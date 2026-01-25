@@ -105,7 +105,7 @@ header {
 .book-card h3 { font-size: 1rem; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .book-card p { font-size: 0.85rem; color: #aaa; }
 
-/* --- 👤 PROFILE SECTION (NEW) --- */
+/* --- 👤 PROFILE SECTION --- */
 .profile-card {
     background: linear-gradient(145deg, rgba(255,255,255,0.05), rgba(0,0,0,0.2));
     padding: 40px; border-radius: 30px;
@@ -150,7 +150,7 @@ header {
 .btn-secondary:hover { background: var(--secondary); color: black; }
 
 
-/* --- 🎵 PLAYER VIEW (Refined) --- */
+/* --- 🎵 PLAYER VIEW --- */
 .glass-back-btn {
     background: rgba(255,255,255,0.1); color: white; border: none; padding: 10px 20px; border-radius: 30px; cursor: pointer; display: flex; align-items: center; gap: 8px; margin-bottom: 20px; transition: 0.3s;
 }
@@ -195,7 +195,7 @@ header {
     border-left: 4px solid var(--secondary); color: var(--secondary);
 }
 
-/* --- 🎹 ULTRA PREMIUM PLAYER BAR (Updated) --- */
+/* --- 🎹 ULTRA PREMIUM PLAYER BAR --- */
 .player-bar {
     position: fixed; 
     bottom: 30px; 
@@ -204,7 +204,6 @@ header {
     width: 90%; 
     max-width: 850px;
     
-    /* 🔥 The Real Glassmorphism Magic */
     background: rgba(16, 18, 27, 0.75); 
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
@@ -217,11 +216,10 @@ header {
     justify-content: space-between;
     gap: 20px;
 
-    /* Subtle Neon Border */
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: 
-        0 20px 50px rgba(0, 0, 0, 0.5), /* Deep Shadow */
-        0 0 0 1px rgba(255, 255, 255, 0.05) inset; /* Inner Light */
+        0 20px 50px rgba(0, 0, 0, 0.5), 
+        0 0 0 1px rgba(255, 255, 255, 0.05) inset;
     
     z-index: 1000;
     transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
@@ -233,19 +231,13 @@ header {
     transform: translateX(-50%) translateY(-2px);
 }
 
-/* Track Info (Left Side) */
+/* Track Info */
 .track-info { 
-    display: flex; 
-    align-items: center; 
-    width: 25%; 
-    gap: 15px; 
+    display: flex; align-items: center; width: 25%; gap: 15px; 
 }
 .track-info img { 
-    width: 55px; height: 55px; 
-    border-radius: 12px; 
-    object-fit: cover; 
-    box-shadow: 0 4px 15px rgba(0,0,0,0.4);
-    transition: 0.3s;
+    width: 55px; height: 55px; border-radius: 12px; object-fit: cover; 
+    box-shadow: 0 4px 15px rgba(0,0,0,0.4); transition: 0.3s;
 }
 .player-bar:hover .track-info img { transform: scale(1.05) rotate(2deg); }
 
@@ -255,16 +247,11 @@ header {
 }
 .mini-text p { font-size: 0.8rem; color: #bbb; margin: 0; margin-top: 3px; }
 
-/* Controls Wrapper (Center) */
+/* Controls */
 .controls-wrapper { 
-    flex-grow: 1; 
-    display: flex; 
-    flex-direction: column; 
-    align-items: center; 
-    gap: 5px; 
+    flex-grow: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; 
 }
 
-/* Buttons Row */
 .controls { display: flex; align-items: center; gap: 25px; margin-bottom: 5px; }
 
 .controls button { 
@@ -275,12 +262,10 @@ header {
 }
 .controls button:hover { color: white; transform: scale(1.1); text-shadow: 0 0 10px white; }
 
-/* The BIG Play Button */
 .play-circle { 
     font-size: 1.8rem !important; color: black !important; 
     background: linear-gradient(135deg, var(--secondary), var(--primary)); 
-    border-radius: 50%; 
-    width: 55px; height: 55px; 
+    border-radius: 50%; width: 55px; height: 55px; 
     box-shadow: 0 0 20px rgba(31, 221, 255, 0.4);
     border: 2px solid rgba(255,255,255,0.2);
 }
@@ -290,11 +275,22 @@ header {
 }
 .play-circle:active { transform: scale(0.95) !important; }
 
+/* 10s Skip Buttons */
+.secondary-btn {
+    background: transparent; border: none; color: #888;
+    font-size: 0.9rem; font-weight: 600; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 4px; transition: 0.3s;
+}
+.secondary-btn i {
+    font-size: 1.1rem; background: rgba(255,255,255,0.1); padding: 8px; border-radius: 50%;
+}
+.secondary-btn:hover { color: white; }
+.secondary-btn:hover i { background: var(--secondary); color: black; box-shadow: 0 0 10px var(--secondary); }
+
 /* Progress Bar Area */
 .progress-container { 
     width: 100%; display: flex; align-items: center; gap: 12px; max-width: 450px; 
 }
-
 .progress-container span { 
     font-size: 0.75rem; font-family: monospace; color: #888; width: 40px; text-align: center;
 }
@@ -304,12 +300,8 @@ header {
     width: 100%; height: 5px; 
     background: rgba(255,255,255,0.1); 
     border-radius: 10px; cursor: pointer; 
-    appearance: none; 
-    position: relative;
-    overflow: hidden; /* For fill effect */
+    appearance: none; position: relative; overflow: hidden;
 }
-
-/* Chrome/Safari Thumb & Track */
 #progress-bar::-webkit-slider-thumb {
     appearance: none; width: 0; height: 0; box-shadow: -400px 0 0 400px var(--secondary);
 }
@@ -317,7 +309,7 @@ header {
     width: 0; height: 0; box-shadow: -400px 0 0 400px var(--secondary); border: none;
 }
 
-/* Speed Button (Right Side) */
+/* Speed Button */
 .extra-controls button {
     background: rgba(255,255,255,0.05); 
     border: 1px solid rgba(255,255,255,0.1);
@@ -329,25 +321,8 @@ header {
     box-shadow: 0 0 15px var(--secondary); border-color: transparent;
 }
 
-/* --- MOBILE RESPONSIVE --- */
-@media (max-width: 768px) {
-    .player-bar { 
-        bottom: 15px; width: 95%; padding: 15px; 
-        flex-wrap: wrap; justify-content: center; gap: 15px;
-    }
-    .track-info { width: 100%; justify-content: center; text-align: center; }
-    .track-info img { display: none; } /* Space bachane ke liye mobile pe image hide */
-    .controls-wrapper { width: 100%; }
-    .extra-controls { position: absolute; top: 15px; right: 15px; }
-}
-
-/* Range Slider */
-.progress-container { width: 100%; display: flex; align-items: center; gap: 10px; max-width: 400px; }
-#progress-bar { width: 100%; height: 4px; background: #333; border-radius: 5px; cursor: pointer; accent-color: var(--secondary); }
-
 /* --- ⚙️ UTILS & LOADING --- */
 .hidden { display: none !important; }
-
 .fade-in { animation: fadeIn 0.4s ease-in-out; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -369,5 +344,95 @@ header {
     .track-info { width: 100%; justify-content: flex-start; }
     .controls-wrapper { width: 100%; }
     .mobile-hide { display: none; } /* Extra buttons hide on mobile */
-    .nav-tabs span { display: none; } /* Hide text in tabs if needed, keep icons */
+    .nav-tabs span { display: none; } 
+    .track-info img { display: none; }
 }
+
+/* --- 🚀 SMART UPDATE NOTIFICATION --- */
+#update-toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(16, 18, 27, 0.95);
+    border: 1px solid var(--secondary);
+    box-shadow: 0 0 20px rgba(31, 221, 255, 0.3);
+    padding: 15px 25px;
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    z-index: 2000;
+    transform: translateY(100px); /* Initially Hidden */
+    opacity: 0;
+    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+#update-toast.show {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+#update-toast p { margin: 0; color: white; font-size: 0.9rem; font-weight: 600; }
+
+#reload-btn {
+    background: var(--secondary);
+    color: black;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 50px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+}
+#reload-btn:hover { background: white; box-shadow: 0 0 10px white; }
+
+/* --- 🔥 STREAK POPUP --- */
+#streak-popup {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    z-index: 9999; text-align: center;
+}
+.fire-anim { font-size: 5rem; animation: bounce 1s infinite alternate; }
+@keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-20px); } }
+
+#streak-popup h2 { font-size: 2.5rem; color: #ff4b1f; margin: 20px 0 10px; }
+#streak-popup p { color: #ccc; margin-bottom: 30px; font-size: 1.1rem; }
+#streak-popup button {
+    background: linear-gradient(45deg, #ff4b1f, #ff9068); color: white;
+    border: none; padding: 15px 40px; font-size: 1.2rem; border-radius: 50px; cursor: pointer;
+    font-weight: bold; box-shadow: 0 0 20px rgba(255, 75, 31, 0.5);
+}
+
+/* --- 🏷️ MOOD TAGS (On Book Card) --- */
+.mood-tags {
+    display: flex; gap: 5px; justify-content: center; margin-top: 8px; flex-wrap: wrap;
+}
+.mood-tag {
+    font-size: 0.7rem; background: rgba(255,255,255,0.1); 
+    padding: 3px 8px; border-radius: 10px; color: var(--secondary);
+    border: 1px solid rgba(31, 221, 255, 0.2);
+}
+
+/* --- 💬 COMMENTS SECTION --- */
+.comments-section { margin-top: 30px; padding-bottom: 100px; }
+.add-comment-box {
+    display: flex; gap: 10px; margin-bottom: 20px;
+    background: rgba(255,255,255,0.05); padding: 10px; border-radius: 50px;
+}
+#comment-input {
+    flex-grow: 1; background: transparent; border: none; color: white; outline: none; padding-left: 10px;
+}
+#post-comment-btn {
+    background: var(--secondary); border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer;
+}
+
+.comment-item {
+    display: flex; gap: 15px; padding: 15px; margin-bottom: 10px;
+    background: rgba(255,255,255,0.02); border-radius: 15px; border-left: 3px solid var(--primary);
+    animation: fadeIn 0.3s ease;
+}
+.comment-time {
+    color: var(--secondary); font-weight: bold; font-family: monospace; cursor: pointer;
+}
+.comment-user { font-size: 0.8rem; color: #888; display: block; margin-bottom: 3px; }

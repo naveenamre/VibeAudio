@@ -1,70 +1,94 @@
-// --- 🖥️ UI CONTROLLER ---
-import { fetchAllBooks } from './api.js';
+// --- 🖥️ UI CONTROLLER (With Streaks & Comments) ---
+import { fetchAllBooks, fetchUserProfile } from './api.js';
 import * as Player from './player.js';
 
-// Global App Object for HTML interactions
 window.app = {
-    switchView: (viewId) => switchView(viewId),
-    goBack: () => goBack(),
-    playBook: (bookId) => initBookPlay(bookId)
+    switchView: (id) => switchView(id),
+    goBack: () => switchView('library'),
+    closeStreak: () => closeStreakPopup()
 };
 
-let allBooks = [];
-
-// --- INIT ---
 async function init() {
-    console.log("🚀 VibeAudio Cloud Starting...");
+    console.log("🚀 VibeAudio UI Starting...");
     
-    // Load Books
-    allBooks = await fetchAllBooks();
-    renderLibrary(allBooks);
-    
-    // Setup Global Listeners
-    setupPlayerListeners();
+    // 1. Check Streak (Popup Logic)
+    const user = await fetchUserProfile();
+    if(user.streak > 0) {
+        showStreakPopup(user.streak);
+    }
+
+    // 2. Load Books
+    const books = await fetchAllBooks();
+    renderLibrary(books);
+    setupListeners();
 }
 
-// --- 🔄 NAVIGATION (SPA Logic) ---
-function switchView(viewId) {
-    // Hide all views
+// --- 🔥 STREAK LOGIC ---
+function showStreakPopup(days) {
+    const popup = document.getElementById('streak-popup');
+    popup.classList.remove('hidden');
+    // GSAP Entrance
+    if(window.gsap) {
+        gsap.fromTo(".fire-anim", {scale: 0}, {scale: 1.2, duration: 0.8, ease: "elastic.out"});
+        gsap.fromTo("#streak-popup h2", {y: 20, opacity: 0}, {y: 0, opacity: 1, delay: 0.3});
+    }
+}
+
+function closeStreakPopup() {
+    const popup = document.getElementById('streak-popup');
+    if(window.gsap) {
+        gsap.to(popup, {opacity: 0, duration: 0.3, onComplete: () => popup.classList.add('hidden')});
+    } else {
+        popup.classList.add('hidden');
+    }
+}
+
+// --- NAVIGATION ---
+function switchView(id) {
     document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
     document.querySelectorAll('.nav-tabs button').forEach(el => el.classList.remove('active-tab'));
-
-    // Show selected view
-    document.getElementById(`view-${viewId}`).classList.remove('hidden');
     
-    // Update Tab
-    const navBtn = document.getElementById(`nav-${viewId}`);
-    if(navBtn) navBtn.classList.add('active-tab');
+    const view = document.getElementById(`view-${id}`);
+    if (view) {
+        view.classList.remove('hidden');
+        if(window.gsap) gsap.fromTo(view, {opacity:0, y:10}, {opacity:1, y:0, duration:0.3});
+    }
+    
+    const btn = document.getElementById(`nav-${id}`);
+    if(btn) btn.classList.add('active-tab');
 }
 
-function goBack() {
-    switchView('library');
-}
-
-// --- 📚 LIBRARY RENDER ---
+// --- LIBRARY (With Moods) ---
 function renderLibrary(books) {
     const grid = document.getElementById('book-grid');
-    grid.innerHTML = ''; // Clear loading spinner
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    if(!books.length) { grid.innerHTML = '<p>No books found.</p>'; return; }
 
     books.forEach(book => {
+        // Mood HTML generator
+        const moodHTML = book.moods ? 
+            `<div class="mood-tags">${book.moods.map(m => `<span class="mood-tag">${m}</span>`).join('')}</div>` : '';
+
         const card = document.createElement('div');
-        card.className = 'book-card fade-in';
+        card.className = 'book-card';
         card.innerHTML = `
-            <img src="${book.cover}" loading="lazy" alt="${book.title}">
+            <img src="${book.cover}">
             <h3>${book.title}</h3>
             <p>${book.author}</p>
-        `;
-        // Pass entire book object via closure
-        card.onclick = () => openPlayerPage(book);
+            ${moodHTML} `;
+        card.onclick = () => openPlayer(book);
         grid.appendChild(card);
     });
+
+    if(window.gsap) gsap.fromTo(".book-card", {opacity:0, y:20}, {opacity:1, y:0, stagger:0.1});
 }
 
-// --- 🎵 PLAYER UI ---
-function openPlayerPage(book) {
+// --- PLAYER (With Comments) ---
+function openPlayer(book) {
     switchView('player');
     
-    // Update Big Player UI
     document.getElementById('detail-cover').src = book.cover;
     document.getElementById('detail-title').innerText = book.title;
     document.getElementById('detail-author').innerText = book.author;
@@ -77,65 +101,133 @@ function openPlayerPage(book) {
     
     book.chapters.forEach((chap, idx) => {
         const li = document.createElement('li');
-        li.innerHTML = `<span>${idx + 1}. ${chap.name}</span> <i class="fas fa-play"></i>`;
-        li.onclick = () => {
-            Player.loadBook(book, idx);
-            updatePlayerState(true);
-        };
+        li.style.opacity = "1"; 
+        li.innerHTML = `<span>${idx+1}. ${chap.name}</span> <i class="fas fa-play"></i>`;
+        li.onclick = () => { Player.loadBook(book, idx); updateUI(true); };
         list.appendChild(li);
     });
 
-    // Auto-play first chapter if not playing
-    document.getElementById('main-play-btn').onclick = () => {
-        Player.loadBook(book, 0);
-        updatePlayerState(true);
+    // Render Comments
+    renderComments(book.comments || []);
+
+    // Setup Add Comment Button (Closure to access current book)
+    document.getElementById('post-comment-btn').onclick = () => {
+        const input = document.getElementById('comment-input');
+        const text = input.value;
+        if(!text) return;
+
+        const state = Player.getCurrentState();
+        const currentTime = Math.floor(state.currentTime || 0);
+        
+        // Add fake comment locally
+        const newComment = { time: currentTime, user: "You", text: text };
+        renderSingleComment(newComment);
+        
+        input.value = ''; // Clear input
+        
+        // Scroll to bottom
+        const commentList = document.getElementById('comments-list');
+        commentList.scrollTop = commentList.scrollHeight;
     };
+
+    const mainBtn = document.getElementById('main-play-btn');
+    if(mainBtn) mainBtn.onclick = () => { Player.loadBook(book, 0); updateUI(true); };
 }
 
+// --- 💬 COMMENTS LOGIC ---
+function renderComments(comments) {
+    const list = document.getElementById('comments-list');
+    list.innerHTML = '';
+    comments.forEach(c => renderSingleComment(c));
+}
+
+function renderSingleComment(c) {
+    const list = document.getElementById('comments-list');
+    const div = document.createElement('div');
+    div.className = 'comment-item';
+    div.innerHTML = `
+        <div class="comment-time" onclick="window.app.seekToComment(${c.time})">
+            ${formatTime(c.time)}
+        </div>
+        <div>
+            <span class="comment-user">${c.user}</span>
+            <p>${c.text}</p>
+        </div>
+    `;
+    list.appendChild(div);
+}
+
+// Global function to seek when comment time is clicked
+window.app.seekToComment = (time) => {
+    Player.seekTo((time / Player.getAudioElement().duration) * 100);
+    Player.togglePlay(); // Ensure play
+};
+
+
 // --- 🎛️ CONTROLS ---
-function setupPlayerListeners() {
+function setupListeners() {
     const playBtn = document.getElementById('play-btn');
-    const progressBar = document.getElementById('progress-bar');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const seekBack = document.getElementById('seek-back-btn');
+    const seekFwd = document.getElementById('seek-fwd-btn');
+    const progress = document.getElementById('progress-bar');
     const audio = Player.getAudioElement();
 
-    // Toggle Play
-    playBtn.onclick = () => {
+    if(playBtn) playBtn.onclick = () => {
         const isPlaying = Player.togglePlay();
-        updatePlayerState(isPlaying);
+        updateUI(isPlaying);
+        if(window.gsap) gsap.fromTo(playBtn, {scale:0.8}, {scale:1, duration:0.3, ease:"elastic.out"});
     };
 
-    // Seek
-    progressBar.addEventListener('input', (e) => {
-        Player.seekTo(e.target.value);
-    });
+    if (prevBtn) prevBtn.onclick = () => {
+        if(Player.prevChapter()) {
+            updateUI(true);
+            if(window.gsap) gsap.fromTo(prevBtn, {x:5}, {x:0, duration:0.2});
+        }
+    };
 
-    // Time Update Loop
+    if (nextBtn) nextBtn.onclick = () => {
+        if(Player.nextChapter()) {
+            updateUI(true);
+            if(window.gsap) gsap.fromTo(nextBtn, {x:-5}, {x:0, duration:0.2});
+        }
+    };
+
+    if(seekBack) seekBack.onclick = () => { Player.skip(-10); animateRotate(seekBack, -45); };
+    if(seekFwd) seekFwd.onclick = () => { Player.skip(10); animateRotate(seekFwd, 45); };
+
+    if(progress) progress.addEventListener('input', (e) => Player.seekTo(e.target.value));
+
     audio.ontimeupdate = () => {
         const state = Player.getCurrentState();
-        if (state.duration) {
-            const percent = (state.currentTime / state.duration) * 100;
-            progressBar.value = percent;
+        if (state.duration && progress) {
+            const pct = (state.currentTime / state.duration) * 100;
+            progress.value = pct;
+            progress.style.background = `linear-gradient(to right, var(--secondary) ${pct}%, rgba(255,255,255,0.1) ${pct}%)`;
+            
             document.getElementById('current-time').innerText = formatTime(state.currentTime);
             document.getElementById('total-duration').innerText = formatTime(state.duration);
         }
     };
-    
-    // Auto Next Chapter
+
     audio.onended = () => {
-        // Logic for next chapter can be added here
-        updatePlayerState(false);
+        if(Player.nextChapter()) updateUI(true);
+        else updateUI(false);
     };
 }
 
-function updatePlayerState(isPlaying) {
-    const btnIcon = document.getElementById('play-btn').querySelector('i');
+// --- HELPERS ---
+function updateUI(isPlaying) {
+    const playBtn = document.getElementById('play-btn');
+    if(!playBtn) return;
     
-    if (isPlaying) {
-        btnIcon.classList.remove('fa-play');
-        btnIcon.classList.add('fa-pause');
+    const icon = playBtn.querySelector('i');
+    if(isPlaying) {
+        icon.classList.remove('fa-play');
+        icon.classList.add('fa-pause');
         document.getElementById('mini-player').classList.remove('hidden');
         
-        // Update Mini Player Info
         const state = Player.getCurrentState();
         if(state.book) {
             document.getElementById('mini-cover').src = state.book.cover;
@@ -143,16 +235,19 @@ function updatePlayerState(isPlaying) {
             document.getElementById('mini-chapter').innerText = state.chapter.name;
         }
     } else {
-        btnIcon.classList.remove('fa-pause');
-        btnIcon.classList.add('fa-play');
+        icon.classList.remove('fa-pause');
+        icon.classList.add('fa-play');
     }
 }
 
-function formatTime(seconds) {
-    const min = Math.floor(seconds / 60);
-    const sec = Math.floor(seconds % 60);
-    return `${min}:${sec < 10 ? '0' + sec : sec}`;
+function animateRotate(el, deg) {
+    if(window.gsap) gsap.fromTo(el, {rotate:0}, {rotate:deg, duration:0.2, yoyo:true, repeat:1});
 }
 
-// Start App
+function formatTime(s) {
+    const m = Math.floor(s/60);
+    const sec = Math.floor(s%60);
+    return `${m}:${sec<10?'0'+sec:sec}`;
+}
+
 init();

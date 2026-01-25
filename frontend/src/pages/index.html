@@ -5,26 +5,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vibe Audio ☁️</title>
-    
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
-    
+
     <link rel="stylesheet" href="../css/style.css">
-    
+
     <link rel="manifest" href="../../public/manifest.json">
     <meta name="theme-color" content="#0f0c29">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3208/3208726.png">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 </head>
 
 <body>
     <div class="bg-gradient"></div>
-    
+
     <div class="glass-container">
 
         <header>
             <div class="logo">
                 <i class="fas fa-cloud-bolt"></i> VibeAudio
             </div>
-            
+
             <div class="nav-tabs">
                 <button id="nav-library" class="active-tab" onclick="app.switchView('library')">Library</button>
                 <button id="nav-history" onclick="app.switchView('history')">History</button>
@@ -43,7 +46,7 @@
             <h2 class="section-title">Trending Now 🔥</h2>
             <div id="category-filters" class="filter-container">
                 </div>
-            
+
             <div id="book-grid" class="grid">
                 <div class="loading-spinner">Loading Cloud Library...</div>
             </div>
@@ -59,9 +62,11 @@
         <section id="view-profile" class="view-section hidden fade-in">
             <div class="profile-card">
                 <div class="profile-header">
-                    <img src="https://ui-avatars.com/api/?name=Captain+Naksh&background=random" alt="User" class="avatar">
+                    <img src="https://ui-avatars.com/api/?name=Captain+Naksh&background=random" alt="User"
+                        class="avatar">
                     <div>
-                        <h2 id="user-name">Captain Naksh</h2> <p class="user-badge">Free Tier</p>
+                        <h2 id="user-name">Captain Naksh</h2>
+                        <p class="user-badge">Free Tier Legend 🚀</p>
                     </div>
                 </div>
 
@@ -89,19 +94,19 @@
             </button>
 
             <div class="player-header-card">
-                <div class="blur-bg" id="blur-bg"></div> 
-                
+                <div class="blur-bg" id="blur-bg"></div>
+
                 <div class="visualizer-container">
                     <canvas id="visualizer"></canvas>
                 </div>
 
                 <img id="detail-cover" src="" alt="Book Cover">
-                
+
                 <div class="info">
                     <span class="badge">NOW PLAYING</span>
                     <h1 id="detail-title">Loading Title...</h1>
                     <p id="detail-author">Unknown Author</p>
-                    
+
                     <div class="meta-info">
                         <span id="total-chapters">0 Chapters</span>
                         <div class="chapter-controls">
@@ -115,8 +120,17 @@
 
             <div class="chapter-list-container">
                 <h3>Chapters</h3>
-                <ul id="chapter-list">
-                    </ul>
+                <ul id="chapter-list"></ul>
+            </div>
+
+            <div class="comments-section">
+                <h3>Vibe Check (Comments) 💬</h3>
+                <div class="add-comment-box">
+                    <input type="text" id="comment-input" placeholder="Type at current time...">
+                    <button id="post-comment-btn"><i class="fas fa-paper-plane"></i></button>
+                </div>
+                <div id="comments-list">
+                    </div>
             </div>
         </section>
 
@@ -133,11 +147,21 @@
 
         <div class="controls-wrapper">
             <div class="controls">
+                <button id="seek-back-btn" class="secondary-btn">
+                    <i class="fas fa-rotate-left"></i> 10s
+                </button>
+
                 <button id="prev-btn"><i class="fas fa-step-backward"></i></button>
+
                 <button id="play-btn" class="play-circle"><i class="fas fa-play"></i></button>
+
                 <button id="next-btn"><i class="fas fa-step-forward"></i></button>
+
+                <button id="seek-fwd-btn" class="secondary-btn">
+                    10s <i class="fas fa-rotate-right"></i>
+                </button>
             </div>
-            
+
             <div class="progress-container">
                 <span id="current-time">00:00</span>
                 <input type="range" id="progress-bar" value="0" step="0.1">
@@ -152,7 +176,49 @@
 
     <audio id="audio-element" crossorigin="anonymous"></audio>
 
+    <div id="streak-popup" class="hidden">
+        <div class="fire-anim">🔥</div>
+        <h2>5 Day Streak!</h2>
+        <p>You are on fire! Don't break the chain.</p>
+        <button onclick="app.closeStreak()">Let's Vibe</button>
+    </div>
+
+    <div id="update-toast">
+        <p>🚀 New Update Available!</p>
+        <button id="reload-btn">Update Now</button>
+    </div>
+
     <script type="module" src="../js/ui.js"></script>
+
+    <script>
+        let newWorker;
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('../../sw.js').then(reg => {
+                    console.log('✅ Service Worker Registered');
+
+                    reg.addEventListener('updatefound', () => {
+                        newWorker = reg.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                const toast = document.getElementById('update-toast');
+                                if(toast) toast.classList.add('show');
+                            }
+                        });
+                    });
+                }).catch(err => console.log('❌ SW Fail:', err));
+            });
+        }
+
+        const reloadBtn = document.getElementById('reload-btn');
+        if(reloadBtn) {
+            reloadBtn.addEventListener('click', () => {
+                if (newWorker) newWorker.postMessage({ action: 'skipWaiting' });
+                window.location.reload();
+            });
+        }
+    </script>
 
 </body>
 </html>
