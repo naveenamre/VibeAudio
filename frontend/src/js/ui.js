@@ -1,4 +1,4 @@
-// --- 🖥️ UI CONTROLLER (With Dynamic Filters) ---
+// --- 🖥️ UI CONTROLLER (Cleaned: No Streak Popup) ---
 import { fetchAllBooks, fetchUserProfile, loginUser, fetchUserProgress } from './api.js'; 
 import * as Player from './player.js';
 
@@ -7,9 +7,9 @@ let allBooks = []; // 📚 Global variable (Master Copy)
 window.app = {
     switchView: (id) => switchView(id),
     goBack: () => switchView('library'),
-    closeStreak: () => closeStreakPopup(),
+    // ❌ closeStreak hata diya
     seekToComment: (time) => seekToComment(time),
-    filterLibrary: (category) => filterLibrary(category) // ✨ Exposed for HTML
+    filterLibrary: (category) => filterLibrary(category)
 };
 
 async function init() {
@@ -17,26 +17,31 @@ async function init() {
 
     console.log("🚀 VibeAudio UI Starting...");
     
-    // 1. Check Streak
-    const userProfile = await fetchUserProfile();
-    if(userProfile.streak > 0) {
-        showStreakPopup(userProfile.streak);
-    }
+    // 👇 STREAK CODE REMOVED
+    // Seedha kaam ki baat pe aate hain:
 
-    // 2. Load Books
+    // 1. Load Books
     allBooks = await fetchAllBooks(); 
     
-    // ✨ Yahan humne Filters aur Library dono render kiye
+    // ✨ Filters aur Library render
     renderCategoryFilters(allBooks);
     renderLibrary(allBooks);
     
-    // 3. Load History
+    // 2. Load History
     renderHistory();
     
     setupListeners();
+
+    // 3. User Name Update (Background me, bina popup ke)
+    fetchUserProfile().then(user => {
+        const userNameDisplay = document.getElementById('user-name-display');
+        if(userNameDisplay && user.name) {
+            userNameDisplay.innerText = user.name;
+        }
+    });
 }
 
-// --- 🏷️ DYNAMIC FILTER LOGIC (New Feature) ---
+// --- 🏷️ DYNAMIC FILTER LOGIC ---
 function renderCategoryFilters(books) {
     const container = document.getElementById('category-filters');
     if(!container) return;
@@ -54,7 +59,6 @@ function renderCategoryFilters(books) {
 
     // 3. Baaki moods ke buttons add karo
     allMoods.forEach(mood => {
-        // Mood name me agar space hai to bhi chalega
         html += `<button class="filter-btn" onclick="app.filterLibrary('${mood}')" id="filter-${mood}">${mood}</button>`;
     });
 
@@ -65,7 +69,6 @@ function filterLibrary(category) {
     // 1. Buttons ki styling update karo
     document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
     
-    // ID safe banane ke liye spaces hataye (sirf selection ke liye)
     const btnId = category === 'All' ? 'filter-all' : `filter-${category}`;
     const activeBtn = document.getElementById(btnId);
     if(activeBtn) activeBtn.classList.add('active');
@@ -80,7 +83,7 @@ function filterLibrary(category) {
         renderLibrary(filtered);
     }
 
-    // GSAP Animation for smooth feel
+    // GSAP Animation
     if(window.gsap) gsap.fromTo(".book-card", {y: 10, opacity: 0}, {y: 0, opacity: 1, stagger: 0.05, duration: 0.3});
 }
 
@@ -165,20 +168,7 @@ function setupAuth() {
     }
 }
 
-// --- STREAK ---
-function showStreakPopup(days) {
-    const popup = document.getElementById('streak-popup');
-    if(!popup) return;
-    popup.classList.remove('hidden');
-    if(window.gsap) {
-        gsap.fromTo(".fire-anim", {scale: 0}, {scale: 1.2, duration: 0.8, ease: "elastic.out"});
-        gsap.fromTo("#streak-popup h2", {y: 20, opacity: 0}, {y: 0, opacity: 1, delay: 0.3});
-    }
-}
-function closeStreakPopup() {
-    const popup = document.getElementById('streak-popup');
-    if(popup) popup.classList.add('hidden');
-}
+// ❌ STREAK FUNCTIONS REMOVED ❌
 
 // --- NAVIGATION ---
 function switchView(id) {
