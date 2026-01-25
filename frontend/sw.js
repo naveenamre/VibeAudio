@@ -1,4 +1,4 @@
-const CACHE_NAME = "vibe-audio-v2"; // ⚠️ IMPORTANT: Jab bhi naya code dalna, isko v3, v4 karna!
+const CACHE_NAME = "vibe-audio-v3"; // ⚠️ Version Updated to v3
 const ASSETS_TO_CACHE = [
     "./",
     "./src/pages/index.html",
@@ -13,7 +13,7 @@ const ASSETS_TO_CACHE = [
 
 // 1. Install Event
 self.addEventListener("install", (event) => {
-    self.skipWaiting(); // 🔥 TRICK: Turant install ho ja, wait mat kar
+    self.skipWaiting(); // 🔥 Turant install ho ja
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
             return cache.addAll(ASSETS_TO_CACHE);
@@ -32,22 +32,44 @@ self.addEventListener("activate", (event) => {
             );
         })
     );
-    self.clients.claim(); // 🔥 TRICK: Turant control le le page ka
+    self.clients.claim(); // Turant control le le page ka
 });
 
-// 3. Fetch Event
+// 3. Fetch Event (The FIX 🛠️)
 self.addEventListener("fetch", (event) => {
+    
+    // 🛑 STOP: In requests ko Cache mat karo
+    if (
+        event.request.url.includes("lambda-url") || // AWS API Calls
+        event.request.method === "POST" ||          // Data Saving
+        event.request.url.startsWith("chrome-extension") || // Browser Junk
+        event.request.url.includes("socket")        // Live Server Sockets
+    ) {
+        return; // Direct network pe jane do, Service Worker beech me nahi aayega
+    }
+
     event.respondWith(
         fetch(event.request)
             .then((networkResponse) => {
-                // Agar net chal raha hai, to naya data le aur cache update kar
-                return caches.open(CACHE_NAME).then((cache) => {
-                    cache.put(event.request, networkResponse.clone());
+                // ✅ Check: Kya response valid hai? (206 Partial Content ya Error ko cache mat karo)
+                if (
+                    !networkResponse || 
+                    networkResponse.status !== 200 || 
+                    networkResponse.type !== 'basic'
+                ) {
                     return networkResponse;
+                }
+
+                // Agar sab sahi hai, to Cache update karo
+                const responseToCache = networkResponse.clone();
+                caches.open(CACHE_NAME).then((cache) => {
+                    cache.put(event.request, responseToCache);
                 });
+
+                return networkResponse;
             })
             .catch(() => {
-                // Agar net nahi hai, to cache se dikha
+                // Agar net nahi hai, to Cache se uthao
                 return caches.match(event.request);
             })
     );

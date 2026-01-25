@@ -1,0 +1,26 @@
+{
+  "name": "vibeaudio",
+  "version": "1.0.0",
+  "description": "a free audiobook platform",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/naveenamre/VibeAudio.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/naveenamre/VibeAudio/issues"
+  },
+  "homepage": "https://github.com/naveenamre/VibeAudio#readme",
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.975.0",
+    "@aws-sdk/lib-dynamodb": "^3.975.0",
+    "dotenv": "^17.2.3"
+  }
+}

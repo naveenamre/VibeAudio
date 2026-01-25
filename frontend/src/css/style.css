@@ -436,3 +436,42 @@ header {
     color: var(--secondary); font-weight: bold; font-family: monospace; cursor: pointer;
 }
 .comment-user { font-size: 0.8rem; color: #888; display: block; margin-bottom: 3px; }
+
+/* --- 🏷️ CATEGORY FILTER BAR --- */
+.filter-container {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    overflow-x: auto; /* Agar jyada tags ho to scroll ho jaye */
+    padding-bottom: 5px; /* Scrollbar ke liye jagah */
+    scrollbar-width: none; /* Firefox me scrollbar chupao */
+}
+
+.filter-container::-webkit-scrollbar {
+    display: none; /* Chrome me scrollbar chupao */
+}
+
+.filter-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ccc;
+    padding: 8px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    white-space: nowrap; /* Text tootna nahi chahiye */
+    transition: all 0.3s ease;
+    font-family: 'Outfit', sans-serif;
+}
+
+.filter-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.filter-btn.active {
+    background: var(--secondary); /* Tera Purple/Pink color */
+    color: white;
+    border-color: var(--secondary);
+    box-shadow: 0 4px 15px rgba(189, 52, 254, 0.4);
+}

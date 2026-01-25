@@ -1,224 +1,171 @@
-// --- 🎧 AUDIO ENGINE (Complete & Crash Proof) ---
+// --- 🎧 PLAYER LOGIC (With Cloud Resume & Memory) ---
+import { saveUserProgress, fetchUserProgress } from './api.js'; // ✨ Imported fetchUserProgress
 
-const audio = document.getElementById('audio-element');
-let isPlaying = false;
+const audio = document.getElementById('audio-element') || new Audio();
 let currentBook = null;
 let currentChapterIndex = 0;
+let saveInterval = null; // ⏱️ Timer for auto-save
 
-// Visualizer Variables (Global taaki crash na ho)
-let audioContext = null;
-let analyser = null;
-let dataArray = null;
-let canvas = null;
-let ctx = null;
-let source = null; // Important: Source ek hi baar banna chahiye
+// --- 📥 LOAD & PLAY (Smart Resume) ---
+export async function loadBook(book, index = 0) {
+    stopProgressLoop(); // Purana timer roko
 
-// --- 🔊 SFX GENERATOR (Bina External File ke Sounds) ---
-const SFX = {
-    ctx: null,
-
-    init: () => {
-        if (!SFX.ctx) {
-            SFX.ctx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-    },
-    
-    playTone: (freq, type, duration) => {
-        SFX.init();
-        if (SFX.ctx.state === 'suspended') SFX.ctx.resume();
-        
-        const osc = SFX.ctx.createOscillator();
-        const gain = SFX.ctx.createGain();
-        osc.type = type;
-        osc.frequency.setValueAtTime(freq, SFX.ctx.currentTime);
-        gain.gain.setValueAtTime(0.1, SFX.ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, SFX.ctx.currentTime + duration);
-        osc.connect(gain);
-        gain.connect(SFX.ctx.destination);
-        osc.start();
-        osc.stop(SFX.ctx.currentTime + duration);
-    },
-
-    tap: () => SFX.playTone(600, 'sine', 0.1),       // Play/Pause Sound
-    tick: () => SFX.playTone(800, 'triangle', 0.05), // Skip Sound
-    swoosh: () => {                                  // Chapter Change Sound
-        SFX.playTone(200, 'sine', 0.3);
-        SFX.playTone(400, 'triangle', 0.2);
-    }
-};
-
-// --- 🎛️ CORE FUNCTIONS ---
-
-export function loadBook(book, index = 0) {
     currentBook = book;
-    SFX.swoosh(); // 🔊 Sound Effect
-    playChapter(index);
+    currentChapterIndex = index;
+
+    console.log("☁️ Checking for saved progress...");
+    
+    // 1. Cloud se pucho: "Bhai is book ka koi save data hai?"
+    // (Note: Hum user_123 hardcode kar rahe hain abhi ke liye)
+    const allProgress = await fetchUserProgress("user_123");
+    
+    // 2. Find progress for THIS book
+    // Note: bookId ko string me convert karke compare kar rahe hain safety ke liye
+    const savedData = allProgress.find(p => p.bookId == book.bookId);
+
+    if (savedData) {
+        console.log(`🔥 Found Save: Chapter ${savedData.chapterIndex} @ ${savedData.currentTime}s`);
+        
+        // Agar saved chapter alag hai user ke selected index se, to saved wala use karo
+        // (Sirf tab jab user ne specific chapter click nahi kiya ho, par abhi simple rakhte hain)
+        if (index === 0 && savedData.chapterIndex > 0) {
+             currentChapterIndex = parseInt(savedData.chapterIndex);
+        }
+        
+        // Resume from saved time
+        playChapter(currentChapterIndex, savedData.currentTime);
+    } else {
+        console.log("✨ No save found, starting fresh.");
+        playChapter(currentChapterIndex, 0); // Start from 0
+    }
 }
 
-export function playChapter(index) {
+function playChapter(index, startTime = 0) { // ✨ startTime parameter added
     if (!currentBook || !currentBook.chapters[index]) return;
 
-    currentChapterIndex = index;
     const chapter = currentBook.chapters[index];
     
-    // 1. CrossOrigin set karna zaroori hai Visualizer ke liye
-    audio.crossOrigin = "anonymous"; 
+    // Audio Source Set karo
     audio.src = chapter.url;
-
-    // 2. AudioContext Init (User interaction ke baad hi allowed hota hai)
-    if (!audioContext) initVisualizer();
-
-    audio.play()
-        .then(() => {
-            isPlaying = true;
-            updateMediaSession(chapter);
-        })
-        .catch(err => console.error("Playback Error:", err));
+    
+    // Metadata set karna (Lock Screen Controls)
+    if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+            title: chapter.name,
+            artist: currentBook.author,
+            album: currentBook.title,
+            artwork: [{ src: currentBook.cover, sizes: '512x512', type: 'image/jpeg' }]
+        });
         
-    return { isPlaying, chapter };
+        navigator.mediaSession.setActionHandler('play', () => togglePlay());
+        navigator.mediaSession.setActionHandler('pause', () => togglePlay());
+        navigator.mediaSession.setActionHandler('previoustrack', () => prevChapter());
+        navigator.mediaSession.setActionHandler('nexttrack', () => nextChapter());
+    }
+
+    // ✨ Magic: Audio load hone ka wait karo fir seek karo
+    // Agar hum turant currentTime set karte hain, to kabhi kabhi fail ho jata hai
+    audio.onloadedmetadata = () => {
+        if (startTime > 0) {
+            audio.currentTime = startTime;
+        }
+        
+        audio.play()
+            .then(() => startProgressLoop()) // ▶️ Play hote hi tracking shuru
+            .catch(e => console.error("Autoplay blocked:", e));
+    };
+    
+    // Fallback: Agar metadata event miss ho jaye to play karne ki koshish karo
+    setTimeout(() => {
+        if(audio.paused) audio.play().catch(()=> {});
+    }, 1000);
 }
 
+// --- ⏯️ CONTROLS ---
 export function togglePlay() {
-    SFX.tap(); // 🔊 Sound Effect
-
-    if (!audio.src) return false;
-    
-    // Resume context if suspended (Browser policy fix)
-    if (audioContext && audioContext.state === 'suspended') {
-        audioContext.resume();
-    }
-    
     if (audio.paused) {
         audio.play();
-        isPlaying = true;
+        startProgressLoop(); // 🟢 Start Auto-Save
+        return true; // Is Playing
     } else {
         audio.pause();
-        isPlaying = false;
+        stopProgressLoop();  // 🔴 Stop Timer
+        triggerSave();       // 💾 Pause karte hi Save karo
+        return false; // Is Paused
     }
-    return isPlaying;
 }
 
-export function seekTo(percent) {
+export function seekTo(pct) {
     if (audio.duration) {
-        audio.currentTime = (percent / 100) * audio.duration;
+        audio.currentTime = (pct / 100) * audio.duration;
     }
 }
 
-// 🔥 10s Skip Logic
 export function skip(seconds) {
-    if (audio.duration) {
-        SFX.tick(); // 🔊 Sound Effect
-        audio.currentTime += seconds;
-    }
+    audio.currentTime += seconds;
+    triggerSave(); // Skip karne par bhi save kar lo
 }
 
-// 🔥 Next Chapter Logic
+export function prevChapter() {
+    if (currentChapterIndex > 0) {
+        currentChapterIndex--;
+        playChapter(currentChapterIndex, 0); // Next/Prev humesha 0 se start hoga
+        return true;
+    }
+    return false;
+}
+
 export function nextChapter() {
     if (currentBook && currentChapterIndex < currentBook.chapters.length - 1) {
-        loadBook(currentBook, currentChapterIndex + 1);
+        currentChapterIndex++;
+        playChapter(currentChapterIndex, 0);
         return true;
     }
+    return false;
 }
 
-// 🔥 Prev Chapter Logic
-export function prevChapter() {
-    if (currentBook && currentChapterIndex > 0) {
-        loadBook(currentBook, currentChapterIndex - 1);
-        return true;
-    }
+// --- ℹ️ GETTERS ---
+export function getAudioElement() {
+    return audio;
 }
-
-export function getAudioElement() { return audio; }
 
 export function getCurrentState() {
     return {
         book: currentBook,
         chapter: currentBook ? currentBook.chapters[currentChapterIndex] : null,
-        isPlaying,
         currentTime: audio.currentTime,
-        duration: audio.duration
+        duration: audio.duration,
+        isPlaying: !audio.paused
     };
 }
 
-// --- 🎨 VISUALIZER LOGIC (Safe & Crash Proof) ---
-function initVisualizer() {
-    try {
-        if(audioContext) return; // Agar pehle se bana hai toh wapas mat banao
+// --- 💾 CLOUD SAVE LOGIC ---
 
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        analyser = audioContext.createAnalyser();
-        
-        // 🔥 CRITICAL FIX: Source ek hi baar create hona chahiye
-        if (!source) {
-            source = audioContext.createMediaElementSource(audio);
-            source.connect(analyser);
-            analyser.connect(audioContext.destination);
-        }
-        
-        analyser.fftSize = 64; 
-        const bufferLength = analyser.frequencyBinCount;
-        dataArray = new Uint8Array(bufferLength);
-        
-        canvas = document.getElementById('visualizer');
-        if(canvas) {
-            ctx = canvas.getContext('2d');
-            animateVisualizer();
-        }
-    } catch(e) {
-        console.warn("Visualizer Init Warning (Ignore if audio plays):", e);
+function triggerSave() {
+    if (currentBook && audio.duration > 0) {
+        saveUserProgress(
+            currentBook.bookId, 
+            currentChapterIndex, 
+            audio.currentTime, 
+            audio.duration
+        );
     }
 }
 
-function animateVisualizer() {
-    requestAnimationFrame(animateVisualizer);
-    
-    if (!canvas || !ctx) return;
-
-    // Resize Canvas agar chhota bada ho raha ho
-    if (canvas.width !== canvas.offsetWidth || canvas.height !== canvas.offsetHeight) {
-        canvas.width = canvas.offsetWidth;
-        canvas.height = canvas.offsetHeight;
-    }
-
-    if (!isPlaying) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        return;
-    }
-    
-    if(analyser) {
-        analyser.getByteFrequencyData(dataArray);
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        const barWidth = (canvas.width / dataArray.length) * 0.8;
-        let x = 0;
-
-        for (let i = 0; i < dataArray.length; i++) {
-            let barHeight = dataArray[i] / 1.5;
-            
-            // Neon Gradient
-            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            gradient.addColorStop(0, '#1fddff');
-            gradient.addColorStop(1, '#ff4b1f');
-            ctx.fillStyle = gradient;
-
-            // Draw Bar (Mirrored effect hataya hai simple look ke liye)
-            ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
-            x += barWidth + 5;
+// 🔁 Auto-Save Loop (Har 15 sec)
+function startProgressLoop() {
+    stopProgressLoop(); // Safety check
+    saveInterval = setInterval(() => {
+        if (!audio.paused && currentBook) {
+            triggerSave();
+            console.log("⏳ Auto-saving progress...");
         }
-    }
+    }, 15000); // 15 Seconds
 }
 
-// Mobile Lock Screen Controls
-function updateMediaSession(chapter) {
-    if ('mediaSession' in navigator) {
-        navigator.mediaSession.metadata = new MediaMetadata({
-            title: chapter.name,
-            artist: currentBook.author,
-            artwork: [{ src: currentBook.cover, sizes: '512x512', type: 'image/jpg' }]
-        });
-        navigator.mediaSession.setActionHandler('play', togglePlay);
-        navigator.mediaSession.setActionHandler('pause', togglePlay);
-        navigator.mediaSession.setActionHandler('previoustrack', prevChapter);
-        navigator.mediaSession.setActionHandler('nexttrack', nextChapter);
+function stopProgressLoop() {
+    if (saveInterval) {
+        clearInterval(saveInterval);
+        saveInterval = null;
     }
 }
