@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Opening VibeAudio...</title>
+    
+    <meta http-equiv="refresh" content="0; url=./src/pages/index.html">
+    
+    <script>
+        // Backup: Agar meta tag fail ho, toh JS sambhal lega
+        window.location.replace("./src/pages/index.html");
+    </script>
+
+    <style>
+        /* Dark Theme Loading Screen */
+        body {
+            background-color: #0f0c29;
+            color: #bd34fe;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: sans-serif;
+            flex-direction: column;
+        }
+        .loader {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-radius: 50%;
+            border-top-color: #bd34fe;
+            animation: spin 1s ease-in-out infinite;
+            margin-bottom: 20px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="loader"></div>
+    <p>🚀 Launching Vibe...</p>
+</body>
+</html>
