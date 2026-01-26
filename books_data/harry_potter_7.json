@@ -2,7 +2,7 @@
   "bookId": "book_7",
   "title": "Harry Potter and the Deathly Hallows",
   "author": "J.K. Rowling",
-  "moods": ["Fiction"],
+  "moods": ["Fiction", "Harry Potter"],
   
   "//_COMMENT_COVER": "Niche dekho: Agar R2 hai to Folder/File.jpg, agar bahar ka hai to https://...",
   "cover": "Cover Page/Harry Potter and the Deathly Hallows.jpg",

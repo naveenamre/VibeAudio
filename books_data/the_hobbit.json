@@ -1,0 +1,20 @@
+{
+  "bookId": "book_10",
+  "title": "The Hobbit",
+  "author": "J.R.R. Tolkien",
+  "moods": ["Fiction", "Lord of the Rings"],
+  
+  "//_COMMENT_COVER": "Niche dekho: Agar R2 hai to Folder/File.jpg, agar bahar ka hai to https://...",
+  "cover": "Cover Page/The Hobbit.jpg",
+
+  "chapters": [
+    {
+      "name": "Chapter 1: The boy who lived",
+      "url": "The Hobbit/01-chapter.m4a"
+    },
+    {
+      "name": "Chapter 2: Vanishing Glass",
+      "url": "The Hobbit/02-chapter.ogg"
+    }
+  ]
+}

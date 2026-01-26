@@ -1,0 +1,56 @@
+{
+  "bookId": "book_8",
+  "title": "The Last Wish",
+  "author": "Andrzej Sapkowski",
+  "moods": ["Fiction", "Fantasy", "Witcher"],
+
+  "//_COMMENT_COVER": "Bahar ka link hai (Amazon), isliye direct https:// use kiya hai",
+  "cover": "https://m.media-amazon.com/images/I/71sZSQ6WS4L._SL1500_.jpg",
+
+  "chapters": [
+    {
+      "name": "Chapter 1",
+      "url": "https://archive.org/download/start-1_202601/start-1.mp3"
+    },
+    {
+      "name": "Chapter 2",
+      "url": "https://archive.org/download/part5_202601/part2.mp3"
+    },
+    {
+      "name": "Chapter 3",
+      "url": "https://archive.org/download/part5_202601/part3.mp3"
+    },
+    {
+      "name": "Chapter 4",
+      "url": "https://archive.org/download/part4_202601/part4.mp3"
+    },
+    {
+      "name": "Chapter 5",
+      "url": "https://archive.org/download/part5_202601/part5.mp3"
+    },
+    {
+      "name": "Chapter 6",
+      "url": "https://archive.org/download/part5_202601/part6.mp3"
+    },
+    {
+      "name": "Chapter 7",
+      "url": "https://archive.org/download/part5_202601/sweet_narrator.mp3"
+    },
+    {
+      "name": "Chapter 8",
+      "url": "https://archive.org/download/part-8_202601/Part8.mp3"
+    },
+    {
+      "name": "Chapter 9",
+      "url": "https://archive.org/download/part-9_202601/Part9.mp3"
+    },
+    {
+      "name": "Chapter 10",
+      "url": "https://archive.org/download/part-10_202601/Part10.mp3"
+    },
+    {
+      "name": "Chapter 11",
+      "url": "https://archive.org/download/part11_202601/part11.mp3"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "bookId": "book_9",
+  "title": "Sword of Destiny",
+  "author": "Andrzej Sapkowski",
+  "moods": ["Fiction", "Witcher"],
+  
+  "//_COMMENT_COVER": "Niche dekho: Agar R2 hai to Folder/File.jpg, agar bahar ka hai to https://...",
+  "cover": "Cover Page/Sword of Destiny.jpg",
+
+  "chapters": [
+    {
+      "name": "Chapter 1: The boy who lived",
+      "url": "Sword of Destiny/01-chapter.m4a"
+    },
+    {
+      "name": "Chapter 2: Vanishing Glass",
+      "url": "Sword of Destiny/02-chapter.ogg"
+    }
+  ]
+}
