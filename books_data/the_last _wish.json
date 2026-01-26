@@ -2,10 +2,10 @@
   "bookId": "book_8",
   "title": "The Last Wish",
   "author": "Andrzej Sapkowski",
-  "moods": ["Fiction", "Fantasy", "Witcher"],
+  "moods": ["Fiction", "Witcher"],
 
   "//_COMMENT_COVER": "Bahar ka link hai (Amazon), isliye direct https:// use kiya hai",
-  "cover": "https://m.media-amazon.com/images/I/71sZSQ6WS4L._SL1500_.jpg",
+  "cover": "https://m.media-amazon.com/images/I/51V1vCcc2BL._SY445_SX342_FMwebp_.jpg",
 
   "chapters": [
     {

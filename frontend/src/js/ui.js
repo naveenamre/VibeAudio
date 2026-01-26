@@ -1,5 +1,5 @@
-// --- 🖥️ UI CONTROLLER (Sorted Books & Cleaned) ---
-import { fetchAllBooks, fetchUserProfile, loginUser, fetchUserProgress } from './api.js'; 
+// --- 🖥️ UI CONTROLLER (Smart Loading & Cached) ---
+import { fetchAllBooks, fetchBookDetails, fetchUserProfile, loginUser, fetchUserProgress } from './api.js'; 
 import * as Player from './player.js';
 
 let allBooks = []; // 📚 Global variable (Master Copy)
@@ -16,13 +16,12 @@ async function init() {
 
     console.log("🚀 VibeAudio UI Starting...");
     
-    // 1. Load Books
+    // 1. Load Books (LITE MODE - Sirf Cover & Titles aayenge)
     allBooks = await fetchAllBooks(); 
     
-    // ✨ SORTING FIX: Books ko ID ke hisab se sort karo (Numerical Order)
+    // ✨ SORTING FIX: Numerical Order
     if(allBooks.length > 0) {
         allBooks.sort((a, b) => {
-            // "book_4" -> 4, "book_10" -> 10
             const numA = parseInt(a.bookId.replace(/\D/g, '')) || 0; 
             const numB = parseInt(b.bookId.replace(/\D/g, '')) || 0;
             return numA - numB;
@@ -38,7 +37,7 @@ async function init() {
     
     setupListeners();
 
-    // 3. User Name Update (Background me)
+    // 3. User Name Update
     fetchUserProfile().then(user => {
         const userNameDisplay = document.getElementById('user-name-display');
         if(userNameDisplay && user.name) {
@@ -52,18 +51,12 @@ function renderCategoryFilters(books) {
     const container = document.getElementById('category-filters');
     if(!container) return;
 
-    // 1. Saare moods collect karo (Unique only)
     const allMoods = new Set();
     books.forEach(book => {
-        if(book.moods) {
-            book.moods.forEach(mood => allMoods.add(mood));
-        }
+        if(book.moods) book.moods.forEach(mood => allMoods.add(mood));
     });
 
-    // 2. HTML banao (Pehle "All" button)
     let html = `<button class="filter-btn active" onclick="app.filterLibrary('All')" id="filter-all">All Books</button>`;
-
-    // 3. Baaki moods ke buttons add karo
     allMoods.forEach(mood => {
         html += `<button class="filter-btn" onclick="app.filterLibrary('${mood}')" id="filter-${mood}">${mood}</button>`;
     });
@@ -72,16 +65,14 @@ function renderCategoryFilters(books) {
 }
 
 function filterLibrary(category) {
-    // 1. Buttons ki styling update karo
     document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
     
     const btnId = category === 'All' ? 'filter-all' : `filter-${category}`;
     const activeBtn = document.getElementById(btnId);
     if(activeBtn) activeBtn.classList.add('active');
 
-    // 2. Books Filter karo
     if (category === 'All') {
-        renderLibrary(allBooks); // Sab dikhao
+        renderLibrary(allBooks);
     } else {
         const filtered = allBooks.filter(book => 
             book.moods && book.moods.includes(category)
@@ -89,10 +80,8 @@ function filterLibrary(category) {
         renderLibrary(filtered);
     }
 
-    // GSAP Animation
     if(window.gsap) gsap.fromTo(".book-card", {y: 10, opacity: 0}, {y: 0, opacity: 1, stagger: 0.05, duration: 0.3});
 }
-
 
 // --- 📜 HISTORY LOGIC ---
 async function renderHistory() {
@@ -127,6 +116,7 @@ async function renderHistory() {
                     <p class="percent-text">${percent}% Completed</p>
                 </div>
             `;
+            // Click karne par openPlayer smart logic handle karega
             card.onclick = () => openPlayer(book);
             grid.appendChild(card);
         }
@@ -204,8 +194,9 @@ function renderLibrary(books) {
 
         const card = document.createElement('div');
         card.className = 'book-card';
+        // 🚀 Lazy Loading Added
         card.innerHTML = `
-            <img src="${book.cover}">
+            <img src="${book.cover}" loading="lazy"> 
             <h3>${book.title}</h3>
             <p>${book.author}</p>
             ${moodHTML} `;
@@ -214,16 +205,64 @@ function renderLibrary(books) {
     });
 }
 
-// --- PLAYER ---
-function openPlayer(book) {
+// --- 🎧 SMART PLAYER LOGIC ---
+async function openPlayer(partialBook) {
     switchView('player');
-    document.getElementById('detail-cover').src = book.cover;
-    document.getElementById('detail-title').innerText = book.title;
-    document.getElementById('detail-author').innerText = book.author;
-    document.getElementById('blur-bg').style.backgroundImage = `url('${book.cover}')`;
-    document.getElementById('total-chapters').innerText = `${book.chapters.length} Chapters`;
 
+    // 1. Instant UI Update (User wait nahi karega)
+    document.getElementById('detail-cover').src = partialBook.cover;
+    document.getElementById('detail-title').innerText = partialBook.title;
+    document.getElementById('detail-author').innerText = partialBook.author;
+    document.getElementById('blur-bg').style.backgroundImage = `url('${partialBook.cover}')`;
+    
     const list = document.getElementById('chapter-list');
+    list.innerHTML = ''; // Clear old list
+
+    // 2. CHECK: Kya Chapters Signed & Loaded hain?
+    // (Hum check karte hain ki chapters array hai aur pehle chapter me URL hai)
+    if (partialBook.chapters && partialBook.chapters.length > 0 && partialBook.chapters[0].url) {
+        console.log("⚡ Cached chapters found!");
+        renderChapterList(partialBook);
+        renderComments(partialBook.comments || []);
+        setupPlayButton(partialBook);
+        return; 
+    }
+
+    // 3. AGAR NAHI HAIN -> SKELETON LOAD (Shimmer Effect)
+    console.log("☁️ Fetching signed chapters...");
+    list.innerHTML = `
+        <div class="skeleton-loader"></div>
+        <div class="skeleton-loader"></div>
+        <div class="skeleton-loader"></div>
+        <p style="text-align:center; opacity:0.7; font-size:0.9rem; margin-top:15px;">
+            <i class="fas fa-satellite-dish"></i> Fetching Secure Audio...
+        </p>
+    `;
+
+    // 4. API CALL (Backend se chapters sign karwao)
+    const fullBook = await fetchBookDetails(partialBook.bookId);
+
+    if (fullBook) {
+        // 5. CACHE UPDATE (Global array me save kar lo taaki agli baar load na ho)
+        const index = allBooks.findIndex(b => b.bookId === partialBook.bookId);
+        if (index !== -1) {
+            // Hum purane object ko naye signed data se merge kar rahe hain
+            allBooks[index] = { ...allBooks[index], ...fullBook };
+        }
+        
+        // 6. Ab Real List Render karo
+        renderChapterList(fullBook);
+        renderComments(fullBook.comments || []);
+        setupPlayButton(fullBook);
+    } else {
+        list.innerHTML = `<p style="color: #ff4444; text-align: center;">❌ Failed to load chapters.</p>`;
+    }
+}
+
+// --- HELPER: Render Chapter List ---
+function renderChapterList(book) {
+    const list = document.getElementById('chapter-list');
+    document.getElementById('total-chapters').innerText = `${book.chapters.length} Chapters`;
     list.innerHTML = '';
     
     book.chapters.forEach((chap, idx) => {
@@ -232,25 +271,10 @@ function openPlayer(book) {
         li.onclick = () => { Player.loadBook(book, idx); updateUI(true); };
         list.appendChild(li);
     });
+}
 
-    renderComments(book.comments || []);
-
-    const postBtn = document.getElementById('post-comment-btn');
-    if(postBtn) {
-        postBtn.onclick = () => {
-            const input = document.getElementById('comment-input');
-            const text = input.value;
-            if(!text) return;
-
-            const state = Player.getCurrentState();
-            const currentTime = Math.floor(state.currentTime || 0);
-            const newComment = { time: currentTime, user: "You", text: text };
-            renderSingleComment(newComment); // Local update
-            input.value = ''; 
-            const commentList = document.getElementById('comments-list');
-            commentList.scrollTop = commentList.scrollHeight;
-        };
-    }
+// --- HELPER: Setup Main Play Button ---
+function setupPlayButton(book) {
     const mainBtn = document.getElementById('main-play-btn');
     if(mainBtn) mainBtn.onclick = () => { Player.loadBook(book, 0); updateUI(true); };
 }
@@ -289,6 +313,7 @@ function setupListeners() {
     const seekFwd = document.getElementById('seek-fwd-btn');
     const progress = document.getElementById('progress-bar');
     const audio = Player.getAudioElement();
+    const postBtn = document.getElementById('post-comment-btn');
 
     // SEARCH LOGIC
     const searchInput = document.getElementById('search-input');
@@ -302,6 +327,23 @@ function setupListeners() {
             );
             renderLibrary(filteredBooks);
         });
+    }
+
+    // Comment Post Logic
+    if(postBtn) {
+        postBtn.onclick = () => {
+            const input = document.getElementById('comment-input');
+            const text = input.value;
+            if(!text) return;
+
+            const state = Player.getCurrentState();
+            const currentTime = Math.floor(state.currentTime || 0);
+            const newComment = { time: currentTime, user: "You", text: text };
+            renderSingleComment(newComment); // Local update
+            input.value = ''; 
+            const commentList = document.getElementById('comments-list');
+            commentList.scrollTop = commentList.scrollHeight;
+        };
     }
 
     if(playBtn) playBtn.onclick = () => {
@@ -355,5 +397,24 @@ function formatTime(s) {
     const sec = Math.floor(s%60);
     return `${m}:${sec<10?'0'+sec:sec}`;
 }
+
+// --- 🎨 DYNAMIC STYLES (Skeleton Loader) ---
+const style = document.createElement('style');
+style.textContent = `
+    .skeleton-loader {
+        height: 45px;
+        margin: 10px 0;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.05);
+        background-image: linear-gradient(90deg, rgba(255, 255, 255, 0) 0, rgba(255, 255, 255, 0.1) 20%, rgba(255, 255, 255, 0.2) 60%, rgba(255, 255, 255, 0) 100%);
+        background-size: 200% 100%;
+        animation: skeleton-shimmer 2s infinite linear;
+    }
+    @keyframes skeleton-shimmer {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
+    }
+`;
+document.head.appendChild(style);
 
 init();

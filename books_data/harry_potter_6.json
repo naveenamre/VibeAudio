@@ -2,19 +2,132 @@
   "bookId": "book_6",
   "title": "Harry Potter and the Half-Blood Prince",
   "author": "J.K. Rowling",
-  "moods": ["Fiction", "Harry Potter"],
-  
+  "moods": [
+    "Fiction",
+    "Harry Potter"
+  ],
   "//_COMMENT_COVER": "Niche dekho: Agar R2 hai to Folder/File.jpg, agar bahar ka hai to https://...",
-  "cover": "Cover Page/Harry Potter and the Half-Blood Prince.jpg",
-
+  "cover": "https://m.media-amazon.com/images/I/81DN1723hUL._SL1500_.jpg",
   "chapters": [
     {
-      "name": "Chapter 1: Shuruat (Example R2)",
-      "url": "Harry Potter and the Half-Blood Prince/01-chapter.mp3"
+      "name": "Chapter 1: The Other Minister",
+      "url": "Harry Potter and the Half-Blood Prince/01-chapter.m4a"
     },
     {
-      "name": "Chapter 2: Kahani Aage (Example Internet Archive)",
-      "url": "https://archive.org/download/some-book/chapter2.mp3"
+      "name": "Chapter 2: Spinner's End",
+      "url": "Harry Potter and the Half-Blood Prince/02-chapter.m4a"
+    },
+    {
+      "name": "Chapter 3: Will and Won't",
+      "url": "Harry Potter and the Half-Blood Prince/03-chapter.m4a"
+    },
+    {
+      "name": "Chapter 4: Horace Slughorn",
+      "url": "Harry Potter and the Half-Blood Prince/04-chapter.m4a"
+    },
+    {
+      "name": "Chapter 5: An Excess of Phlegm",
+      "url": "Harry Potter and the Half-Blood Prince/05-chapter.m4a"
+    },
+    {
+      "name": "Chapter 6: Draco's Detour",
+      "url": "Harry Potter and the Half-Blood Prince/06-chapter.m4a"
+    },
+    {
+      "name": "Chapter 7: The Slug Club",
+      "url": "Harry Potter and the Half-Blood Prince/07-chapter.m4a"
+    },
+    {
+      "name": "Chapter 8: Snape Victorious",
+      "url": "Harry Potter and the Half-Blood Prince/08-chapter.m4a"
+    },
+    {
+      "name": "Chapter 9: The Half-Blood Prince",
+      "url": "Harry Potter and the Half-Blood Prince/09-chapter.m4a"
+    },
+    {
+      "name": "Chapter 10: The House of Gaunt",
+      "url": "Harry Potter and the Half-Blood Prince/10-chapter.m4a"
+    },
+    {
+      "name": "Chapter 11: Hermione's Helping Hand",
+      "url": "Harry Potter and the Half-Blood Prince/11-chapter.m4a"
+    },
+    {
+      "name": "Chapter 12: Silver and Opals",
+      "url": "Harry Potter and the Half-Blood Prince/12-chapter.m4a"
+    },
+    {
+      "name": "Chapter 13: The Secret Riddle",
+      "url": "Harry Potter and the Half-Blood Prince/13-chapter.m4a"
+    },
+    {
+      "name": "Chapter 14: Felix Felicis",
+      "url": "Harry Potter and the Half-Blood Prince/14-chapter.m4a"
+    },
+    {
+      "name": "Chapter 15: The Unbreakable Vow",
+      "url": "Harry Potter and the Half-Blood Prince/15-chapter.m4a"
+    },
+    {
+      "name": "Chapter 16: A Very Frosty Christmas",
+      "url": "Harry Potter and the Half-Blood Prince/16-chapter.m4a"
+    },
+    {
+      "name": "Chapter 17: A Sluggish Memory",
+      "url": "Harry Potter and the Half-Blood Prince/17-chapter.m4a"
+    },
+    {
+      "name": "Chapter 18: Birthday Surprises",
+      "url": "Harry Potter and the Half-Blood Prince/18-chapter.m4a"
+    },
+    {
+      "name": "Chapter 19: Elf Tails",
+      "url": "Harry Potter and the Half-Blood Prince/19-chapter.m4a"
+    },
+    {
+      "name": "Chapter 20: Lord Voldemort's Request",
+      "url": "Harry Potter and the Half-Blood Prince/20-chapter.m4a"
+    },
+    {
+      "name": "Chapter 21: The Unknowable Room",
+      "url": "Harry Potter and the Half-Blood Prince/21-chapter.m4a"
+    },
+    {
+      "name": "Chapter 22: After the Burial",
+      "url": "Harry Potter and the Half-Blood Prince/22-chapter.m4a"
+    },
+    {
+      "name": "Chapter 23: Horcruxes",
+      "url": "Harry Potter and the Half-Blood Prince/23-chapter.m4a"
+    },
+    {
+      "name": "Chapter 24: Sectumsempra",
+      "url": "Harry Potter and the Half-Blood Prince/24-chapter.m4a"
+    },
+    {
+      "name": "Chapter 25: The Seer Overheard",
+      "url": "Harry Potter and the Half-Blood Prince/25-chapter.m4a"
+    },
+    {
+      "name": "Chapter 26: The Cave",
+      "url": "Harry Potter and the Half-Blood Prince/26-chapter.m4a"
+    },
+    {
+      "name": "Chapter 27: The Lightning-Struck Tower",
+      "url": "Harry Potter and the Half-Blood Prince/27-chapter.m4a"
+    },
+    {
+      "name": "Chapter 28: Flight of the Prince",
+      "url": "Harry Potter and the Half-Blood Prince/28-chapter.m4a"
+    },
+    {
+      "name": "Chapter 29: The Phoenix Lament",
+      "url": "Harry Potter and the Half-Blood Prince/29-chapter.m4a"
+    },
+    {
+      "name": "Chapter 30: The White Tomb",
+      "url": "Harry Potter and the Half-Blood Prince/30-chapter.m4a"
     }
   ]
 }

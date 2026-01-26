@@ -2,19 +2,80 @@
   "bookId": "book_1",
   "title": "Harry Potter and the Philosopher's Stone",
   "author": "J.K. Rowling",
-  "moods": ["Fiction", "Harry Potter"],
-  
+  "moods": [
+    "Fiction",
+    "Harry Potter"
+  ],
   "//_COMMENT_COVER": "Niche dekho: Agar R2 hai to Folder/File.jpg, agar bahar ka hai to https://...",
-  "cover": "Cover Page/Harry Potter and the Philosopher's Stone.jpg",
-
+  "cover": "https://m.media-amazon.com/images/I/81q77Q39nEL._SY522_.jpg",
   "chapters": [
     {
-      "name": "Chapter 1: The boy who lived",
+      "name": "Chapter 1: The Boy Who Lived",
       "url": "Harry Potter and the Philosopher's Stone/01-chapter.m4a"
     },
     {
-      "name": "Chapter 2: Vanishing Glass",
+      "name": "Chapter 2: The Vanishing Glass",
       "url": "Harry Potter and the Philosopher's Stone/02-chapter.ogg"
+    },
+    {
+      "name": "Chapter 3: The Letters from No One",
+      "url": "Harry Potter and the Philosopher's Stone/03-chapter.mp3"
+    },
+    {
+      "name": "Chapter 4: The Keeper of the Keys",
+      "url": "Harry Potter and the Philosopher's Stone/04-chapter.mp3"
+    },
+    {
+      "name": "Chapter 5: Diagon Alley",
+      "url": "Harry Potter and the Philosopher's Stone/05-chapter.mp3"
+    },
+    {
+      "name": "Chapter 6: The Journey from Platform Nine and Three-Quarters",
+      "url": "Harry Potter and the Philosopher's Stone/06-chapter.mp3"
+    },
+    {
+      "name": "Chapter 7: The Sorting Hat",
+      "url": "Harry Potter and the Philosopher's Stone/07-chapter.mp3"
+    },
+    {
+      "name": "Chapter 8: The Potions Master",
+      "url": "Harry Potter and the Philosopher's Stone/08-chapter.mp3"
+    },
+    {
+      "name": "Chapter 9: The Midnight Duel",
+      "url": "Harry Potter and the Philosopher's Stone/09-chapter.mp3"
+    },
+    {
+      "name": "Chapter 10: Halloween",
+      "url": "Harry Potter and the Philosopher's Stone/10-chapter.mp3"
+    },
+    {
+      "name": "Chapter 11: Quidditch",
+      "url": "Harry Potter and the Philosopher's Stone/11-chapter.mp3"
+    },
+    {
+      "name": "Chapter 12: The Mirror of Erised",
+      "url": "Harry Potter and the Philosopher's Stone/12-chapter.mp3"
+    },
+    {
+      "name": "Chapter 13: Nicolas Flamel",
+      "url": "Harry Potter and the Philosopher's Stone/13-chapter.mp3"
+    },
+    {
+      "name": "Chapter 14: Norbert the Norwegian Ridgeback",
+      "url": "Harry Potter and the Philosopher's Stone/14-chapter.mp3"
+    },
+    {
+      "name": "Chapter 15: The Forbidden Forest",
+      "url": "Harry Potter and the Philosopher's Stone/15-chapter.mp3"
+    },
+    {
+      "name": "Chapter 16: Through the Trapdoor",
+      "url": "Harry Potter and the Philosopher's Stone/16-chapter.mp3"
+    },
+    {
+      "name": "Chapter 17: The Man with Two Faces",
+      "url": "Harry Potter and the Philosopher's Stone/17-chapter.mp3"
     }
   ]
 }

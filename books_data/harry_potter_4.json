@@ -2,19 +2,160 @@
   "bookId": "book_4",
   "title": "Harry Potter and the Goblet of Fire",
   "author": "J.K. Rowling",
-  "moods": ["Fiction", "Harry Potter"],
-  
+  "moods": [
+    "Fiction",
+    "Harry Potter"
+  ],
   "//_COMMENT_COVER": "Niche dekho: Agar R2 hai to Folder/File.jpg, agar bahar ka hai to https://...",
-  "cover": "Cover Page/Harry Potter and the Goblet of Fire.jpg",
-
+  "cover": "https://m.media-amazon.com/images/I/81zeKRGCPpL._SL1500_.jpg",
   "chapters": [
     {
-      "name": "Chapter 1: Shuruat (Example R2)",
-      "url": "Harry Potter and the Goblet of Fire/01-chapter.mp3"
+      "name": "Chapter 1: The Riddle House",
+      "url": "Harry Potter and the Goblet of Fire/01-chapter.m4a"
     },
     {
-      "name": "Chapter 2: Kahani Aage (Example Internet Archive)",
-      "url": "https://archive.org/download/some-book/chapter2.mp3"
+      "name": "Chapter 2: The Scar",
+      "url": "Harry Potter and the Goblet of Fire/02-chapter.m4a"
+    },
+    {
+      "name": "Chapter 3: The Invitation",
+      "url": "Harry Potter and the Goblet of Fire/03-chapter.m4a"
+    },
+    {
+      "name": "Chapter 4: Back to the Burrow",
+      "url": "Harry Potter and the Goblet of Fire/04-chapter.m4a"
+    },
+    {
+      "name": "Chapter 5: Weasleys' Wizard Wheezes",
+      "url": "Harry Potter and the Goblet of Fire/05-chapter.m4a"
+    },
+    {
+      "name": "Chapter 6: The Portkey",
+      "url": "Harry Potter and the Goblet of Fire/06-chapter.m4a"
+    },
+    {
+      "name": "Chapter 7: Bagman and Crouch",
+      "url": "Harry Potter and the Goblet of Fire/07-chapter.m4a"
+    },
+    {
+      "name": "Chapter 8: The Quidditch World Cup",
+      "url": "Harry Potter and the Goblet of Fire/08-chapter.m4a"
+    },
+    {
+      "name": "Chapter 9: The Dark Mark",
+      "url": "Harry Potter and the Goblet of Fire/09-chapter.m4a"
+    },
+    {
+      "name": "Chapter 10: Mayhem at the Ministry",
+      "url": "Harry Potter and the Goblet of Fire/10-chapter.m4a"
+    },
+    {
+      "name": "Chapter 11: Aboard the Hogwarts Express",
+      "url": "Harry Potter and the Goblet of Fire/11-chapter.m4a"
+    },
+    {
+      "name": "Chapter 12: The Triwizard Tournament",
+      "url": "Harry Potter and the Goblet of Fire/12-chapter.m4a"
+    },
+    {
+      "name": "Chapter 13: Mad-Eye Moody",
+      "url": "Harry Potter and the Goblet of Fire/13-chapter.m4a"
+    },
+    {
+      "name": "Chapter 14: The Unforgivable Curses",
+      "url": "Harry Potter and the Goblet of Fire/14-chapter.m4a"
+    },
+    {
+      "name": "Chapter 15: Beauxbatons and Durmstrang",
+      "url": "Harry Potter and the Goblet of Fire/15-chapter.m4a"
+    },
+    {
+      "name": "Chapter 16: The Goblet of Fire",
+      "url": "Harry Potter and the Goblet of Fire/16-chapter.m4a"
+    },
+    {
+      "name": "Chapter 17: The Four Champions",
+      "url": "Harry Potter and the Goblet of Fire/17-chapter.m4a"
+    },
+    {
+      "name": "Chapter 18: The Weighing of the Wands",
+      "url": "Harry Potter and the Goblet of Fire/18-chapter.m4a"
+    },
+    {
+      "name": "Chapter 19: The Hungarian Horntail",
+      "url": "Harry Potter and the Goblet of Fire/19-chapter.m4a"
+    },
+    {
+      "name": "Chapter 20: The First Task",
+      "url": "Harry Potter and the Goblet of Fire/20-chapter.m4a"
+    },
+    {
+      "name": "Chapter 21: The House-Elf Liberation Front",
+      "url": "Harry Potter and the Goblet of Fire/21-chapter.m4a"
+    },
+    {
+      "name": "Chapter 22: The Unexpected Task",
+      "url": "Harry Potter and the Goblet of Fire/22-chapter.m4a"
+    },
+    {
+      "name": "Chapter 23: The Yule Ball",
+      "url": "Harry Potter and the Goblet of Fire/23-chapter.m4a"
+    },
+    {
+      "name": "Chapter 24: Rita Skeeter's Scoop",
+      "url": "Harry Potter and the Goblet of Fire/24-chapter.m4a"
+    },
+    {
+      "name": "Chapter 25: The Egg and the Eye",
+      "url": "Harry Potter and the Goblet of Fire/25-chapter.m4a"
+    },
+    {
+      "name": "Chapter 26: The Second Task",
+      "url": "Harry Potter and the Goblet of Fire/26-chapter.m4a"
+    },
+    {
+      "name": "Chapter 27: Padfoot Returns",
+      "url": "Harry Potter and the Goblet of Fire/27-chapter.m4a"
+    },
+    {
+      "name": "Chapter 28: The Madness of Mr. Crouch",
+      "url": "Harry Potter and the Goblet of Fire/28-chapter.m4a"
+    },
+    {
+      "name": "Chapter 29: The Dream",
+      "url": "Harry Potter and the Goblet of Fire/29-chapter.m4a"
+    },
+    {
+      "name": "Chapter 30: The Pensieve",
+      "url": "Harry Potter and the Goblet of Fire/30-chapter.m4a"
+    },
+    {
+      "name": "Chapter 31: The Third Task",
+      "url": "Harry Potter and the Goblet of Fire/31-chapter.m4a"
+    },
+    {
+      "name": "Chapter 32: Flesh, Blood, and Bone",
+      "url": "Harry Potter and the Goblet of Fire/32-chapter.m4a"
+    },
+    {
+      "name": "Chapter 33: The Death Eaters",
+      "url": "Harry Potter and the Goblet of Fire/33-chapter.m4a"
+    },
+    {
+      "name": "Chapter 34: Priori Incantatem",
+      "url": "Harry Potter and the Goblet of Fire/34-chapter.m4a"
+    },
+    {
+      "name": "Chapter 35: Veritaserum",
+      "url": "Harry Potter and the Goblet of Fire/35-chapter.m4a"
+    },
+    {
+      "name": "Chapter 36: The Parting of the Ways",
+      "url": "Harry Potter and the Goblet of Fire/36-chapter.m4a"
+    },
+    {
+      "name": "Chapter 37: The Beginning",
+      "url": "Harry Potter and the Goblet of Fire/37-chapter.m4a"
     }
   ]
 }

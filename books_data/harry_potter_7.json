@@ -2,19 +2,160 @@
   "bookId": "book_7",
   "title": "Harry Potter and the Deathly Hallows",
   "author": "J.K. Rowling",
-  "moods": ["Fiction", "Harry Potter"],
-  
+  "moods": [
+    "Fiction",
+    "Harry Potter"
+  ],
   "//_COMMENT_COVER": "Niche dekho: Agar R2 hai to Folder/File.jpg, agar bahar ka hai to https://...",
-  "cover": "Cover Page/Harry Potter and the Deathly Hallows.jpg",
-
+  "cover": "https://m.media-amazon.com/images/I/81aCMT1zKtL._SL1500_.jpg",
   "chapters": [
     {
-      "name": "Chapter 1: Shuruat (Example R2)",
-      "url": "Harry Potter and the Deathly Hallows/01-chapter.mp3"
+      "name": "Chapter 1: The Dark Lord Ascending",
+      "url": "Harry Potter and the Deathly Hallows/01-chapter.m4a"
     },
     {
-      "name": "Chapter 2: Kahani Aage (Example Internet Archive)",
-      "url": "https://archive.org/download/some-book/chapter2.mp3"
+      "name": "Chapter 2: In Memoriam",
+      "url": "Harry Potter and the Deathly Hallows/02-chapter.m4a"
+    },
+    {
+      "name": "Chapter 3: The Dursleys Departing",
+      "url": "Harry Potter and the Deathly Hallows/03-chapter.m4a"
+    },
+    {
+      "name": "Chapter 4: The Seven Potters",
+      "url": "Harry Potter and the Deathly Hallows/04-chapter.m4a"
+    },
+    {
+      "name": "Chapter 5: Fallen Warrior",
+      "url": "Harry Potter and the Deathly Hallows/05-chapter.m4a"
+    },
+    {
+      "name": "Chapter 6: The Ghoul in Pyjamas",
+      "url": "Harry Potter and the Deathly Hallows/06-chapter.m4a"
+    },
+    {
+      "name": "Chapter 7: The Will of Albus Dumbledore",
+      "url": "Harry Potter and the Deathly Hallows/07-chapter.m4a"
+    },
+    {
+      "name": "Chapter 8: The Wedding",
+      "url": "Harry Potter and the Deathly Hallows/08-chapter.m4a"
+    },
+    {
+      "name": "Chapter 9: A Place to Hide",
+      "url": "Harry Potter and the Deathly Hallows/09-chapter.m4a"
+    },
+    {
+      "name": "Chapter 10: Kreacher's Tale",
+      "url": "Harry Potter and the Deathly Hallows/10-chapter.m4a"
+    },
+    {
+      "name": "Chapter 11: The Bribe",
+      "url": "Harry Potter and the Deathly Hallows/11-chapter.m4a"
+    },
+    {
+      "name": "Chapter 12: Magic is Might",
+      "url": "Harry Potter and the Deathly Hallows/12-chapter.m4a"
+    },
+    {
+      "name": "Chapter 13: The Muggle-Born Registration Commission",
+      "url": "Harry Potter and the Deathly Hallows/13-chapter.m4a"
+    },
+    {
+      "name": "Chapter 14: The Thief",
+      "url": "Harry Potter and the Deathly Hallows/14-chapter.m4a"
+    },
+    {
+      "name": "Chapter 15: The Goblin's Revenge",
+      "url": "Harry Potter and the Deathly Hallows/15-chapter.m4a"
+    },
+    {
+      "name": "Chapter 16: Godric's Hollow",
+      "url": "Harry Potter and the Deathly Hallows/16-chapter.m4a"
+    },
+    {
+      "name": "Chapter 17: Bathilda's Secret",
+      "url": "Harry Potter and the Deathly Hallows/17-chapter.m4a"
+    },
+    {
+      "name": "Chapter 18: The Life and Lies of Albus Dumbledore",
+      "url": "Harry Potter and the Deathly Hallows/18-chapter.m4a"
+    },
+    {
+      "name": "Chapter 19: The Silver Doe",
+      "url": "Harry Potter and the Deathly Hallows/19-chapter.m4a"
+    },
+    {
+      "name": "Chapter 20: Xenophilius Lovegood",
+      "url": "Harry Potter and the Deathly Hallows/20-chapter.m4a"
+    },
+    {
+      "name": "Chapter 21: The Tale of the Three Brothers",
+      "url": "Harry Potter and the Deathly Hallows/21-chapter.m4a"
+    },
+    {
+      "name": "Chapter 22: The Deathly Hallows",
+      "url": "Harry Potter and the Deathly Hallows/22-chapter.m4a"
+    },
+    {
+      "name": "Chapter 23: Malfoy Manor",
+      "url": "Harry Potter and the Deathly Hallows/23-chapter.m4a"
+    },
+    {
+      "name": "Chapter 24: The Wandmaker",
+      "url": "Harry Potter and the Deathly Hallows/24-chapter.m4a"
+    },
+    {
+      "name": "Chapter 25: Shell Cottage",
+      "url": "Harry Potter and the Deathly Hallows/25-chapter.m4a"
+    },
+    {
+      "name": "Chapter 26: Gringotts",
+      "url": "Harry Potter and the Deathly Hallows/26-chapter.m4a"
+    },
+    {
+      "name": "Chapter 27: The Final Hiding Place",
+      "url": "Harry Potter and the Deathly Hallows/27-chapter.m4a"
+    },
+    {
+      "name": "Chapter 28: The Missing Mirror",
+      "url": "Harry Potter and the Deathly Hallows/28-chapter.m4a"
+    },
+    {
+      "name": "Chapter 29: The Lost Diadem",
+      "url": "Harry Potter and the Deathly Hallows/29-chapter.m4a"
+    },
+    {
+      "name": "Chapter 30: The Sacking of Severus Snape",
+      "url": "Harry Potter and the Deathly Hallows/30-chapter.m4a"
+    },
+    {
+      "name": "Chapter 31: The Battle of Hogwarts",
+      "url": "Harry Potter and the Deathly Hallows/31-chapter.m4a"
+    },
+    {
+      "name": "Chapter 32: The Elder Wand",
+      "url": "Harry Potter and the Deathly Hallows/32-chapter.m4a"
+    },
+    {
+      "name": "Chapter 33: The Prince's Tale",
+      "url": "Harry Potter and the Deathly Hallows/33-chapter.m4a"
+    },
+    {
+      "name": "Chapter 34: The Forest Again",
+      "url": "Harry Potter and the Deathly Hallows/34-chapter.m4a"
+    },
+    {
+      "name": "Chapter 35: King's Cross",
+      "url": "Harry Potter and the Deathly Hallows/35-chapter.m4a"
+    },
+    {
+      "name": "Chapter 36: The Flaw in the Plan",
+      "url": "Harry Potter and the Deathly Hallows/36-chapter.m4a"
+    },
+    {
+      "name": "Chapter 37: Epilogue: Nineteen Years Later",
+      "url": "Harry Potter and the Deathly Hallows/37-chapter.m4a"
     }
   ]
 }

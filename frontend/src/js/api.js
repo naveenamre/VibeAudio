@@ -1,16 +1,22 @@
 // --- 📡 API MANAGER (Cloud Connection Center) ---
 
 // 👇 APNE LAMBDA URLS YAHAN PASTE KARO (Quotes ke andar)
-// 1. Get Books Lambda URL
+
+// 1. Get Books Lambda URL (UPDATED: Jo sirf List lata hai)
+// Isme wahi purana URL chalega agar tumne code update karke deploy kar diya hai
 const API_URL = "https://5adznqob5lrnexreqzi5fmrzly0gzsuz.lambda-url.ap-south-1.on.aws/"; 
 
-// 2. Save Progress Lambda URL
+// 2. 🆕 Get Book Details Lambda URL (JO ABHI BANAYA HAI)
+// Yahan Naya Lambda URL Daalo jo Chapters sign karta hai 👇
+const DETAILS_API_URL = "https://sjl6oq3rk6tssebvh3pzrvoy6e0tzhfb.lambda-url.ap-south-1.on.aws/"; 
+
+// 3. Save Progress Lambda URL (Same as before)
 const PROGRESS_URL = "https://rrsv2aw64zkkgpdhkamz57ftr40tchro.lambda-url.ap-south-1.on.aws/"; 
 
-// 3. Get Progress Lambda URL
+// 4. Get Progress Lambda URL (Same as before)
 const GET_PROGRESS_URL = "https://2wc6byruxj32gfzka622p22pju0qitcw.lambda-url.ap-south-1.on.aws/"; 
 
-// 4. Auth/Login Lambda URL (🆕 Naya wala)
+// 5. Auth/Login Lambda URL (Same as before)
 const AUTH_URL = "https://aj7bwk3d72tzj5n2r43lusryg40tosik.lambda-url.ap-south-1.on.aws/"; 
 
 
@@ -38,9 +44,9 @@ export async function loginUser(code, name) {
     }
 }
 
-// --- 📚 FETCH BOOKS ---
+// --- 📚 1. FETCH BOOK LIST (Lite Mode - Fast) ---
 export async function fetchAllBooks() {
-    console.log("☁️ Fetching books from AWS Cloud...");
+    console.log("☁️ Fetching book list (Menu)...");
     try {
         const response = await fetch(API_URL);
         
@@ -49,8 +55,8 @@ export async function fetchAllBooks() {
         }
         
         const data = await response.json();
-        console.log("✅ Books received:", data);
-        return data;
+        console.log(`✅ Menu received: ${data.length} books`);
+        return data; // Isme ab chapters nahi honge, sirf info hogi
 
     } catch (error) {
         console.error("❌ Cloud Error (Books):", error);
@@ -58,12 +64,36 @@ export async function fetchAllBooks() {
     }
 }
 
+// --- ⚡ 2. FETCH BOOK DETAILS (Deep Mode - On Click) ---
+export async function fetchBookDetails(bookId) {
+    console.log(`⚡ Fetching chapters for Book ID: ${bookId}...`);
+    try {
+        const response = await fetch(DETAILS_API_URL, {
+            method: "POST", // Hum ID bhej rahe hain
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ bookId: bookId })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log("✅ Chapters signed & received!");
+        return data; // Ye full book object return karega WITH chapters
+
+    } catch (error) {
+        console.error("❌ Cloud Error (Details):", error);
+        return null;
+    }
+}
+
 // --- 👤 FETCH USER PROFILE ---
 export async function fetchUserProfile() {
     const user = getCurrentUser();
     return {
-        name: user ? user.name : "Guest Vibe", // ✨ Asli Naam
-        streak: 5, // Abhi ke liye dummy (baad me database se layenge)
+        name: user ? user.name : "Guest Vibe",
+        streak: 5, 
         totalBooks: 12,
         totalHours: "45h"
     };
@@ -79,7 +109,7 @@ export async function saveUserProgress(bookId, chapterIndex, currentTime, totalD
     }
 
     const payload = {
-        userId: user.userId, // ✨ Dynamic User ID
+        userId: user.userId,
         bookId: bookId.toString(),
         chapterIndex: chapterIndex,
         currentTime: currentTime,
@@ -101,11 +131,10 @@ export async function saveUserProgress(bookId, chapterIndex, currentTime, totalD
 // --- 🔄 FETCH PROGRESS (Smart Resume) ---
 export async function fetchUserProgress() {
     const user = getCurrentUser();
-    if (!user) return []; // Guest ke liye empty
+    if (!user) return [];
 
     console.log(`☁️ Checking cloud progress for ${user.name}...`);
     try {
-        // URL me userId bhejo query parameter ki tarah
         const response = await fetch(`${GET_PROGRESS_URL}?userId=${user.userId}`);
         
         if (!response.ok) throw new Error("Failed to fetch progress");

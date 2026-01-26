@@ -2,19 +2,84 @@
   "bookId": "book_2",
   "title": "Harry Potter and the Chamber of Secrets",
   "author": "J.K. Rowling",
-  "moods": ["Fiction", "Harry Potter"],
-  
+  "moods": [
+    "Fiction",
+    "Harry Potter"
+  ],
   "//_COMMENT_COVER": "Niche dekho: Agar R2 hai to Folder/File.jpg, agar bahar ka hai to https://...",
-  "cover": "Cover Page/Harry Potter and the Chamber of Secrets.jpg",
-
+  "cover": "https://m.media-amazon.com/images/I/818umIdoruL._SL1500_.jpg",
   "chapters": [
     {
-      "name": "Chapter 1: Shuruat (Example R2)",
-      "url": "Harry Potter and the Chamber of Secrets/01-chapter.mp3"
+      "name": "Chapter 1: The Worst Birthday",
+      "url": "Harry Potter and the Chamber of Secrets/01-chapter.m4a"
     },
     {
-      "name": "Chapter 2: Kahani Aage (Example Internet Archive)",
-      "url": "https://archive.org/download/some-book/chapter2.mp3"
+      "name": "Chapter 2: Dobby's Warning",
+      "url": "Harry Potter and the Chamber of Secrets/02-chapter.m4a"
+    },
+    {
+      "name": "Chapter 3: The Burrow",
+      "url": "Harry Potter and the Chamber of Secrets/03-chapter.m4a"
+    },
+    {
+      "name": "Chapter 4: At Flourish and Blotts",
+      "url": "Harry Potter and the Chamber of Secrets/04-chapter.m4a"
+    },
+    {
+      "name": "Chapter 5: The Whomping Willow",
+      "url": "Harry Potter and the Chamber of Secrets/05-chapter.m4a"
+    },
+    {
+      "name": "Chapter 6: Gilderoy Lockhart",
+      "url": "Harry Potter and the Chamber of Secrets/06-chapter.m4a"
+    },
+    {
+      "name": "Chapter 7: Mudbloods and Murmurs",
+      "url": "Harry Potter and the Chamber of Secrets/07-chapter.m4a"
+    },
+    {
+      "name": "Chapter 8: The Deathday Party",
+      "url": "Harry Potter and the Chamber of Secrets/08-chapter.m4a"
+    },
+    {
+      "name": "Chapter 9: The Writing on the Wall",
+      "url": "Harry Potter and the Chamber of Secrets/09-chapter.m4a"
+    },
+    {
+      "name": "Chapter 10: The Rogue Bludger",
+      "url": "Harry Potter and the Chamber of Secrets/10-chapter.m4a"
+    },
+    {
+      "name": "Chapter 11: The Dueling Club",
+      "url": "Harry Potter and the Chamber of Secrets/11-chapter.m4a"
+    },
+    {
+      "name": "Chapter 12: The Polyjuice Potion",
+      "url": "Harry Potter and the Chamber of Secrets/12-chapter.m4a"
+    },
+    {
+      "name": "Chapter 13: The Very Secret Diary",
+      "url": "Harry Potter and the Chamber of Secrets/13-chapter.m4a"
+    },
+    {
+      "name": "Chapter 14: Cornelius Fudge",
+      "url": "Harry Potter and the Chamber of Secrets/14-chapter.m4a"
+    },
+    {
+      "name": "Chapter 15: Aragog",
+      "url": "Harry Potter and the Chamber of Secrets/15-chapter.m4a"
+    },
+    {
+      "name": "Chapter 16: The Chamber of Secrets",
+      "url": "Harry Potter and the Chamber of Secrets/16-chapter.m4a"
+    },
+    {
+      "name": "Chapter 17: The Heir of Slytherin",
+      "url": "Harry Potter and the Chamber of Secrets/17-chapter.m4a"
+    },
+    {
+      "name": "Chapter 18: Dobby's Reward",
+      "url": "Harry Potter and the Chamber of Secrets/18-chapter.m4a"
     }
   ]
 }

@@ -2,19 +2,164 @@
   "bookId": "book_5",
   "title": "Harry Potter and the Order of the Phoenix",
   "author": "J.K. Rowling",
-  "moods": ["Fiction", "Harry Potter"],
-  
+  "moods": [
+    "Fiction",
+    "Harry Potter"
+  ],
   "//_COMMENT_COVER": "Niche dekho: Agar R2 hai to Folder/File.jpg, agar bahar ka hai to https://...",
-  "cover": "Cover Page/Harry Potter and the Order of the Phoenix.jpg",
-
+  "cover": "https://m.media-amazon.com/images/I/81Budsu1XBL._SL1500_.jpg",
   "chapters": [
     {
-      "name": "Chapter 1: Shuruat (Example R2)",
-      "url": "Harry Potter and the Order of the Phoenix/01-chapter.mp3"
+      "name": "Chapter 1: Dudley Demented",
+      "url": "Harry Potter and the Order of the Phoenix/01-chapter.m4a"
     },
     {
-      "name": "Chapter 2: Kahani Aage (Example Internet Archive)",
-      "url": "https://archive.org/download/some-book/chapter2.mp3"
+      "name": "Chapter 2: A Peck of Owls",
+      "url": "Harry Potter and the Order of the Phoenix/02-chapter.m4a"
+    },
+    {
+      "name": "Chapter 3: The Advance Guard",
+      "url": "Harry Potter and the Order of the Phoenix/03-chapter.m4a"
+    },
+    {
+      "name": "Chapter 4: Number Twelve, Grimmauld Place",
+      "url": "Harry Potter and the Order of the Phoenix/04-chapter.m4a"
+    },
+    {
+      "name": "Chapter 5: The Order of the Phoenix",
+      "url": "Harry Potter and the Order of the Phoenix/05-chapter.m4a"
+    },
+    {
+      "name": "Chapter 6: The Noble and Most Ancient House of Black",
+      "url": "Harry Potter and the Order of the Phoenix/06-chapter.m4a"
+    },
+    {
+      "name": "Chapter 7: The Ministry of Magic",
+      "url": "Harry Potter and the Order of the Phoenix/07-chapter.m4a"
+    },
+    {
+      "name": "Chapter 8: The Hearing",
+      "url": "Harry Potter and the Order of the Phoenix/08-chapter.m4a"
+    },
+    {
+      "name": "Chapter 9: The Woes of Mrs. Weasley",
+      "url": "Harry Potter and the Order of the Phoenix/09-chapter.m4a"
+    },
+    {
+      "name": "Chapter 10: Luna Lovegood",
+      "url": "Harry Potter and the Order of the Phoenix/10-chapter.m4a"
+    },
+    {
+      "name": "Chapter 11: The Sorting Hat's New Song",
+      "url": "Harry Potter and the Order of the Phoenix/11-chapter.m4a"
+    },
+    {
+      "name": "Chapter 12: Professor Umbridge",
+      "url": "Harry Potter and the Order of the Phoenix/12-chapter.m4a"
+    },
+    {
+      "name": "Chapter 13: Detention with Dolores",
+      "url": "Harry Potter and the Order of the Phoenix/13-chapter.m4a"
+    },
+    {
+      "name": "Chapter 14: Percy and Padfoot",
+      "url": "Harry Potter and the Order of the Phoenix/14-chapter.m4a"
+    },
+    {
+      "name": "Chapter 15: The High Inquisitor of Hogwarts",
+      "url": "Harry Potter and the Order of the Phoenix/15-chapter.m4a"
+    },
+    {
+      "name": "Chapter 16: In the Hog's Head",
+      "url": "Harry Potter and the Order of the Phoenix/16-chapter.m4a"
+    },
+    {
+      "name": "Chapter 17: Educational Decree Number Twenty-four",
+      "url": "Harry Potter and the Order of the Phoenix/17-chapter.m4a"
+    },
+    {
+      "name": "Chapter 18: Dumbledore's Army",
+      "url": "Harry Potter and the Order of the Phoenix/18-chapter.m4a"
+    },
+    {
+      "name": "Chapter 19: The Lion and the Serpent",
+      "url": "Harry Potter and the Order of the Phoenix/19-chapter.m4a"
+    },
+    {
+      "name": "Chapter 20: Hagrid's Tale",
+      "url": "Harry Potter and the Order of the Phoenix/20-chapter.m4a"
+    },
+    {
+      "name": "Chapter 21: The Eye of the Snake",
+      "url": "Harry Potter and the Order of the Phoenix/21-chapter.m4a"
+    },
+    {
+      "name": "Chapter 22: St. Mungo's Hospital for Magical Maladies and Injuries",
+      "url": "Harry Potter and the Order of the Phoenix/22-chapter.m4a"
+    },
+    {
+      "name": "Chapter 23: Christmas on the Closed Ward",
+      "url": "Harry Potter and the Order of the Phoenix/23-chapter.m4a"
+    },
+    {
+      "name": "Chapter 24: Occlumency",
+      "url": "Harry Potter and the Order of the Phoenix/24-chapter.m4a"
+    },
+    {
+      "name": "Chapter 25: The Beetle at Bay",
+      "url": "Harry Potter and the Order of the Phoenix/25-chapter.m4a"
+    },
+    {
+      "name": "Chapter 26: Seen and Unforeseen",
+      "url": "Harry Potter and the Order of the Phoenix/26-chapter.m4a"
+    },
+    {
+      "name": "Chapter 27: The Centaur and the Sneak",
+      "url": "Harry Potter and the Order of the Phoenix/27-chapter.m4a"
+    },
+    {
+      "name": "Chapter 28: Snape's Worst Memory",
+      "url": "Harry Potter and the Order of the Phoenix/28-chapter.m4a"
+    },
+    {
+      "name": "Chapter 29: Career Advice",
+      "url": "Harry Potter and the Order of the Phoenix/29-chapter.m4a"
+    },
+    {
+      "name": "Chapter 30: Grawp",
+      "url": "Harry Potter and the Order of the Phoenix/30-chapter.m4a"
+    },
+    {
+      "name": "Chapter 31: O.W.L.s",
+      "url": "Harry Potter and the Order of the Phoenix/31-chapter.m4a"
+    },
+    {
+      "name": "Chapter 32: Out of the Fire",
+      "url": "Harry Potter and the Order of the Phoenix/32-chapter.m4a"
+    },
+    {
+      "name": "Chapter 33: Fight and Flight",
+      "url": "Harry Potter and the Order of the Phoenix/33-chapter.m4a"
+    },
+    {
+      "name": "Chapter 34: The Department of Mysteries",
+      "url": "Harry Potter and the Order of the Phoenix/34-chapter.m4a"
+    },
+    {
+      "name": "Chapter 35: Beyond the Veil",
+      "url": "Harry Potter and the Order of the Phoenix/35-chapter.m4a"
+    },
+    {
+      "name": "Chapter 36: The Only One He Ever Feared",
+      "url": "Harry Potter and the Order of the Phoenix/36-chapter.m4a"
+    },
+    {
+      "name": "Chapter 37: The Lost Prophecy",
+      "url": "Harry Potter and the Order of the Phoenix/37-chapter.m4a"
+    },
+    {
+      "name": "Chapter 38: The Second War Begins",
+      "url": "Harry Potter and the Order of the Phoenix/38-chapter.m4a"
     }
   ]
 }
