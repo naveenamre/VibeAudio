@@ -1,0 +1,20 @@
+{
+  "bookId": "book_5",
+  "title": "Harry Potter and the Order of the Phoenix",
+  "author": "J.K. Rowling",
+  "moods": ["Fiction"],
+  
+  "//_COMMENT_COVER": "Niche dekho: Agar R2 hai to Folder/File.jpg, agar bahar ka hai to https://...",
+  "cover": "Cover Page/Harry Potter and the Order of the Phoenix.jpg",
+
+  "chapters": [
+    {
+      "name": "Chapter 1: Shuruat (Example R2)",
+      "url": "Harry Potter and the Order of the Phoenix/01-chapter.mp3"
+    },
+    {
+      "name": "Chapter 2: Kahani Aage (Example Internet Archive)",
+      "url": "https://archive.org/download/some-book/chapter2.mp3"
+    }
+  ]
+}

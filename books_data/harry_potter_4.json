@@ -1,0 +1,20 @@
+{
+  "bookId": "book_4",
+  "title": "Harry Potter and the Goblet of Fire",
+  "author": "J.K. Rowling",
+  "moods": ["Fiction"],
+  
+  "//_COMMENT_COVER": "Niche dekho: Agar R2 hai to Folder/File.jpg, agar bahar ka hai to https://...",
+  "cover": "Cover Page/Harry Potter and the Goblet of Fire.jpg",
+
+  "chapters": [
+    {
+      "name": "Chapter 1: Shuruat (Example R2)",
+      "url": "Harry Potter and the Goblet of Fire/01-chapter.mp3"
+    },
+    {
+      "name": "Chapter 2: Kahani Aage (Example Internet Archive)",
+      "url": "https://archive.org/download/some-book/chapter2.mp3"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "bookId": "book_3",
+  "title": "Harry Potter and the Prisoner of Azkaban",
+  "author": "J.K. Rowling",
+  "moods": ["Fiction"],
+  
+  "//_COMMENT_COVER": "Niche dekho: Agar R2 hai to Folder/File.jpg, agar bahar ka hai to https://...",
+  "cover": "Cover Page/Harry Potter and the Prisoner of Azkaban.jpg",
+
+  "chapters": [
+    {
+      "name": "Chapter 1: Shuruat (Example R2)",
+      "url": "Harry Potter and the Prisoner of Azkaban/01-chapter.mp3"
+    },
+    {
+      "name": "Chapter 2: Kahani Aage (Example Internet Archive)",
+      "url": "https://archive.org/download/some-book/chapter2.mp3"
+    }
+  ]
+}

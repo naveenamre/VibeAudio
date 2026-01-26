@@ -1,4 +1,4 @@
-// --- 🖥️ UI CONTROLLER (Cleaned: No Streak Popup) ---
+// --- 🖥️ UI CONTROLLER (Sorted Books & Cleaned) ---
 import { fetchAllBooks, fetchUserProfile, loginUser, fetchUserProgress } from './api.js'; 
 import * as Player from './player.js';
 
@@ -7,7 +7,6 @@ let allBooks = []; // 📚 Global variable (Master Copy)
 window.app = {
     switchView: (id) => switchView(id),
     goBack: () => switchView('library'),
-    // ❌ closeStreak hata diya
     seekToComment: (time) => seekToComment(time),
     filterLibrary: (category) => filterLibrary(category)
 };
@@ -17,12 +16,19 @@ async function init() {
 
     console.log("🚀 VibeAudio UI Starting...");
     
-    // 👇 STREAK CODE REMOVED
-    // Seedha kaam ki baat pe aate hain:
-
     // 1. Load Books
     allBooks = await fetchAllBooks(); 
     
+    // ✨ SORTING FIX: Books ko ID ke hisab se sort karo (Numerical Order)
+    if(allBooks.length > 0) {
+        allBooks.sort((a, b) => {
+            // "book_4" -> 4, "book_10" -> 10
+            const numA = parseInt(a.bookId.replace(/\D/g, '')) || 0; 
+            const numB = parseInt(b.bookId.replace(/\D/g, '')) || 0;
+            return numA - numB;
+        });
+    }
+
     // ✨ Filters aur Library render
     renderCategoryFilters(allBooks);
     renderLibrary(allBooks);
@@ -32,7 +38,7 @@ async function init() {
     
     setupListeners();
 
-    // 3. User Name Update (Background me, bina popup ke)
+    // 3. User Name Update (Background me)
     fetchUserProfile().then(user => {
         const userNameDisplay = document.getElementById('user-name-display');
         if(userNameDisplay && user.name) {
@@ -168,8 +174,6 @@ function setupAuth() {
     }
 }
 
-// ❌ STREAK FUNCTIONS REMOVED ❌
-
 // --- NAVIGATION ---
 function switchView(id) {
     document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
@@ -241,7 +245,7 @@ function openPlayer(book) {
             const state = Player.getCurrentState();
             const currentTime = Math.floor(state.currentTime || 0);
             const newComment = { time: currentTime, user: "You", text: text };
-            renderSingleComment(newComment);
+            renderSingleComment(newComment); // Local update
             input.value = ''; 
             const commentList = document.getElementById('comments-list');
             commentList.scrollTop = commentList.scrollHeight;
