@@ -112,52 +112,74 @@
 .secondary-btn:hover { color: white; }
 .secondary-btn:hover i { background: var(--secondary); color: black; box-shadow: 0 0 10px var(--secondary); }
 
-/* Progress Bar Area */
-.progress-container { width: 100%; display: flex; align-items: center; gap: 12px; max-width: 450px; }
-.progress-container span { font-size: 0.75rem; font-family: monospace; color: #888; width: 40px; text-align: center; }
+/* --- 🎚️ 2. ULTIMATE PROGRESS BAR (YouTube Style) --- */
 
-/* 🎚️ 2. PREMIUM GLOWING SLIDER (Replaces old slider CSS) */
+.progress-container {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    position: relative;
+}
 
+/* Time text style */
+.progress-container span {
+    font-size: 0.8rem;
+    font-family: 'Outfit', sans-serif;
+    color: #bbb;
+    min-width: 45px;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Slider Input */
 input[type=range] {
     -webkit-appearance: none;
     width: 100%;
-    background: transparent;
-    margin: 10px 0;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 5px;
+    cursor: pointer;
+    transition: height 0.2s ease;
+    
+    /* Dynamic Fill Magic (Left side color, Right side empty) */
+    background-image: linear-gradient(var(--primary, #ff4b1f), var(--primary, #ff4b1f));
+    background-size: 0% 100%;
+    background-repeat: no-repeat;
 }
+
 input[type=range]:focus { outline: none; }
 
-/* The Track (Rasta) */
-input[type=range]::-webkit-slider-runnable-track {
-    width: 100%;
-    height: 6px;
-    cursor: pointer;
-    background: rgba(255, 255, 255, 0.1); /* Halka transparent track */
-    border-radius: 10px;
-    transition: 0.3s;
+/* 🔥 Hover Effect: Jab mouse upar aaye toh track mota ho jaye */
+input[type=range]:hover {
+    height: 10px; 
 }
 
-/* The Thumb (Gola) - Ispe Chameleon Glow aayega */
+/* --- THE THUMB (Gola) --- */
 input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 0; 
+    width: 0; 
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 0 10px var(--primary, #ff4b1f);
+    transition: all 0.2s ease;
+}
+
+/* Jab Slider pe hover ho, tabhi Gola dikhe */
+.progress-container:hover input[type=range]::-webkit-slider-thumb {
     height: 16px;
     width: 16px;
-    border-radius: 50%;
-    
-    /* 👇 MAGIC: Ye var(--primary) JS se set hota hai (Chameleon Vibe) */
-    background: var(--primary, #ff6b00); 
-    
-    cursor: pointer;
-    -webkit-appearance: none;
-    margin-top: -5px; /* Center adjustment */
-    
-    /* ✨ GLOW EFFECT */
-    box-shadow: 0 0 10px var(--primary, #ff6b00); 
-    transition: transform 0.1s, box-shadow 0.2s;
+    margin-top: -3px;
+    box-shadow: 0 0 15px var(--primary, #ff4b1f);
+    transform: scale(1.2);
 }
 
-/* Hover effect */
-input[type=range]::-webkit-slider-thumb:hover {
-    transform: scale(1.4);
-    box-shadow: 0 0 20px var(--primary, #ff6b00);
+/* Firefox Support */
+input[type=range]::-moz-range-thumb {
+    height: 0; width: 0; border: none; transition: all 0.2s ease;
+}
+.progress-container:hover input[type=range]::-moz-range-thumb {
+    height: 16px; width: 16px; background: white; border-radius: 50%;
 }
 
 /* Speed Button */

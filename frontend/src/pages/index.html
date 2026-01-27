@@ -9,11 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="../css/base.css">
-    <link rel="stylesheet" href="../css/components.css">
-    <link rel="stylesheet" href="../css/player.css">
-
-    <link rel="icon" type="image/png" href="../icons/favicon.png">
+    <link rel="stylesheet" href="../css/base.css">       <link rel="stylesheet" href="../css/components.css"> <link rel="stylesheet" href="../css/player.css">     <link rel="icon" type="image/png" href="../icons/favicon.png">
     <link rel="manifest" href="../../public/manifest.json">
     <meta name="theme-color" content="#0f0c29">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3208/3208726.png">
@@ -25,10 +21,8 @@
 
     <div id="login-overlay"
         style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0f0f0f; z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column;">
-
-        <div
-            style="background: rgba(30, 30, 30, 0.9); padding: 2.5rem; border-radius: 20px; border: 1px solid #333; text-align: center; max-width: 90%; width: 350px; backdrop-filter: blur(15px); box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
-
+        
+        <div style="background: rgba(30, 30, 30, 0.9); padding: 2.5rem; border-radius: 20px; border: 1px solid #333; text-align: center; max-width: 90%; width: 350px; backdrop-filter: blur(15px); box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
             <h2 style="color: #fff; margin-bottom: 5px;">🚀 Join Vibe</h2>
             <p style="color: #888; font-size: 0.9rem; margin-bottom: 20px;">Enter your Name & Invite Code</p>
 
@@ -45,10 +39,7 @@
 
             <p id="login-msg" style="color: #ff4444; margin-top: 15px; font-size: 0.8rem; min-height: 1.2rem;"></p>
         </div>
-
     </div>
-
-    <div class="bg-gradient"></div>
 
     <div class="glass-container">
 
@@ -73,9 +64,7 @@
 
         <main id="view-library" class="view-section fade-in">
             <h2 class="section-title">Trending Now 🔥</h2>
-            <div id="category-filters" class="filter-container">
-            </div>
-
+            <div id="category-filters" class="filter-container"></div>
             <div id="book-grid" class="grid">
                 <div class="loading-spinner">Loading Cloud Library...</div>
             </div>
@@ -91,8 +80,7 @@
         <section id="view-profile" class="view-section hidden fade-in">
             <div class="profile-card">
                 <div class="profile-header">
-                    <img src="https://ui-avatars.com/api/?name=Captain+Naksh&background=random" alt="User"
-                        class="avatar">
+                    <img src="https://ui-avatars.com/api/?name=Captain+Naksh&background=random" alt="User" class="avatar">
                     <div>
                         <h2 id="user-name-display">Captain Naksh</h2>
                         <p class="user-badge">Free Tier Legend 🚀</p>
@@ -111,8 +99,9 @@
                 </div>
 
                 <div class="profile-actions">
-                    <button class="btn-danger" onclick="localStorage.removeItem('vibe_user'); location.reload();"><i
-                            class="fas fa-sign-out-alt"></i> Logout</button>
+                    <button class="btn-danger" onclick="localStorage.removeItem('vibe_user'); location.reload();">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
                     <button class="btn-secondary"><i class="fas fa-sync"></i> Sync Data</button>
                 </div>
             </div>
@@ -125,7 +114,6 @@
 
             <div class="player-header-card">
                 <div class="blur-bg" id="blur-bg"></div>
-
                 <div class="visualizer-container">
                     <canvas id="visualizer"></canvas>
                 </div>
@@ -159,8 +147,7 @@
                     <input type="text" id="comment-input" placeholder="Type at current time...">
                     <button id="post-comment-btn"><i class="fas fa-paper-plane"></i></button>
                 </div>
-                <div id="comments-list">
-                </div>
+                <div id="comments-list"></div>
             </div>
         </section>
 
@@ -180,13 +167,9 @@
                 <button id="seek-back-btn" class="secondary-btn">
                     <i class="fas fa-rotate-left"></i> 10s
                 </button>
-
                 <button id="prev-btn"><i class="fas fa-step-backward"></i></button>
-
                 <button id="play-btn" class="play-circle"><i class="fas fa-play"></i></button>
-
                 <button id="next-btn"><i class="fas fa-step-forward"></i></button>
-
                 <button id="seek-fwd-btn" class="secondary-btn">
                     10s <i class="fas fa-rotate-right"></i>
                 </button>
@@ -206,7 +189,6 @@
 
     <audio id="audio-element" crossorigin="anonymous"></audio>
 
-
     <div id="update-toast">
         <p>🚀 New Update Available!</p>
         <button id="reload-btn">Update Now</button>
@@ -216,12 +198,10 @@
 
     <script>
         let newWorker;
-
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('../../sw.js').then(reg => {
                     console.log('✅ Service Worker Registered');
-
                     reg.addEventListener('updatefound', () => {
                         newWorker = reg.installing;
                         newWorker.addEventListener('statechange', () => {
@@ -234,7 +214,6 @@
                 }).catch(err => console.log('❌ SW Fail:', err));
             });
         }
-
         const reloadBtn = document.getElementById('reload-btn');
         if (reloadBtn) {
             reloadBtn.addEventListener('click', () => {
@@ -245,9 +224,7 @@
     </script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.7.0/vanilla-tilt.min.js"></script>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js"></script>
 
 </body>
-
 </html>

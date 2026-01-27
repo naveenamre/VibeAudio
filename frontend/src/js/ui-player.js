@@ -1,4 +1,4 @@
-// --- 🎧 UI PLAYER MODULE (Updated with Chameleon Vibe) ---
+// --- 🎧 UI PLAYER MODULE (Updated with Immersive Chameleon Vibe) ---
 import { fetchBookDetails } from './api.js';
 import * as Player from './player.js';
 
@@ -53,10 +53,12 @@ export async function openPlayerUI(partialBook, allBooks, switchViewCallback) {
 // 🌈 HELPER: Extract Color & Apply Theme
 function applyChameleonTheme(imageUrl) {
     const root = document.documentElement;
+    const body = document.body;
     
-    // Default Vibe (Agar color na mile ya error aaye)
+    // Default Vibe (Reset agar color na mile ya error aaye)
     const resetTheme = () => {
-        root.style.setProperty('--primary', '#ff6b00'); // Tera Default Orange
+        root.style.setProperty('--primary', '#ff4b1f'); // Tera Default Orange
+        body.style.background = ""; // Reset to CSS Galaxy Gradient
         const playBtn = document.getElementById('play-btn');
         if(playBtn) playBtn.style.boxShadow = 'none';
     };
@@ -77,14 +79,22 @@ function applyChameleonTheme(imageUrl) {
             const color = colorThief.getColor(img);
             const rgb = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
             
+            // Background ke liye Dark Version nikalo (Taaki text readable rahe)
+            const darkRgb = `rgb(${Math.floor(color[0]*0.2)}, ${Math.floor(color[1]*0.2)}, ${Math.floor(color[2]*0.2)})`;
+            
             console.log("🦎 Chameleon Vibe Detected:", rgb);
             
-            // CSS Variables Update karo
+            // 1. CSS Variables Update karo (Buttons, Slider)
             root.style.setProperty('--primary', rgb);
             
-            // Play Button Glow Effect
+            // 2. 🌌 UPDATE BACKGROUND (Immersive Mode)
+            // Hum extracted color ko Black ke saath mix karke naya gradient banayenge
+            body.style.background = `linear-gradient(-45deg, ${darkRgb}, #000000, ${rgb}, #0f0f0f)`;
+            body.style.backgroundSize = "400% 400%"; // Animation on rakho
+            
+            // 3. Play Button Glow Effect
             const playBtn = document.getElementById('play-btn');
-            if(playBtn) playBtn.style.boxShadow = `0 0 20px ${rgb}`;
+            if(playBtn) playBtn.style.boxShadow = `0 0 30px ${rgb}`; // Thoda zyada glow
 
         } catch (e) {
             console.warn("🦎 Chameleon failed (CORS issue):", e);

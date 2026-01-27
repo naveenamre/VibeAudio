@@ -66,9 +66,15 @@ function switchView(id) {
     // History tab refresh logic
     if (id === 'history') LibraryUI.renderHistory(allBooks, (book) => PlayerUI.openPlayerUI(book, allBooks, switchView));
 
-    // 🦎 RESET THEME: Agar Library me wapas aaye toh default color wapas lao
+    // 🦎 RESET THEME: Agar Library me wapas aaye toh default look wapas lao
     if (id === 'library') {
-        document.documentElement.style.setProperty('--primary', '#ff6b00');
+        // 1. Color Reset
+        document.documentElement.style.setProperty('--primary', '#ff4b1f');
+        
+        // 2. Background Reset (Wapas Galaxy Animation)
+        document.body.style.background = ""; 
+        
+        // 3. Button Shadow Reset
         const playBtn = document.getElementById('play-btn');
         if(playBtn) playBtn.style.boxShadow = 'none';
     }
