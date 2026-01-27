@@ -1,0 +1,184 @@
+/* --- 🎹 PLAYER & CONTROLS --- */
+
+.player-header-card {
+    position: relative; display: flex; gap: 30px; align-items: flex-end; padding: 40px;
+    background: rgba(255,255,255,0.03); border-radius: 30px; overflow: hidden; margin-bottom: 30px;
+    border: 1px solid var(--border); min-height: 280px;
+}
+
+.blur-bg {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background-size: cover; background-position: center; filter: blur(60px) brightness(0.3); z-index: 0;
+}
+
+.visualizer-container {
+    position: absolute; bottom: 0; left: 0; width: 100%; height: 50%; z-index: 0; pointer-events: none;
+    mask-image: linear-gradient(to top, rgba(0,0,0,1), transparent);
+}
+#visualizer { width: 100%; height: 100%; }
+
+.player-header-card img { width: 180px; border-radius: 15px; box-shadow: 0 15px 40px rgba(0,0,0,0.6); z-index: 1; position: relative; }
+.player-header-card .info { z-index: 1; position: relative; width: 100%; }
+
+/* Chapter List */
+.chapter-list-container ul { list-style: none; }
+.chapter-list-container li {
+    padding: 15px; margin-bottom: 10px; background: rgba(255,255,255,0.02); border-radius: 12px;
+    cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.2s;
+}
+.chapter-list-container li:hover { background: rgba(255,255,255,0.08); }
+.chapter-list-container li.active { 
+    background: linear-gradient(90deg, rgba(31, 221, 255, 0.1), transparent);
+    border-left: 4px solid var(--secondary); color: var(--secondary);
+}
+
+/* --- 🎹 ULTRA PREMIUM PLAYER BAR --- */
+.player-bar {
+    position: fixed; 
+    bottom: 30px; 
+    left: 50%; 
+    transform: translateX(-50%);
+    width: 90%; 
+    max-width: 850px;
+    
+    background: rgba(16, 18, 27, 0.75); 
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    
+    border-radius: 25px; 
+    padding: 15px 35px;
+    
+    display: flex; 
+    align-items: center; 
+    justify-content: space-between;
+    gap: 20px;
+
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 
+        0 20px 50px rgba(0, 0, 0, 0.5), 
+        0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+    
+    z-index: 1000;
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.player-bar:hover {
+    background: rgba(16, 18, 27, 0.85); 
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+    transform: translateX(-50%) translateY(-2px);
+}
+
+/* Track Info */
+.track-info { display: flex; align-items: center; width: 25%; gap: 15px; }
+.track-info img { 
+    width: 55px; height: 55px; border-radius: 12px; object-fit: cover; 
+    box-shadow: 0 4px 15px rgba(0,0,0,0.4); transition: 0.3s;
+}
+.player-bar:hover .track-info img { transform: scale(1.05) rotate(2deg); }
+
+.mini-text h4 { font-size: 1rem; font-weight: 700; color: white; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
+.mini-text p { font-size: 0.8rem; color: #bbb; margin: 0; margin-top: 3px; }
+
+/* Controls */
+.controls-wrapper { flex-grow: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+
+.controls { display: flex; align-items: center; gap: 25px; margin-bottom: 5px; }
+
+.controls button { 
+    background: none; border: none; color: #ccc; 
+    font-size: 1.3rem; cursor: pointer; 
+    transition: all 0.2s ease;
+    display: flex; align-items: center; justify-content: center;
+}
+.controls button:hover { color: white; transform: scale(1.1); text-shadow: 0 0 10px white; }
+
+.play-circle { 
+    font-size: 1.8rem !important; color: black !important; 
+    background: linear-gradient(135deg, var(--secondary), var(--primary)); 
+    border-radius: 50%; width: 55px; height: 55px; 
+    box-shadow: 0 0 20px rgba(31, 221, 255, 0.4);
+    border: 2px solid rgba(255,255,255,0.2);
+}
+.play-circle:hover { transform: scale(1.15) !important; box-shadow: 0 0 35px rgba(31, 221, 255, 0.7); }
+.play-circle:active { transform: scale(0.95) !important; }
+
+/* 10s Skip Buttons */
+.secondary-btn {
+    background: transparent; border: none; color: #888;
+    font-size: 0.9rem; font-weight: 600; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 4px; transition: 0.3s;
+}
+.secondary-btn i { font-size: 1.1rem; background: rgba(255,255,255,0.1); padding: 8px; border-radius: 50%; }
+.secondary-btn:hover { color: white; }
+.secondary-btn:hover i { background: var(--secondary); color: black; box-shadow: 0 0 10px var(--secondary); }
+
+/* Progress Bar Area */
+.progress-container { width: 100%; display: flex; align-items: center; gap: 12px; max-width: 450px; }
+.progress-container span { font-size: 0.75rem; font-family: monospace; color: #888; width: 40px; text-align: center; }
+
+/* 🎚️ 2. PREMIUM GLOWING SLIDER (Replaces old slider CSS) */
+
+input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    background: transparent;
+    margin: 10px 0;
+}
+input[type=range]:focus { outline: none; }
+
+/* The Track (Rasta) */
+input[type=range]::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 6px;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.1); /* Halka transparent track */
+    border-radius: 10px;
+    transition: 0.3s;
+}
+
+/* The Thumb (Gola) - Ispe Chameleon Glow aayega */
+input[type=range]::-webkit-slider-thumb {
+    height: 16px;
+    width: 16px;
+    border-radius: 50%;
+    
+    /* 👇 MAGIC: Ye var(--primary) JS se set hota hai (Chameleon Vibe) */
+    background: var(--primary, #ff6b00); 
+    
+    cursor: pointer;
+    -webkit-appearance: none;
+    margin-top: -5px; /* Center adjustment */
+    
+    /* ✨ GLOW EFFECT */
+    box-shadow: 0 0 10px var(--primary, #ff6b00); 
+    transition: transform 0.1s, box-shadow 0.2s;
+}
+
+/* Hover effect */
+input[type=range]::-webkit-slider-thumb:hover {
+    transform: scale(1.4);
+    box-shadow: 0 0 20px var(--primary, #ff6b00);
+}
+
+/* Speed Button */
+.extra-controls button {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    color: #ddd; padding: 6px 14px; border-radius: 12px;
+    font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: 0.2s;
+}
+.extra-controls button:hover { background: var(--secondary); color: black; box-shadow: 0 0 15px var(--secondary); border-color: transparent; }
+
+/* --- 📱 MOBILE RESPONSIVE (Player Specific) --- */
+@media (max-width: 768px) {
+    .player-header-card { flex-direction: column; align-items: center; text-align: center; padding: 30px 20px; }
+    .player-header-card img { width: 150px; margin-bottom: 20px; }
+    
+    .player-bar { 
+        bottom: 0; width: 100%; border-radius: 20px 20px 0 0; 
+        flex-direction: column; gap: 15px; padding: 20px;
+    }
+    .track-info { width: 100%; justify-content: flex-start; }
+    .controls-wrapper { width: 100%; }
+    .mobile-hide { display: none; }
+    .track-info img { display: none; }
+}

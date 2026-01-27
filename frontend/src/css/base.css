@@ -1,0 +1,102 @@
+/* --- 🏗️ BASE: Variables, Reset, Layout --- */
+
+:root {
+    --primary: #ff4b1f;   /* Hot Orange */
+    --secondary: #1fddff; /* Neon Blue */
+    --text: #ffffff;
+    --dark-bg: #0f0c29;
+    --glass-bg: rgba(255, 255, 255, 0.05);
+    --border: rgba(255, 255, 255, 0.1);
+    --nav-height: 70px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
+
+/* 👇 UPDATED: Breathing Background Logic */
+body {
+    /* Moving Gradient: Dark Blue/Purple/Black mix */
+    background: linear-gradient(-45deg, #0f0c29, #302b63, #24243e, #1a1a1a);
+    background-size: 400% 400%;
+    animation: gradientMove 15s ease infinite;
+    
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 140px; /* Space for Mini Player */
+    overflow-x: hidden;
+}
+
+/* 👇 NEW: Background Animation Keyframes */
+@keyframes gradientMove {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* Purana static background hata diya, kyunki ab Body animate kar raha hai */
+.bg-gradient { display: none; }
+
+.glass-container {
+    max-width: 1100px;
+    margin: 20px auto;
+    padding: 30px;
+}
+
+/* --- 🟢 HEADER & NAVIGATION --- */
+header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 30px; flex-wrap: wrap; gap: 20px;
+}
+
+.logo { 
+    font-size: 1.8rem; font-weight: 700; 
+    background: linear-gradient(to right, var(--secondary), var(--primary)); 
+    -webkit-background-clip: text; color: transparent; 
+    display: flex; align-items: center; gap: 10px;
+}
+
+/* Tabs Styling */
+.nav-tabs {
+    background: rgba(255,255,255,0.05);
+    padding: 5px; border-radius: 50px;
+    display: flex; gap: 5px;
+    border: 1px solid var(--border);
+}
+
+.nav-tabs button {
+    background: transparent; border: none; color: #aaa;
+    font-size: 0.95rem; padding: 8px 20px; cursor: pointer;
+    font-weight: 600; transition: 0.3s; border-radius: 30px;
+    display: flex; align-items: center; gap: 8px;
+}
+
+.nav-tabs button:hover { color: white; background: rgba(255,255,255,0.1); }
+
+.nav-tabs button.active-tab { 
+    background: var(--secondary); 
+    color: black; 
+    box-shadow: 0 0 15px rgba(31, 221, 255, 0.4);
+}
+
+.search-box {
+    background: rgba(255,255,255,0.1); padding: 10px 20px;
+    border-radius: 50px; display: flex; align-items: center; gap: 10px;
+    border: 1px solid transparent; transition: 0.3s;
+}
+.search-box:focus-within { border-color: var(--secondary); box-shadow: 0 0 10px rgba(31, 221, 255, 0.2); }
+.search-box input { background: transparent; border: none; color: white; outline: none; width: 150px; }
+
+/* --- 📚 GRID SYSTEM --- */
+.grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 25px;
+}
+
+/* --- ⚙️ UTILS & LOADING --- */
+.hidden { display: none !important; }
+.fade-in { animation: fadeIn 0.4s ease-in-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+.loading-spinner {
+    color: var(--secondary); font-size: 1.2rem; text-align: center; margin-top: 50px;
+    animation: pulse 1.5s infinite;
+}
+@keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
