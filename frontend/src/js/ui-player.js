@@ -1,4 +1,4 @@
-// --- 🎧 UI PLAYER MODULE ---
+// --- 🎧 UI PLAYER MODULE (Updated with Chameleon Vibe) ---
 import { fetchBookDetails } from './api.js';
 import * as Player from './player.js';
 
@@ -12,6 +12,9 @@ export async function openPlayerUI(partialBook, allBooks, switchViewCallback) {
     document.getElementById('detail-author').innerText = partialBook.author;
     document.getElementById('blur-bg').style.backgroundImage = `url('${partialBook.cover}')`;
     
+    // 🦎 CHAMELEON MAGIC: Rang Badlo!
+    applyChameleonTheme(partialBook.cover);
+
     const list = document.getElementById('chapter-list');
     list.innerHTML = ''; 
 
@@ -45,6 +48,51 @@ export async function openPlayerUI(partialBook, allBooks, switchViewCallback) {
     } else {
         list.innerHTML = `<p style="color: #ff4444; text-align: center;">❌ Failed to load chapters.</p>`;
     }
+}
+
+// 🌈 HELPER: Extract Color & Apply Theme
+function applyChameleonTheme(imageUrl) {
+    const root = document.documentElement;
+    
+    // Default Vibe (Agar color na mile ya error aaye)
+    const resetTheme = () => {
+        root.style.setProperty('--primary', '#ff6b00'); // Tera Default Orange
+        const playBtn = document.getElementById('play-btn');
+        if(playBtn) playBtn.style.boxShadow = 'none';
+    };
+
+    // Agar library load nahi hui, to risk mat lo
+    if (!window.ColorThief) { resetTheme(); return; }
+
+    const colorThief = new ColorThief();
+    const img = new Image();
+    
+    // 🛡️ CORS JUGAD: External images allow karne ke liye
+    img.crossOrigin = "Anonymous"; 
+    img.src = imageUrl;
+
+    img.onload = function() {
+        try {
+            // Dominant color nikalo (R, G, B)
+            const color = colorThief.getColor(img);
+            const rgb = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
+            
+            console.log("🦎 Chameleon Vibe Detected:", rgb);
+            
+            // CSS Variables Update karo
+            root.style.setProperty('--primary', rgb);
+            
+            // Play Button Glow Effect
+            const playBtn = document.getElementById('play-btn');
+            if(playBtn) playBtn.style.boxShadow = `0 0 20px ${rgb}`;
+
+        } catch (e) {
+            console.warn("🦎 Chameleon failed (CORS issue):", e);
+            resetTheme();
+        }
+    };
+
+    img.onerror = resetTheme;
 }
 
 // --- HELPERS ---

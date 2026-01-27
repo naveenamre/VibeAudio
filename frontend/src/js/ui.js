@@ -23,7 +23,7 @@ window.app = {
 
 // --- 🚀 INIT ---
 async function init() {
-    setupAuth(); // 👈 Ab ye function niche pura define kiya hai
+    setupAuth();
     console.log("🚀 VibeAudio UI Starting...");
     setupImageObserver(); // Watchman start
 
@@ -65,6 +65,13 @@ function switchView(id) {
 
     // History tab refresh logic
     if (id === 'history') LibraryUI.renderHistory(allBooks, (book) => PlayerUI.openPlayerUI(book, allBooks, switchView));
+
+    // 🦎 RESET THEME: Agar Library me wapas aaye toh default color wapas lao
+    if (id === 'library') {
+        document.documentElement.style.setProperty('--primary', '#ff6b00');
+        const playBtn = document.getElementById('play-btn');
+        if(playBtn) playBtn.style.boxShadow = 'none';
+    }
 }
 
 // --- 🔍 FILTER LOGIC ---
@@ -162,7 +169,7 @@ function setupImageObserver() {
     }, { rootMargin: "100px 0px", threshold: 0.01 });
 }
 
-// --- 🔒 AUTH & USER (FIXED LOGIC) ---
+// --- 🔒 AUTH & USER ---
 function setupAuth() {
     const loginOverlay = document.getElementById('login-overlay');
     const loginBtn = document.getElementById('login-btn');

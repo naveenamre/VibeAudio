@@ -1,4 +1,4 @@
-// --- 📚 UI LIBRARY MODULE ---
+// --- 📚 UI LIBRARY MODULE (Updated with 3D Tilt) ---
 import { fetchUserProgress } from './api.js';
 
 // --- RENDER LIBRARY ---
@@ -17,11 +17,15 @@ export function renderLibrary(books, openPlayerCallback) {
 
         const card = document.createElement('div');
         card.className = 'book-card';
+        
+        // ✨ UPDATE: Content ko wrap kiya hai better 3D feel ke liye
         card.innerHTML = `
             <img class="lazy-img" src="${placeholder}" data-src="${book.cover}" alt="${book.title}">
-            <h3>${book.title}</h3>
-            <p>${book.author}</p>
-            ${moodHTML} `;
+            <div class="card-content">
+                <h3>${book.title}</h3>
+                <p>${book.author}</p>
+                ${moodHTML}
+            </div>`;
         
         card.onclick = () => openPlayerCallback(book);
         grid.appendChild(card);
@@ -30,6 +34,19 @@ export function renderLibrary(books, openPlayerCallback) {
         const img = card.querySelector('img');
         if(window.imageObserver) window.imageObserver.observe(img);
     });
+
+    // 🌟 JADU START: Sabhi cards pe Tilt lagao
+    // Hum check karte hain ki index.html me script load hui hai ya nahi
+    if (window.VanillaTilt) {
+        window.VanillaTilt.init(document.querySelectorAll("#book-grid .book-card"), {
+            max: 15,          // Kitna jhukega (Degrees)
+            speed: 400,       // Wapas aane ki speed
+            glare: true,      // Chamak (Glare)
+            "max-glare": 0.3, // Chamak ki intensity
+            scale: 1.05,      // Hover karne pe thoda bada hoga
+            gyroscope: true   // Phone hilane pe bhi effect aayega
+        });
+    }
 }
 
 // --- RENDER HISTORY ---
@@ -67,6 +84,17 @@ export async function renderHistory(allBooks, openPlayerCallback) {
             `;
             card.onclick = () => openPlayerCallback(book);
             grid.appendChild(card);
+            
+            // ✨ History Cards ko bhi Tilt effect dete hain
+            if (window.VanillaTilt) {
+                window.VanillaTilt.init(card, {
+                    max: 10,
+                    speed: 400,
+                    glare: true,
+                    "max-glare": 0.2,
+                    scale: 1.02
+                });
+            }
         }
     });
 }
