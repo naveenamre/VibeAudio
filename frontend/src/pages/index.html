@@ -9,7 +9,10 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="../css/base.css">       <link rel="stylesheet" href="../css/components.css"> <link rel="stylesheet" href="../css/player.css">     <link rel="icon" type="image/png" href="../icons/favicon.png">
+    <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/player.css">
+    <link rel="icon" type="image/png" href="../icons/favicon.png">
     <link rel="manifest" href="../../public/manifest.json">
     <meta name="theme-color" content="#0f0c29">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3208/3208726.png">
@@ -21,8 +24,9 @@
 
     <div id="login-overlay"
         style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0f0f0f; z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column;">
-        
-        <div style="background: rgba(30, 30, 30, 0.9); padding: 2.5rem; border-radius: 20px; border: 1px solid #333; text-align: center; max-width: 90%; width: 350px; backdrop-filter: blur(15px); box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+
+        <div
+            style="background: rgba(30, 30, 30, 0.9); padding: 2.5rem; border-radius: 20px; border: 1px solid #333; text-align: center; max-width: 90%; width: 350px; backdrop-filter: blur(15px); box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
             <h2 style="color: #fff; margin-bottom: 5px;">🚀 Join Vibe</h2>
             <p style="color: #888; font-size: 0.9rem; margin-bottom: 20px;">Enter your Name & Invite Code</p>
 
@@ -80,7 +84,8 @@
         <section id="view-profile" class="view-section hidden fade-in">
             <div class="profile-card">
                 <div class="profile-header">
-                    <img src="https://ui-avatars.com/api/?name=Captain+Naksh&background=random" alt="User" class="avatar">
+                    <img src="https://ui-avatars.com/api/?name=Captain+Naksh&background=random" alt="User"
+                        class="avatar">
                     <div>
                         <h2 id="user-name-display">Captain Naksh</h2>
                         <p class="user-badge">Free Tier Legend 🚀</p>
@@ -182,8 +187,12 @@
             </div>
         </div>
 
-        <div class="extra-controls mobile-hide">
-            <button id="speed-btn">1x</button>
+        <div class="extra-controls mobile-hide" style="display: flex; gap: 10px;">
+            <button id="sleep-timer-btn" title="Sleep Timer">
+                <i class="fas fa-moon"></i>
+            </button>
+
+            <button id="speed-btn" title="Playback Speed">1x</button>
         </div>
     </div>
 
@@ -227,4 +236,5 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js"></script>
 
 </body>
+
 </html>

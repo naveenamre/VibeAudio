@@ -18,6 +18,39 @@ window.app = {
     seekToComment: (time) => {
         const audio = Player.getAudioElement();
         if(audio.duration) { Player.seekTo((time/audio.duration)*100); Player.togglePlay(); }
+    },
+
+    // 🔄 SYNC DATA (Fake Animation for User Satisfaction)
+    syncData: async () => {
+        const btn = document.querySelector('.btn-secondary'); 
+        if(!btn) return;
+        
+        const icon = btn.querySelector('i');
+        const originalText = btn.innerHTML;
+        
+        // 1. Animation Start
+        if(icon) icon.classList.add('fa-spin');
+        btn.innerHTML = `<i class="fas fa-sync fa-spin"></i> Syncing...`;
+        btn.disabled = true;
+
+        // 2. Fake Delay (Feel lene ke liye)
+        await new Promise(r => setTimeout(r, 1500));
+
+        // 3. Success Feedback
+        if(icon) icon.classList.remove('fa-spin');
+        btn.innerHTML = `<i class="fas fa-check"></i> Synced!`;
+        btn.style.borderColor = "#00ff00";
+        btn.style.color = "#00ff00";
+        
+        showToast("☁️ Data synced with Cloud!");
+
+        // 4. Reset after 3s
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            btn.style.borderColor = "";
+            btn.style.color = "";
+        }, 3000);
     }
 };
 
@@ -63,18 +96,20 @@ function switchView(id) {
     const btn = document.getElementById(`nav-${id}`);
     if(btn) btn.classList.add('active-tab');
 
+    // 👇 NEW: Player Mode Trigger (For Mobile Cleanup)
+    if (id === 'player') {
+        document.body.classList.add('player-mode');
+    } else {
+        document.body.classList.remove('player-mode');
+    }
+
     // History tab refresh logic
     if (id === 'history') LibraryUI.renderHistory(allBooks, (book) => PlayerUI.openPlayerUI(book, allBooks, switchView));
 
-    // 🦎 RESET THEME: Agar Library me wapas aaye toh default look wapas lao
+    // 🦎 RESET THEME: Agar Library me wapas aaye toh default color wapas lao
     if (id === 'library') {
-        // 1. Color Reset
         document.documentElement.style.setProperty('--primary', '#ff4b1f');
-        
-        // 2. Background Reset (Wapas Galaxy Animation)
         document.body.style.background = ""; 
-        
-        // 3. Button Shadow Reset
         const playBtn = document.getElementById('play-btn');
         if(playBtn) playBtn.style.boxShadow = 'none';
     }
@@ -106,6 +141,12 @@ function setupListeners() {
     const audio = Player.getAudioElement();
     const postBtn = document.getElementById('post-comment-btn');
     const searchInput = document.getElementById('search-input');
+    
+    // Sync Button Listener
+    const syncBtn = document.querySelector('.btn-secondary');
+    if (syncBtn) {
+        syncBtn.onclick = () => window.app.syncData();
+    }
 
     // Search
     if (searchInput) {
@@ -142,15 +183,29 @@ function setupListeners() {
     if (nextBtn) nextBtn.onclick = () => { if(Player.nextChapter()) PlayerUI.updateUI(true); };
     if(seekBack) seekBack.onclick = () => Player.skip(-10);
     if(seekFwd) seekFwd.onclick = () => Player.skip(10);
-    if(progress) progress.addEventListener('input', (e) => Player.seekTo(e.target.value));
+    
+    // 🔥 PROGRESS BAR DRAG (Update Color Instantly)
+    if(progress) {
+        progress.addEventListener('input', (e) => {
+            const pct = e.target.value;
+            Player.seekTo(pct);
+            progress.style.backgroundSize = `${pct}% 100%`; // Slider Color Fill
+        });
+    }
 
     // Audio Events
     audio.ontimeupdate = () => {
         const state = Player.getCurrentState();
         if (state.duration && progress) {
             const pct = (state.currentTime / state.duration) * 100;
+            
+            // 1. Value Update
             progress.value = pct;
-            progress.style.background = `linear-gradient(to right, var(--secondary) ${pct}%, rgba(255,255,255,0.1) ${pct}%)`;
+            
+            // 2. 🔥 Color Fill Logic (Important for Ultimate Slider)
+            progress.style.backgroundSize = `${pct}% 100%`;
+
+            // 3. Time Text
             document.getElementById('current-time').innerText = PlayerUI.formatTime(state.currentTime);
             document.getElementById('total-duration').innerText = PlayerUI.formatTime(state.duration);
         }
@@ -247,6 +302,15 @@ function updateUserName() {
         const d = document.getElementById('user-name-display');
         if(d && user.name) d.innerText = user.name;
     });
+}
+
+// --- 🍞 HELPER: TOAST MSG ---
+function showToast(msg) {
+    const toast = document.createElement('div');
+    toast.className = 'toast-msg';
+    toast.innerText = msg;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
 }
 
 // --- 🎨 STYLES ---

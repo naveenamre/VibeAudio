@@ -32,7 +32,7 @@ body {
     100% { background-position: 0% 50%; }
 }
 
-/* Purana static background hata diya, kyunki ab Body animate kar raha hai */
+/* Purana static background hata diya */
 .bg-gradient { display: none; }
 
 .glass-container {
@@ -45,6 +45,7 @@ body {
 header {
     display: flex; justify-content: space-between; align-items: center;
     margin-bottom: 30px; flex-wrap: wrap; gap: 20px;
+    transition: all 0.3s ease;
 }
 
 .logo { 
@@ -100,3 +101,63 @@ header {
     animation: pulse 1.5s infinite;
 }
 @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+
+/* --- 📱 MOBILE & PLAYER MODE OPTIMIZATION --- */
+
+/* 1. Mobile Layout Fixes */
+@media (max-width: 768px) {
+    .glass-container {
+        padding: 15px; 
+        width: 95%; 
+    }
+
+    /* Grid ko Force karo 2 Columns hone ke liye (Amazon Style) */
+    .grid {
+        grid-template-columns: repeat(2, 1fr); 
+        gap: 12px; 
+    }
+
+    /* Search box adjustment */
+    header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .search-box {
+        margin-top: 10px;
+        width: 100%;
+    }
+    .search-box input { width: 100%; }
+    
+    .logo { justify-content: center; margin-bottom: 10px; }
+    .nav-tabs { justify-content: center; width: 100%; }
+}
+
+/* 2. PLAYER MODE (Jab Player active ho, Header clean karo) */
+body.player-mode header {
+    padding-bottom: 0; 
+    border-bottom: none;
+    background: transparent;
+    backdrop-filter: none;
+    margin-bottom: 10px;
+}
+
+/* Tabs aur Search ko Gayab karo */
+body.player-mode .nav-tabs,
+body.player-mode .search-box {
+    display: none !important;
+}
+
+/* Sirf Logo dikhega, centered */
+body.player-mode .logo {
+    width: 100%;
+    justify-content: center;
+    margin-bottom: 0;
+    font-size: 1.2rem;
+    opacity: 0.8;
+}
+
+/* Back Button Alignment fix for Player Mode */
+body.player-mode #back-btn {
+    margin-top: -5px;
+    margin-bottom: 15px;
+}
