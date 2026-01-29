@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to VibeAudio ☁️</title>
+    <title>Vibe Audio • Log In</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -16,72 +16,139 @@
     ></script>
 
     <style>
+        :root {
+            --primary-bg: #0d0b21;
+            --accent-glow: #7b4dff;
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --font-main: 'Outfit', sans-serif;
+        }
+
         body {
-            margin: 0; padding: 0;
-            font-family: 'Outfit', sans-serif;
+            margin: 0;
+            padding: 0;
             height: 100vh;
-            display: flex; align-items: center; justify-content: center;
+            width: 100vw;
+            font-family: var(--font-main);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle at top, #2f256e, var(--primary-bg) 60%, #000000 100%);
             overflow: hidden;
-            background: linear-gradient(125deg, #0f0c29, #302b63, #24243e);
-            background-size: 400% 400%;
-            animation: calmFlow 15s ease infinite;
             color: white;
+            position: relative;
         }
 
-        @keyframes calmFlow {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
+        /* Ambient Glow - Now Responsive */
+        .bg-glow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: clamp(300px, 60vw, 600px); /* Smart Sizing */
+            height: clamp(300px, 60vw, 600px);
+            border-radius: 50%;
+            background: var(--accent-glow);
+            filter: blur(120px);
+            opacity: 0.3;
+            z-index: -1;
+            animation: pulse 8s infinite ease-in-out alternate;
         }
 
+        @keyframes pulse {
+            0% { transform: translate(-50%, -50%) scale(1); opacity: 0.25; }
+            100% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.4; }
+        }
+
+        /* Glass Card */
         .login-card {
-            background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 3rem 2rem;
-            border-radius: 24px;
-            width: 100%; max-width: 380px;
+            width: 90%;
+            max-width: 400px;
+            padding: 2.5rem 2rem;
             text-align: center;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-            animation: floatUp 1s ease-out;
+            
+            background: var(--glass-bg);
+            border-radius: 24px;
+            backdrop-filter: blur(40px); /* Heavy Blur for Premium Feel */
+            -webkit-backdrop-filter: blur(40px);
+            border: 1px solid var(--glass-border);
+            
+            box-shadow: 
+                0 20px 40px rgba(0,0,0,0.4),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+            
+            animation: slideUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+            opacity: 0;
+            transform: translateY(30px);
         }
 
-        @keyframes floatUp {
-            from { opacity: 0; transform: translateY(20px); }
+        @keyframes slideUp {
             to { opacity: 1; transform: translateY(0); }
         }
 
-        .logo-icon {
-            font-size: 3.5rem; margin-bottom: 15px;
-            background: linear-gradient(to bottom, #fff, #aaa);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            filter: drop-shadow(0 0 15px rgba(255,255,255,0.2));
+        .logo {
+            width: 72px;
+            height: 72px;
+            margin-bottom: 1rem;
+            border-radius: 18px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            transition: transform 0.3s ease;
         }
 
-        h1 { font-weight: 600; margin: 0; font-size: 1.8rem; letter-spacing: 0.5px; }
-        p { color: #ccc; font-size: 0.95rem; margin-top: 5px; margin-bottom: 30px; font-weight: 300; }
+        .logo:hover {
+            transform: scale(1.05) rotate(3deg);
+        }
 
-        .cl-signIn-root { margin: 0 auto; }
-        
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin: 0;
+            letter-spacing: -0.5px;
+            background: linear-gradient(to right, #fff, #b4b4b4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p {
+            margin: 8px 0 28px;
+            font-size: 0.95rem;
+            color: rgba(255, 255, 255, 0.6);
+            font-weight: 300;
+        }
+
         #loader {
-            margin-top: 20px; font-size: 0.9rem; opacity: 0.7; display: none;
+            font-size: 0.9rem;
+            display: none;
+            margin-top: 25px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 480px) {
+            .login-card {
+                padding: 2rem 1.5rem;
+                width: 85%;
+            }
+            h1 { font-size: 1.6rem; }
+            .bg-glow { filter: blur(80px); }
         }
     </style>
 </head>
+
 <body>
 
+    <div class="bg-glow"></div>
+
     <div class="login-card">
-        <div class="logo-icon">
-            <i class="fas fa-cloud-moon"></i>
-        </div>
+        <img src="src/icons/favicon.png" class="logo" alt="Vibe Logo" onerror="this.style.display='none'"/>
+
         <h1>Vibe Audio</h1>
-        <p>Relax. Listen. Escape.</p>
-        
+        <p>Your personal soundscape awaits.</p>
+
         <div id="sign-in-container"></div>
-        
+
         <div id="loader">
-            <i class="fas fa-spinner fa-spin"></i> Taking you to the vibe...
+            <i class="fas fa-circle-notch fa-spin"></i> &nbsp; Syncing your vibe...
         </div>
     </div>
 
@@ -90,54 +157,66 @@
             const loader = document.getElementById('loader');
             const signInDiv = document.getElementById('sign-in-container');
 
-            // Wait for Clerk to be defined
             if (!window.Clerk) {
-                signInDiv.innerText = "Loading security...";
-                // Thoda wait karo script load hone ka
-                await new Promise(r => setTimeout(r, 500));
+                signInDiv.innerHTML = '<span style="color:red; opacity:0.7">Error: Scripts blocked.</span>';
+                return;
             }
 
             try {
-                // 🔥 FIX: Ab 'new Clerk()' nahi karna, window.Clerk use karna hai
-                // Kyunki humne script tag me key de di hai
                 await window.Clerk.load();
 
                 if (window.Clerk.user) {
-                    console.log("User found:", window.Clerk.user.firstName);
-                    signInDiv.style.display = 'none';
+                    // User already logged in
                     loader.style.display = 'block';
-                    
-                    // Save User Info
+                    signInDiv.style.display = 'none';
+
                     localStorage.setItem("vibe_user_id", window.Clerk.user.id);
                     localStorage.setItem("vibe_user_name", window.Clerk.user.firstName);
-                    
+
                     setTimeout(() => {
-                        window.location.href = "./src/pages/app.html"; 
-                    }, 1000);
+                        window.location.href = "./src/pages/app.html";
+                    }, 800);
+
                 } else {
-                    window.Clerk.mountSignIn(document.getElementById('sign-in-container'), {
+                    // Mount Login - With Native Clerk Styling (No CSS Hacks needed!)
+                    window.Clerk.mountSignIn(signInDiv, {
                         appearance: {
+                            layout: {
+                                socialButtonsPlacement: 'top',
+                                showOptionalFields: false,
+                            },
                             variables: {
-                                colorPrimary: '#ffffff',
-                                colorText: 'white',
-                                colorBackground: '#1a1a1a',
-                                colorInputBackground: '#333',
-                                colorInputText: 'white'
+                                fontFamily: '"Outfit", sans-serif',
+                                colorPrimary: "#7b4dff", // Your brand color
+                                colorText: "white",
+                                colorBackground: "transparent",
+                                colorInputBackground: "rgba(255,255,255,0.08)",
+                                colorInputText: "white",
+                                borderRadius: "12px"
                             },
                             elements: {
-                                footer: "hidden",
-                                card: "shadow-none bg-transparent"
+                                card: "shadow-none bg-transparent p-0",
+                                headerTitle: "hidden", // We have our own H1
+                                headerSubtitle: "hidden",
+                                socialButtonsBlockButton: "bg-white/5 border border-white/10 hover:bg-white/10 text-white",
+                                socialButtonsBlockButtonText: "text-white font-normal",
+                                dividerLine: "bg-white/20",
+                                dividerText: "text-white/40",
+                                formFieldLabel: "text-white/60",
+                                formButtonPrimary: "bg-white text-black hover:bg-gray-200 border-none", // The main button style
+                                footer: "hidden" // Hiding the "Secured by Clerk" footer for cleaner look
                             }
                         }
                     });
                 }
             } catch (err) {
-                console.error("Clerk Error:", err);
-                signInDiv.innerText = "Connection failed. Please refresh.";
+                console.error("Clerk Failure:", err);
+                signInDiv.innerHTML = '<span style="color:#ff6b6b">Connection failed. Please refresh.</span>';
             }
         }
 
-        window.addEventListener('load', startClerk);
+        window.addEventListener("load", startClerk);
     </script>
+
 </body>
 </html>
