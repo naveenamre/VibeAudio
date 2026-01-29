@@ -1,171 +1,168 @@
-// --- 🎧 PLAYER LOGIC (With Cloud Resume & Memory) ---
-import { saveUserProgress, fetchUserProgress } from './api.js'; // ✨ Imported fetchUserProgress
+// --- 🎵 PLAYER LOGIC MODULE (Fixed Imports & Time Resume) ---
+import { saveUserProgress, fetchUserProgress } from './api.js'; // ✅ Fixed Name
 
-const audio = document.getElementById('audio-element') || new Audio();
+let audio = document.getElementById('audio-element') || new Audio();
 let currentBook = null;
 let currentChapterIndex = 0;
-let saveInterval = null; // ⏱️ Timer for auto-save
+let progressInterval = null;
 
-// --- 📥 LOAD & PLAY (Smart Resume) ---
-export async function loadBook(book, index = 0) {
-    stopProgressLoop(); // Purana timer roko
-
-    currentBook = book;
-    currentChapterIndex = index;
-
-    console.log("☁️ Checking for saved progress...");
-    
-    // 1. Cloud se pucho: "Bhai is book ka koi save data hai?"
-    // (Note: Hum user_123 hardcode kar rahe hain abhi ke liye)
-    const allProgress = await fetchUserProgress("user_123");
-    
-    // 2. Find progress for THIS book
-    // Note: bookId ko string me convert karke compare kar rahe hain safety ke liye
-    const savedData = allProgress.find(p => p.bookId == book.bookId);
-
-    if (savedData) {
-        console.log(`🔥 Found Save: Chapter ${savedData.chapterIndex} @ ${savedData.currentTime}s`);
-        
-        // Agar saved chapter alag hai user ke selected index se, to saved wala use karo
-        // (Sirf tab jab user ne specific chapter click nahi kiya ho, par abhi simple rakhte hain)
-        if (index === 0 && savedData.chapterIndex > 0) {
-             currentChapterIndex = parseInt(savedData.chapterIndex);
-        }
-        
-        // Resume from saved time
-        playChapter(currentChapterIndex, savedData.currentTime);
-    } else {
-        console.log("✨ No save found, starting fresh.");
-        playChapter(currentChapterIndex, 0); // Start from 0
-    }
+// --- 🎧 INIT PLAYER ---
+export function getAudioElement() { return audio; }
+export function getCurrentState() { 
+    return { 
+        book: currentBook, 
+        currentChapterIndex, 
+        currentTime: audio.currentTime, 
+        duration: audio.duration 
+    }; 
 }
 
-function playChapter(index, startTime = 0) { // ✨ startTime parameter added
-    if (!currentBook || !currentBook.chapters[index]) return;
+// --- 📂 LOAD BOOK (With Time Resume) ---
+// ✨ UPDATE: Added 'startTime' parameter for accurate resuming
+export async function loadBook(book, chapterIndex = 0, startTime = 0) {
+    if (!book || !book.chapters || !book.chapters[chapterIndex]) return;
 
-    const chapter = currentBook.chapters[index];
-    
-    // Audio Source Set karo
-    audio.src = chapter.url;
-    
-    // Metadata set karna (Lock Screen Controls)
-    if ('mediaSession' in navigator) {
-        navigator.mediaSession.metadata = new MediaMetadata({
-            title: chapter.name,
-            artist: currentBook.author,
-            album: currentBook.title,
-            artwork: [{ src: currentBook.cover, sizes: '512x512', type: 'image/jpeg' }]
-        });
-        
-        navigator.mediaSession.setActionHandler('play', () => togglePlay());
-        navigator.mediaSession.setActionHandler('pause', () => togglePlay());
-        navigator.mediaSession.setActionHandler('previoustrack', () => prevChapter());
-        navigator.mediaSession.setActionHandler('nexttrack', () => nextChapter());
+    // Resume Logic: Agar same chapter aur same book hai, toh bas play karo
+    if (currentBook && currentBook.bookId === book.bookId && currentChapterIndex === chapterIndex && audio.src) {
+        console.log("⚠️ Already loaded. Resuming...");
+        playAudioSafe();
+        return;
     }
 
-    // ✨ Magic: Audio load hone ka wait karo fir seek karo
-    // Agar hum turant currentTime set karte hain, to kabhi kabhi fail ho jata hai
+    currentBook = book;
+    currentChapterIndex = chapterIndex;
+    
+    stopProgressTracker(); // Purana save loop roko
+    audio.pause();
+
+    const chapter = book.chapters[chapterIndex];
+    console.log(`📂 Loading: ${chapter.name} at ${startTime}s`);
+
+    audio.src = chapter.url;
+    
+    // ✨ MAGIC: Metadata load hone ka wait karo fir Seek karo
     audio.onloadedmetadata = () => {
         if (startTime > 0) {
             audio.currentTime = startTime;
         }
-        
-        audio.play()
-            .then(() => startProgressLoop()) // ▶️ Play hote hi tracking shuru
-            .catch(e => console.error("Autoplay blocked:", e));
+        playAudioSafe(); // Safe play call
     };
-    
-    // Fallback: Agar metadata event miss ho jaye to play karne ki koshish karo
-    setTimeout(() => {
-        if(audio.paused) audio.play().catch(()=> {});
-    }, 1000);
+
+    // Fallback: Agar metadata event miss ho jaye
+    audio.load();
+
+    // 📱 LOCK SCREEN CONTROLS (Media Session API)
+    if ('mediaSession' in navigator) {
+        updateMediaSession(book, chapter);
+        setupMediaHandlers();
+    }
+
+    startProgressTracker();
+}
+
+// 📱 HELPER: Media Session UI Update
+function updateMediaSession(book, chapter) {
+    navigator.mediaSession.metadata = new MediaMetadata({
+        title: chapter.name.replace(/^Chapter\s+\d+[:\s-]*/i, '').replace(/^\d+[\.\s]+/, '').trim(),
+        artist: book.author || "Vibe Audio",
+        album: book.title,
+        artwork: [
+            { src: book.cover, sizes: '96x96', type: 'image/png' },
+            { src: book.cover, sizes: '128x128', type: 'image/png' },
+            { src: book.cover, sizes: '512x512', type: 'image/png' }
+        ]
+    });
+}
+
+function setupMediaHandlers() {
+    navigator.mediaSession.setActionHandler('play', () => { togglePlay(); updateUIState(true); });
+    navigator.mediaSession.setActionHandler('pause', () => { togglePlay(); updateUIState(false); });
+    navigator.mediaSession.setActionHandler('previoustrack', prevChapter);
+    navigator.mediaSession.setActionHandler('nexttrack', nextChapter);
+    navigator.mediaSession.setActionHandler('seekbackward', () => skip(-10));
+    navigator.mediaSession.setActionHandler('seekforward', () => skip(10));
+}
+
+// 🛡️ SAFE PLAY HELPER (No Red Errors)
+async function playAudioSafe() {
+    try {
+        await audio.play();
+        updateUIState(true);
+    } catch (err) {
+        if (err.name !== 'AbortError') {
+            console.warn("⚠️ Autoplay blocked (Click Play manually):", err);
+            updateUIState(false); 
+        }
+    }
 }
 
 // --- ⏯️ CONTROLS ---
 export function togglePlay() {
     if (audio.paused) {
-        audio.play();
-        startProgressLoop(); // 🟢 Start Auto-Save
-        return true; // Is Playing
+        playAudioSafe();
+        return true;
     } else {
         audio.pause();
-        stopProgressLoop();  // 🔴 Stop Timer
-        triggerSave();       // 💾 Pause karte hi Save karo
-        return false; // Is Paused
-    }
-}
-
-export function seekTo(pct) {
-    if (audio.duration) {
-        audio.currentTime = (pct / 100) * audio.duration;
+        updateUIState(false);
+        stopProgressTracker();
+        // Pause karte waqt turant save karo (Fixed function call)
+        if(currentBook) saveUserProgress(currentBook.bookId, currentChapterIndex, audio.currentTime);
+        return false;
     }
 }
 
 export function skip(seconds) {
     audio.currentTime += seconds;
-    triggerSave(); // Skip karne par bhi save kar lo
+}
+
+export function seekTo(percent) {
+    if (audio.duration) {
+        audio.currentTime = (percent / 100) * audio.duration;
+    }
+}
+
+// --- ⏭️ NAVIGATION ---
+export function nextChapter() {
+    if (currentBook && currentChapterIndex < currentBook.chapters.length - 1) {
+        loadBook(currentBook, currentChapterIndex + 1, 0); // Next chapter hamesha 0 se start hoga
+        updateUIState(true); 
+        return true;
+    }
+    return false;
 }
 
 export function prevChapter() {
     if (currentChapterIndex > 0) {
-        currentChapterIndex--;
-        playChapter(currentChapterIndex, 0); // Next/Prev humesha 0 se start hoga
+        loadBook(currentBook, currentChapterIndex - 1, 0);
+        updateUIState(true); 
         return true;
     }
     return false;
 }
 
-export function nextChapter() {
-    if (currentBook && currentChapterIndex < currentBook.chapters.length - 1) {
-        currentChapterIndex++;
-        playChapter(currentChapterIndex, 0);
-        return true;
-    }
-    return false;
-}
-
-// --- ℹ️ GETTERS ---
-export function getAudioElement() {
-    return audio;
-}
-
-export function getCurrentState() {
-    return {
-        book: currentBook,
-        chapter: currentBook ? currentBook.chapters[currentChapterIndex] : null,
-        currentTime: audio.currentTime,
-        duration: audio.duration,
-        isPlaying: !audio.paused
-    };
-}
-
-// --- 💾 CLOUD SAVE LOGIC ---
-
-function triggerSave() {
-    if (currentBook && audio.duration > 0) {
-        saveUserProgress(
-            currentBook.bookId, 
-            currentChapterIndex, 
-            audio.currentTime, 
-            audio.duration
-        );
-    }
-}
-
-// 🔁 Auto-Save Loop (Har 15 sec)
-function startProgressLoop() {
-    stopProgressLoop(); // Safety check
-    saveInterval = setInterval(() => {
+// --- 💾 PROGRESS TRACKER (Cloud Sync) ---
+function startProgressTracker() {
+    stopProgressTracker();
+    // Har 10 second mein save karo
+    progressInterval = setInterval(() => {
         if (!audio.paused && currentBook) {
-            triggerSave();
-            console.log("⏳ Auto-saving progress...");
+            saveUserProgress(currentBook.bookId, currentChapterIndex, audio.currentTime);
         }
-    }, 15000); // 15 Seconds
+    }, 10000);
 }
 
-function stopProgressLoop() {
-    if (saveInterval) {
-        clearInterval(saveInterval);
-        saveInterval = null;
-    }
+function stopProgressTracker() {
+    if (progressInterval) clearInterval(progressInterval);
+}
+
+// --- 🔄 UI NOTIFIER Helper ---
+function updateUIState(isPlaying) {
+    const event = new CustomEvent('player-state-change', { 
+        detail: { 
+            isPlaying: isPlaying,
+            book: currentBook,
+            chapter: currentBook ? currentBook.chapters[currentChapterIndex] : null
+        } 
+    });
+    window.dispatchEvent(event);
 }
