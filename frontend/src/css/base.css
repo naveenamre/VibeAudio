@@ -102,37 +102,8 @@ header {
 }
 @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
 
-/* --- 📱 MOBILE & PLAYER MODE OPTIMIZATION --- */
-
-/* 1. Mobile Layout Fixes */
-@media (max-width: 768px) {
-    .glass-container {
-        padding: 15px; 
-        width: 95%; 
-    }
-
-    /* Grid ko Force karo 2 Columns hone ke liye (Amazon Style) */
-    .grid {
-        grid-template-columns: repeat(2, 1fr); 
-        gap: 12px; 
-    }
-
-    /* Search box adjustment */
-    header {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    .search-box {
-        margin-top: 10px;
-        width: 100%;
-    }
-    .search-box input { width: 100%; }
-    
-    .logo { justify-content: center; margin-bottom: 10px; }
-    .nav-tabs { justify-content: center; width: 100%; }
-}
-
-/* 2. PLAYER MODE (Jab Player active ho, Header clean karo) */
+/* --- 🎭 PLAYER MODE (Global Clean Look) --- */
+/* Jab Player active ho, Header clean karo */
 body.player-mode header {
     padding-bottom: 0; 
     border-bottom: none;
@@ -160,4 +131,101 @@ body.player-mode .logo {
 body.player-mode #back-btn {
     margin-top: -5px;
     margin-bottom: 15px;
+}
+
+/* --- 📱 MOBILE OPTIMIZATION (V2 - Airy & Open) --- */
+@media (max-width: 768px) {
+    /* 1. Container ko khula saans lene do */
+    .glass-container {
+        padding: 0; /* Container padding hatao, hum elements pe denge */
+        width: 100%;
+        margin: 0;
+        max-width: 100%;
+        background: transparent; /* Box hataya */
+        border: none;
+        box-shadow: none;
+    }
+
+    /* 2. Header: Floating Glass Effect 🏳️ */
+    header {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        
+        /* Glass Effect */
+        background: rgba(15, 12, 41, 0.85); /* Thoda transparent */
+        backdrop-filter: blur(15px);        /* Blur background */
+        -webkit-backdrop-filter: blur(15px);
+        
+        padding: 15px 20px;
+        margin-bottom: 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 0 0 25px 25px; /* Neeche se gol */
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    /* Logo Styling Update */
+    .logo { 
+        justify-content: center; 
+        width: 100%; 
+        font-size: 1.5rem;
+        margin-bottom: 5px;
+    }
+
+    /* Search Bar: Full Width & Modern */
+    .search-box {
+        width: 100%;
+        background: rgba(255,255,255,0.08);
+        padding: 12px 20px;
+    }
+    .search-box input { width: 100%; font-size: 1rem; }
+
+    /* Tabs: Full Width Scrolling */
+    .nav-tabs {
+        width: 100%;
+        justify-content: space-between; /* Failaa do */
+        background: transparent;
+        border: none;
+        padding: 0;
+    }
+    .nav-tabs button {
+        flex-grow: 1; /* Barabar hissa */
+        justify-content: center;
+        padding: 10px;
+        font-size: 0.9rem;
+        background: rgba(255,255,255,0.05);
+    }
+    .nav-tabs button.active-tab {
+        background: var(--secondary);
+        box-shadow: 0 5px 15px rgba(31, 221, 255, 0.3);
+    }
+
+    /* 3. Grid Fix: Chipka-Chipki Band! 🛑 */
+    .grid {
+        display: grid;
+        /* Strict 2 Columns */
+        grid-template-columns: repeat(2, 1fr); 
+        
+        /* 🔥 BADA GAP (Space between books) */
+        gap: 20px; 
+        
+        /* 🔥 SIDE PADDING (Screen ke kinare se doori) */
+        padding: 0 20px 100px 20px; 
+    }
+
+    /* Section Titles ko bhi padding do */
+    .section-title {
+        padding-left: 20px;
+        margin-bottom: 15px;
+        font-size: 1.4rem;
+    }
+
+    /* Filter Bar Scroll Fix */
+    .filter-container {
+        padding-left: 20px; /* Start me gap */
+        padding-right: 20px;
+    }
 }
