@@ -14,7 +14,6 @@
     
     /* Animation settings */
     animation: fadeInUp 0.6s cubic-bezier(0.25, 1, 0.5, 1) forwards;
-    /* Note: animation-delay hum JS se set kar rahe hain */
 }
 
 /* 👇 FIX: Animation Keyframes (No Transform here) */
@@ -159,4 +158,77 @@
     background: linear-gradient(45deg, #ff4b1f, #ff9068); color: white;
     border: none; padding: 15px 40px; font-size: 1.2rem; border-radius: 50px; cursor: pointer;
     font-weight: bold; box-shadow: 0 0 20px rgba(255, 75, 31, 0.5);
+}
+
+/* --- 📱 MOBILE OPTIMIZATION (Hulk Fix) --- */
+@media (max-width: 768px) {
+    /* Cards ki diet - Chhota karo */
+    .book-card {
+        padding: 10px; 
+        border-radius: 15px;
+    }
+
+    .book-card img {
+        border-radius: 10px;
+        margin-bottom: 8px;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+    }
+
+    .book-card h3 {
+        font-size: 0.9rem;
+        margin-bottom: 3px;
+    }
+
+    .book-card p {
+        font-size: 0.75rem;
+    }
+
+    /* Mood tags adjustment */
+    .mood-tags {
+        gap: 3px;
+    }
+    .mood-tag {
+        font-size: 0.6rem;
+        padding: 2px 6px;
+    }
+    
+    /* 1. Touch Friendly Buttons (Mote Buttons) */
+    .nav-tabs button {
+        padding: 12px 20px; /* Thoda bada tap area */
+        font-size: 1rem;
+    }
+
+    /* 2. Header Sticky */
+    header {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        background: rgba(15, 12, 41, 0.95);
+        backdrop-filter: blur(10px);
+        padding-top: 10px;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    /* 3. Toast Message Styling (Professional) */
+    .toast-msg {
+        position: fixed;
+        bottom: 80px; /* Player bar ke upar */
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(255, 255, 255, 0.9);
+        color: black;
+        padding: 10px 20px;
+        border-radius: 50px;
+        font-weight: 600;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        z-index: 2000;
+        animation: popUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    
+    @keyframes popUp {
+        from { transform: translateX(-50%) scale(0.5); opacity: 0; }
+        to { transform: translateX(-50%) scale(1); opacity: 1; }
+    }
 }
