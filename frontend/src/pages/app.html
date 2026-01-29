@@ -6,6 +6,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vibe Audio ☁️</title>
 
+    <script>
+        (function() {
+            // Check kar ki banda login hai ya nahi
+            const userId = localStorage.getItem("vibe_user_id");
+            
+            if (!userId) {
+                console.warn("⛔ Access Denied! Redirecting to Login...");
+                // Agar ID nahi mili, toh wapas bahar (Login Page) phenk do
+                window.location.href = "../../index.html"; 
+            }
+        })();
+    </script>
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
 
@@ -21,29 +34,6 @@
 </head>
 
 <body>
-
-    <div id="login-overlay"
-        style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0f0f0f; z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column;">
-
-        <div
-            style="background: rgba(30, 30, 30, 0.9); padding: 2.5rem; border-radius: 20px; border: 1px solid #333; text-align: center; max-width: 90%; width: 350px; backdrop-filter: blur(15px); box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
-            <h2 style="color: #fff; margin-bottom: 5px;">🚀 Join Vibe</h2>
-            <p style="color: #888; font-size: 0.9rem; margin-bottom: 20px;">Enter your Name & Invite Code</p>
-
-            <input type="text" id="user-name" placeholder="Your Name (e.g. Naksh)"
-                style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #444; background: #222; color: #fff; text-align: center; font-size: 1rem; margin-bottom: 10px; outline: none;">
-
-            <input type="text" id="access-code" placeholder="Secret Code"
-                style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #444; background: #222; color: #fff; text-align: center; font-size: 1rem; margin-bottom: 20px; outline: none;">
-
-            <button id="login-btn"
-                style="width: 100%; padding: 12px; background: #fff; color: #000; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.3s;">
-                Let's Vibe 🎧
-            </button>
-
-            <p id="login-msg" style="color: #ff4444; margin-top: 15px; font-size: 0.8rem; min-height: 1.2rem;"></p>
-        </div>
-    </div>
 
     <div class="glass-container">
 
@@ -80,7 +70,7 @@
                 <p style="color:#aaa; margin-top:10px;">Version 2.0 (Stable)</p>
                 <div style="margin:20px 0; text-align:left; color:#ddd; font-size:0.9rem; line-height:1.6;">
                     <p>🎧 <strong>Immersive Audio:</strong> Experience books like never before.</p>
-                    <p>☁️ <strong>Cloud Sync:</strong> Your progress is saved everywhere.</p>
+                    <p>☁ <strong>Cloud Sync:</strong> Your progress is saved everywhere.</p>
                     <p>📱 <strong>Offline Ready:</strong> Works even when internet is gone.</p>
                     <p>👨‍💻 <strong>Developer:</strong> Crafted with ❤️ by Naksh.</p>
                 </div>
@@ -110,11 +100,8 @@
                 </div>
 
                 <div class="profile-actions">
-                    <button class="btn-danger" onclick="localStorage.removeItem('vibe_user'); location.reload();">
+                    <button class="btn-danger" onclick="window.app.logout()">
                         <i class="fas fa-sign-out-alt"></i> Logout
-                    </button>
-                    <button class="btn-secondary" onclick="window.app.syncData()">
-                        <i class="fas fa-sync"></i> Sync Data
                     </button>
                 </div>
             </div>
@@ -232,6 +219,7 @@
         let newWorker;
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
+                // Correct path to sw.js (root se relative)
                 navigator.serviceWorker.register('../../sw.js').then(reg => {
                     console.log('✅ Service Worker Registered');
                     reg.addEventListener('updatefound', () => {
