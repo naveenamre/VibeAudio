@@ -1,5 +1,5 @@
-// --- 🖥️ UI CONTROLLER (Main Hub - Fixed Sidebar Highlight) ---
-import { fetchAllBooks, fetchUserProfile, loginUser } from './api.js'; 
+// --- 🖥️ UI CONTROLLER (Clerk Ready - Cleaned Up) ---
+import { fetchAllBooks, fetchUserProgress, getLocalUserProfile, syncUserProfile } from './api.js'; 
 import * as Player from './player.js';
 
 // Import New Modules
@@ -33,8 +33,8 @@ window.app = {
         btn.innerHTML = `<i class="fas fa-sync fa-spin"></i> Syncing...`;
         btn.disabled = true;
 
-        // 2. Fake Delay (Feel lene ke liye)
-        await new Promise(r => setTimeout(r, 1500));
+        // 2. Real Sync Call
+        await syncUserProfile();
 
         // 3. Success Feedback
         if(icon) icon.classList.remove('fa-spin');
@@ -51,16 +51,48 @@ window.app = {
             btn.style.borderColor = "";
             btn.style.color = "";
         }, 3000);
+    },
+
+    // 🔥 NEW: PROPER LOGOUT FUNCTION
+    logout: async () => {
+        console.log("👋 Logging out...");
+        
+        // 1. Clerk session khatam karo (Server Logout)
+        if (window.Clerk) {
+            try {
+                await window.Clerk.signOut();
+            } catch (e) {
+                console.warn("Clerk signout issue:", e);
+            }
+        }
+
+        // 2. Local cleaning (Client Logout)
+        localStorage.removeItem("vibe_user_id");
+        localStorage.removeItem("vibe_user_name");
+        
+        // 3. Wapas Login Page bhejo
+        window.location.href = "../../index.html";
     }
 };
 
 // --- 🚀 INIT ---
 async function init() {
-    setupAuth();
     console.log("🚀 VibeAudio UI Starting...");
     setupImageObserver(); // Watchman start
 
-    // 1. Load Data
+    // 1. Get User Profile from LocalStorage (Clerk Data)
+    const user = getLocalUserProfile();
+    if (user.name) {
+        const nameDisplay = document.getElementById('user-name-display');
+        const avatar = document.getElementById('profile-avatar');
+        if(nameDisplay) nameDisplay.innerText = user.name;
+        if(avatar) avatar.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=ff4b1f&color=fff&bold=true`;
+    }
+
+    // 2. Sync User with Backend (Quietly)
+    syncUserProfile();
+
+    // 3. Load Data
     allBooks = await fetchAllBooks(); 
     
     // Sort
@@ -72,15 +104,14 @@ async function init() {
         });
     }
 
-    // 2. Render Library & Filters (using Module)
+    // 4. Render Library & Filters
     LibraryUI.renderCategoryFilters(allBooks);
     LibraryUI.renderLibrary(allBooks, (book) => PlayerUI.openPlayerUI(book, allBooks, switchView));
     
-    // 3. Render History
+    // 5. Render History
     LibraryUI.renderHistory(allBooks, (book) => PlayerUI.openPlayerUI(book, allBooks, switchView));
     
     setupListeners();
-    updateUserName();
 }
 
 // --- 🧭 NAVIGATION ---
@@ -93,11 +124,8 @@ function switchView(id) {
         if(window.gsap) gsap.fromTo(view, {opacity:0, y:10}, {opacity:1, y:0, duration:0.3});
     }
 
-    // 🍔 SIDEBAR HIGHLIGHT LOGIC (Fixed)
-    // Sabhi buttons se 'active' class hatao
+    // 🍔 SIDEBAR HIGHLIGHT LOGIC
     document.querySelectorAll('.sidebar-nav button').forEach(btn => btn.classList.remove('active'));
-
-    // Jis button pe click kiya use 'active' karo (Attribute selector magic)
     const activeBtn = document.querySelector(`.sidebar-nav button[onclick*="'${id}'"]`);
     if(activeBtn) activeBtn.classList.add('active');
 
@@ -111,7 +139,7 @@ function switchView(id) {
     // History tab refresh logic
     if (id === 'history') LibraryUI.renderHistory(allBooks, (book) => PlayerUI.openPlayerUI(book, allBooks, switchView));
 
-    // 🦎 RESET THEME: Agar Library me wapas aaye toh default color wapas lao
+    // 🦎 RESET THEME
     if (id === 'library') {
         document.documentElement.style.setProperty('--primary', '#ff4b1f');
         document.body.style.background = ""; 
@@ -170,16 +198,9 @@ function setupListeners() {
     if(closeBtn) closeBtn.onclick = () => toggleSidebar(false);
     if(overlay) overlay.onclick = () => toggleSidebar(false);
 
-    // Sidebar navigation click pe sidebar band karo
     document.querySelectorAll('.sidebar-nav button').forEach(btn => {
         btn.addEventListener('click', () => toggleSidebar(false));
     });
-
-    // Sync Button Listener
-    const syncBtn = document.querySelector('.btn-secondary');
-    if (syncBtn) {
-        syncBtn.onclick = () => window.app.syncData();
-    }
 
     // Search
     if (searchInput) {
@@ -222,7 +243,7 @@ function setupListeners() {
         progress.addEventListener('input', (e) => {
             const pct = e.target.value;
             Player.seekTo(pct);
-            progress.style.backgroundSize = `${pct}% 100%`; // Slider Color Fill
+            progress.style.backgroundSize = `${pct}% 100%`; 
         });
     }
 
@@ -231,14 +252,8 @@ function setupListeners() {
         const state = Player.getCurrentState();
         if (state.duration && progress) {
             const pct = (state.currentTime / state.duration) * 100;
-            
-            // 1. Value Update
             progress.value = pct;
-            
-            // 2. 🔥 Color Fill Logic
             progress.style.backgroundSize = `${pct}% 100%`;
-
-            // 3. Time Text
             document.getElementById('current-time').innerText = PlayerUI.formatTime(state.currentTime);
             document.getElementById('total-duration').innerText = PlayerUI.formatTime(state.duration);
         }
@@ -261,80 +276,6 @@ function setupImageObserver() {
             }
         });
     }, { rootMargin: "100px 0px", threshold: 0.01 });
-}
-
-// --- 🔒 AUTH & USER ---
-function setupAuth() {
-    const loginOverlay = document.getElementById('login-overlay');
-    const loginBtn = document.getElementById('login-btn');
-    const nameInput = document.getElementById('user-name');
-    const codeInput = document.getElementById('access-code');
-    const loginMsg = document.getElementById('login-msg');
-    const userNameDisplay = document.getElementById('user-name-display');
-
-    // 1. Check Previous Login
-    const storedUser = localStorage.getItem('vibe_user');
-    if (storedUser) {
-        if(loginOverlay) loginOverlay.style.display = 'none';
-        try {
-            const user = JSON.parse(storedUser);
-            if(userNameDisplay) userNameDisplay.innerText = user.name;
-        } catch(e) { console.error("Parse Error", e); }
-    }
-
-    // 2. Button Logic
-    if (loginBtn) {
-        loginBtn.onclick = async () => {
-            const name = nameInput.value.trim();
-            const code = codeInput.value.trim();
-
-            if (!name || !code) {
-                if(loginMsg) {
-                    loginMsg.innerText = "Please enter both Name & Code! 🤨";
-                    loginMsg.style.color = "#ff4444";
-                }
-                return;
-            }
-
-            // Feedback
-            const originalText = loginBtn.innerText;
-            loginBtn.innerText = "Verifying...";
-            loginBtn.disabled = true;
-
-            // API Call
-            const result = await loginUser(code, name);
-            
-            if (result.success) {
-                // Success
-                localStorage.setItem('vibe_user', JSON.stringify({ 
-                    userId: result.userId, 
-                    name: result.name 
-                }));
-                
-                if(loginMsg) {
-                    loginMsg.innerText = "Access Granted! 🚀";
-                    loginMsg.style.color = "#00ff00";
-                }
-                setTimeout(() => location.reload(), 1000);
-
-            } else {
-                // Fail
-                if(loginMsg) {
-                    loginMsg.style.color = "#ff4444";
-                    loginMsg.innerText = result.error || "Wrong Code!";
-                }
-                loginBtn.innerText = originalText;
-                loginBtn.disabled = false;
-            }
-        };
-    }
-}
-
-function updateUserName() {
-    fetchUserProfile().then(user => {
-        const d = document.getElementById('user-name-display');
-        if(d && user.name) d.innerText = user.name;
-    });
 }
 
 // --- 🍞 HELPER: TOAST MSG ---
@@ -362,4 +303,4 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-init();
+document.addEventListener('DOMContentLoaded', init);

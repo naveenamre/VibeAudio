@@ -3,42 +3,141 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Opening VibeAudio...</title>
+    <title>Welcome to VibeAudio ☁️</title>
     
-    <meta http-equiv="refresh" content="0; url=./src/pages/index.html">
-    
-    <script>
-        // Backup: Agar meta tag fail ho, toh JS sambhal lega
-        window.location.replace("./src/pages/index.html");
-    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script
+        crossorigin="anonymous"
+        data-clerk-publishable-key="pk_test_cXVhbGl0eS1oYXJlLTk5LmNsZXJrLmFjY291bnRzLmRldiQ"
+        src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
+        type="text/javascript"
+    ></script>
 
     <style>
-        /* Dark Theme Loading Screen */
         body {
-            background-color: #0f0c29;
-            color: #bd34fe;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            margin: 0; padding: 0;
+            font-family: 'Outfit', sans-serif;
             height: 100vh;
-            margin: 0;
-            font-family: sans-serif;
-            flex-direction: column;
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden;
+            background: linear-gradient(125deg, #0f0c29, #302b63, #24243e);
+            background-size: 400% 400%;
+            animation: calmFlow 15s ease infinite;
+            color: white;
         }
-        .loader {
-            width: 40px;
-            height: 40px;
-            border: 3px solid rgba(255,255,255,0.1);
-            border-radius: 50%;
-            border-top-color: #bd34fe;
-            animation: spin 1s ease-in-out infinite;
-            margin-bottom: 20px;
+
+        @keyframes calmFlow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .login-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 3rem 2rem;
+            border-radius: 24px;
+            width: 100%; max-width: 380px;
+            text-align: center;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            animation: floatUp 1s ease-out;
+        }
+
+        @keyframes floatUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .logo-icon {
+            font-size: 3.5rem; margin-bottom: 15px;
+            background: linear-gradient(to bottom, #fff, #aaa);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 15px rgba(255,255,255,0.2));
+        }
+
+        h1 { font-weight: 600; margin: 0; font-size: 1.8rem; letter-spacing: 0.5px; }
+        p { color: #ccc; font-size: 0.95rem; margin-top: 5px; margin-bottom: 30px; font-weight: 300; }
+
+        .cl-signIn-root { margin: 0 auto; }
+        
+        #loader {
+            margin-top: 20px; font-size: 0.9rem; opacity: 0.7; display: none;
+        }
     </style>
 </head>
 <body>
-    <div class="loader"></div>
-    <p>🚀 Launching Vibe...</p>
+
+    <div class="login-card">
+        <div class="logo-icon">
+            <i class="fas fa-cloud-moon"></i>
+        </div>
+        <h1>Vibe Audio</h1>
+        <p>Relax. Listen. Escape.</p>
+        
+        <div id="sign-in-container"></div>
+        
+        <div id="loader">
+            <i class="fas fa-spinner fa-spin"></i> Taking you to the vibe...
+        </div>
+    </div>
+
+    <script>
+        async function startClerk() {
+            const loader = document.getElementById('loader');
+            const signInDiv = document.getElementById('sign-in-container');
+
+            // Wait for Clerk to be defined
+            if (!window.Clerk) {
+                signInDiv.innerText = "Loading security...";
+                // Thoda wait karo script load hone ka
+                await new Promise(r => setTimeout(r, 500));
+            }
+
+            try {
+                // 🔥 FIX: Ab 'new Clerk()' nahi karna, window.Clerk use karna hai
+                // Kyunki humne script tag me key de di hai
+                await window.Clerk.load();
+
+                if (window.Clerk.user) {
+                    console.log("User found:", window.Clerk.user.firstName);
+                    signInDiv.style.display = 'none';
+                    loader.style.display = 'block';
+                    
+                    // Save User Info
+                    localStorage.setItem("vibe_user_id", window.Clerk.user.id);
+                    localStorage.setItem("vibe_user_name", window.Clerk.user.firstName);
+                    
+                    setTimeout(() => {
+                        window.location.href = "./src/pages/app.html"; 
+                    }, 1000);
+                } else {
+                    window.Clerk.mountSignIn(document.getElementById('sign-in-container'), {
+                        appearance: {
+                            variables: {
+                                colorPrimary: '#ffffff',
+                                colorText: 'white',
+                                colorBackground: '#1a1a1a',
+                                colorInputBackground: '#333',
+                                colorInputText: 'white'
+                            },
+                            elements: {
+                                footer: "hidden",
+                                card: "shadow-none bg-transparent"
+                            }
+                        }
+                    });
+                }
+            } catch (err) {
+                console.error("Clerk Error:", err);
+                signInDiv.innerText = "Connection failed. Please refresh.";
+            }
+        }
+
+        window.addEventListener('load', startClerk);
+    </script>
 </body>
 </html>
