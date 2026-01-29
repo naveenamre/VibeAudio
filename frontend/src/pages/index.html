@@ -49,15 +49,8 @@
 
         <header>
             <div class="logo">
-                <i class="fas fa-cloud-bolt"></i> VibeAudio
-            </div>
-
-            <div class="nav-tabs">
-                <button id="nav-library" class="active-tab" onclick="app.switchView('library')">Library</button>
-                <button id="nav-history" onclick="app.switchView('history')">History</button>
-                <button id="nav-profile" onclick="app.switchView('profile')">
-                    <i class="fas fa-user-circle"></i> Me
-                </button>
+                <button id="menu-btn" class="glass-btn"><i class="fas fa-bars"></i></button>
+                <span><i class="fas fa-cloud-bolt"></i> VibeAudio</span>
             </div>
 
             <div class="search-box">
@@ -81,13 +74,26 @@
             </div>
         </section>
 
+        <section id="view-about" class="view-section hidden fade-in">
+            <div class="profile-card">
+                <h2>⚡ About VibeAudio</h2>
+                <p style="color:#aaa; margin-top:10px;">Version 2.0 (Stable)</p>
+                <div style="margin:20px 0; text-align:left; color:#ddd; font-size:0.9rem; line-height:1.6;">
+                    <p>🎧 <strong>Immersive Audio:</strong> Experience books like never before.</p>
+                    <p>☁️ <strong>Cloud Sync:</strong> Your progress is saved everywhere.</p>
+                    <p>📱 <strong>Offline Ready:</strong> Works even when internet is gone.</p>
+                    <p>👨‍💻 <strong>Developer:</strong> Crafted with ❤️ by Naksh.</p>
+                </div>
+                <button class="action-btn" onclick="app.goBack()">Go to Library</button>
+            </div>
+        </section>
+
         <section id="view-profile" class="view-section hidden fade-in">
             <div class="profile-card">
                 <div class="profile-header">
-                    <img src="https://ui-avatars.com/api/?name=Captain+Naksh&background=random" alt="User"
-                        class="avatar">
+                    <img src="https://ui-avatars.com/api/?name=User&background=random" alt="User" class="avatar" id="profile-avatar">
                     <div>
-                        <h2 id="user-name-display">Captain Naksh</h2>
+                        <h2 id="user-name-display">Guest User</h2>
                         <p class="user-badge">Free Tier Legend 🚀</p>
                     </div>
                 </div>
@@ -107,7 +113,9 @@
                     <button class="btn-danger" onclick="localStorage.removeItem('vibe_user'); location.reload();">
                         <i class="fas fa-sign-out-alt"></i> Logout
                     </button>
-                    <button class="btn-secondary"><i class="fas fa-sync"></i> Sync Data</button>
+                    <button class="btn-secondary" onclick="window.app.syncData()">
+                        <i class="fas fa-sync"></i> Sync Data
+                    </button>
                 </div>
             </div>
         </section>
@@ -157,6 +165,21 @@
         </section>
 
     </div>
+
+    <div id="sidebar-overlay" class="hidden"></div>
+    <aside id="sidebar">
+        <div class="sidebar-header">
+            <h3>Menu</h3>
+            <button id="close-sidebar"><i class="fas fa-times"></i></button>
+        </div>
+        <nav class="sidebar-nav">
+            <button onclick="window.app.switchView('library')"><i class="fas fa-book"></i> Library</button>
+            <button onclick="window.app.switchView('history')"><i class="fas fa-history"></i> History</button>
+            <button onclick="window.app.switchView('about')"><i class="fas fa-info-circle"></i> About</button>
+            <div class="divider"></div>
+            <button onclick="window.app.switchView('profile')"><i class="fas fa-user"></i> My Profile</button>
+        </nav>
+    </aside>
 
     <div id="mini-player" class="player-bar hidden">
         <div class="track-info">

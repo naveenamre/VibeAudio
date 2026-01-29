@@ -1,4 +1,4 @@
-// --- 🖥️ UI CONTROLLER (Main Hub) ---
+// --- 🖥️ UI CONTROLLER (Main Hub - Fixed Sidebar Highlight) ---
 import { fetchAllBooks, fetchUserProfile, loginUser } from './api.js'; 
 import * as Player from './player.js';
 
@@ -86,17 +86,22 @@ async function init() {
 // --- 🧭 NAVIGATION ---
 function switchView(id) {
     document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
-    document.querySelectorAll('.nav-tabs button').forEach(el => el.classList.remove('active-tab'));
     
     const view = document.getElementById(`view-${id}`);
     if (view) {
         view.classList.remove('hidden');
         if(window.gsap) gsap.fromTo(view, {opacity:0, y:10}, {opacity:1, y:0, duration:0.3});
     }
-    const btn = document.getElementById(`nav-${id}`);
-    if(btn) btn.classList.add('active-tab');
 
-    // 👇 NEW: Player Mode Trigger (For Mobile Cleanup)
+    // 🍔 SIDEBAR HIGHLIGHT LOGIC (Fixed)
+    // Sabhi buttons se 'active' class hatao
+    document.querySelectorAll('.sidebar-nav button').forEach(btn => btn.classList.remove('active'));
+
+    // Jis button pe click kiya use 'active' karo (Attribute selector magic)
+    const activeBtn = document.querySelector(`.sidebar-nav button[onclick*="'${id}'"]`);
+    if(activeBtn) activeBtn.classList.add('active');
+
+    // 👇 Player Mode Trigger
     if (id === 'player') {
         document.body.classList.add('player-mode');
     } else {
@@ -142,6 +147,34 @@ function setupListeners() {
     const postBtn = document.getElementById('post-comment-btn');
     const searchInput = document.getElementById('search-input');
     
+    // 🍔 SIDEBAR LOGIC
+    const menuBtn = document.getElementById('menu-btn');
+    const closeBtn = document.getElementById('close-sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    const sidebar = document.getElementById('sidebar');
+
+    function toggleSidebar(show) {
+        if(!sidebar || !overlay) return;
+        if (show) {
+            sidebar.classList.add('active');
+            overlay.classList.add('active');
+            overlay.classList.remove('hidden');
+        } else {
+            sidebar.classList.remove('active');
+            overlay.classList.remove('active');
+            setTimeout(() => overlay.classList.add('hidden'), 300);
+        }
+    }
+
+    if(menuBtn) menuBtn.onclick = () => toggleSidebar(true);
+    if(closeBtn) closeBtn.onclick = () => toggleSidebar(false);
+    if(overlay) overlay.onclick = () => toggleSidebar(false);
+
+    // Sidebar navigation click pe sidebar band karo
+    document.querySelectorAll('.sidebar-nav button').forEach(btn => {
+        btn.addEventListener('click', () => toggleSidebar(false));
+    });
+
     // Sync Button Listener
     const syncBtn = document.querySelector('.btn-secondary');
     if (syncBtn) {
@@ -184,7 +217,7 @@ function setupListeners() {
     if(seekBack) seekBack.onclick = () => Player.skip(-10);
     if(seekFwd) seekFwd.onclick = () => Player.skip(10);
     
-    // 🔥 PROGRESS BAR DRAG (Update Color Instantly)
+    // 🔥 PROGRESS BAR DRAG
     if(progress) {
         progress.addEventListener('input', (e) => {
             const pct = e.target.value;
@@ -202,7 +235,7 @@ function setupListeners() {
             // 1. Value Update
             progress.value = pct;
             
-            // 2. 🔥 Color Fill Logic (Important for Ultimate Slider)
+            // 2. 🔥 Color Fill Logic
             progress.style.backgroundSize = `${pct}% 100%`;
 
             // 3. Time Text

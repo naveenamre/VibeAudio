@@ -12,7 +12,7 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
 
-/* 👇 UPDATED: Breathing Background Logic */
+/* 👇 Breathing Background Logic */
 body {
     /* Moving Gradient: Dark Blue/Purple/Black mix */
     background: linear-gradient(-45deg, #0f0c29, #302b63, #24243e, #1a1a1a);
@@ -25,14 +25,12 @@ body {
     overflow-x: hidden;
 }
 
-/* 👇 NEW: Background Animation Keyframes */
 @keyframes gradientMove {
     0% { background-position: 0% 50%; }
     50% { background-position: 100% 50%; }
     100% { background-position: 0% 50%; }
 }
 
-/* Purana static background hata diya */
 .bg-gradient { display: none; }
 
 .glass-container {
@@ -52,32 +50,10 @@ header {
     font-size: 1.8rem; font-weight: 700; 
     background: linear-gradient(to right, var(--secondary), var(--primary)); 
     -webkit-background-clip: text; color: transparent; 
-    display: flex; align-items: center; gap: 10px;
+    display: flex; align-items: center; gap: 15px; /* Thoda gap badhaya menu button ke liye */
 }
 
-/* Tabs Styling */
-.nav-tabs {
-    background: rgba(255,255,255,0.05);
-    padding: 5px; border-radius: 50px;
-    display: flex; gap: 5px;
-    border: 1px solid var(--border);
-}
-
-.nav-tabs button {
-    background: transparent; border: none; color: #aaa;
-    font-size: 0.95rem; padding: 8px 20px; cursor: pointer;
-    font-weight: 600; transition: 0.3s; border-radius: 30px;
-    display: flex; align-items: center; gap: 8px;
-}
-
-.nav-tabs button:hover { color: white; background: rgba(255,255,255,0.1); }
-
-.nav-tabs button.active-tab { 
-    background: var(--secondary); 
-    color: black; 
-    box-shadow: 0 0 15px rgba(31, 221, 255, 0.4);
-}
-
+/* Search Box */
 .search-box {
     background: rgba(255,255,255,0.1); padding: 10px 20px;
     border-radius: 50px; display: flex; align-items: center; gap: 10px;
@@ -85,6 +61,64 @@ header {
 }
 .search-box:focus-within { border-color: var(--secondary); box-shadow: 0 0 10px rgba(31, 221, 255, 0.2); }
 .search-box input { background: transparent; border: none; color: white; outline: none; width: 150px; }
+
+/* --- 🍔 HAMBURGER & SIDEBAR (New Addition) --- */
+
+/* Menu Button */
+.glass-btn {
+    background: rgba(255,255,255,0.1); border: 1px solid var(--border); color: white;
+    width: 45px; height: 45px; border-radius: 12px; cursor: pointer;
+    font-size: 1.2rem; display: flex; justify-content: center; align-items: center;
+    transition: 0.3s;
+}
+.glass-btn:hover { background: var(--secondary); color: black; box-shadow: 0 0 15px rgba(31, 221, 255, 0.4); }
+
+/* Sidebar Container */
+#sidebar {
+    position: fixed; top: 0; left: -300px; /* Screen ke bahar */
+    width: 280px; height: 100%;
+    background: rgba(15, 12, 41, 0.95); /* Dark Glass */
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-right: 1px solid var(--border);
+    z-index: 2000;
+    transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex; flex-direction: column;
+    box-shadow: 10px 0 50px rgba(0,0,0,0.6);
+}
+
+/* Jab Active ho */
+#sidebar.active { left: 0; }
+
+/* Overlay (Peeche ka dhundla part) */
+#sidebar-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6); z-index: 1999;
+    backdrop-filter: blur(4px);
+    opacity: 0; visibility: hidden; transition: 0.3s;
+}
+#sidebar-overlay.active { opacity: 1; visibility: visible; }
+
+/* Sidebar Content */
+.sidebar-header {
+    padding: 25px; display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px solid var(--border);
+}
+.sidebar-header h3 { font-size: 1.5rem; color: var(--secondary); font-weight: 700; }
+#close-sidebar { background: transparent; border: none; color: #aaa; font-size: 1.5rem; cursor: pointer; transition: 0.3s; }
+#close-sidebar:hover { color: white; transform: rotate(90deg); }
+
+.sidebar-nav { padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+.sidebar-nav button {
+    background: transparent; border: none; color: white;
+    text-align: left; padding: 15px; font-size: 1.1rem;
+    border-radius: 12px; cursor: pointer; transition: 0.2s;
+    display: flex; align-items: center; gap: 15px; font-weight: 500;
+}
+.sidebar-nav button:hover { background: rgba(255,255,255,0.08); color: var(--secondary); padding-left: 20px; }
+.sidebar-nav button i { width: 25px; color: var(--secondary); text-align: center; }
+
+.divider { height: 1px; background: var(--border); margin: 10px 0; }
 
 /* --- 📚 GRID SYSTEM --- */
 .grid {
@@ -103,7 +137,6 @@ header {
 @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
 
 /* --- 🎭 PLAYER MODE (Global Clean Look) --- */
-/* Jab Player active ho, Header clean karo */
 body.player-mode header {
     padding-bottom: 0; 
     border-bottom: none;
@@ -112,120 +145,63 @@ body.player-mode header {
     margin-bottom: 10px;
 }
 
-/* Tabs aur Search ko Gayab karo */
-body.player-mode .nav-tabs,
-body.player-mode .search-box {
-    display: none !important;
-}
+/* Search ko Gayab karo */
+body.player-mode .search-box { display: none !important; }
 
 /* Sirf Logo dikhega, centered */
 body.player-mode .logo {
-    width: 100%;
-    justify-content: center;
-    margin-bottom: 0;
-    font-size: 1.2rem;
-    opacity: 0.8;
+    width: 100%; justify-content: center; margin-bottom: 0;
+    font-size: 1.2rem; opacity: 0.8;
 }
+/* Player mode me Menu button chhupa do */
+body.player-mode #menu-btn { display: none; }
 
-/* Back Button Alignment fix for Player Mode */
-body.player-mode #back-btn {
-    margin-top: -5px;
-    margin-bottom: 15px;
-}
+/* Back Button Alignment fix */
+body.player-mode #back-btn { margin-top: -5px; margin-bottom: 15px; }
 
-/* --- 📱 MOBILE OPTIMIZATION (V2 - Airy & Open) --- */
+/* --- 📱 MOBILE OPTIMIZATION (V2) --- */
 @media (max-width: 768px) {
-    /* 1. Container ko khula saans lene do */
     .glass-container {
-        padding: 0; /* Container padding hatao, hum elements pe denge */
-        width: 100%;
-        margin: 0;
-        max-width: 100%;
-        background: transparent; /* Box hataya */
-        border: none;
-        box-shadow: none;
+        padding: 0; 
+        width: 100%; margin: 0; max-width: 100%;
+        background: transparent; border: none; box-shadow: none;
     }
 
-    /* 2. Header: Floating Glass Effect 🏳️ */
+    /* Header: Floating Glass Effect */
     header {
-        position: sticky;
-        top: 0;
-        z-index: 100;
-        
-        /* Glass Effect */
-        background: rgba(15, 12, 41, 0.85); /* Thoda transparent */
-        backdrop-filter: blur(15px);        /* Blur background */
-        -webkit-backdrop-filter: blur(15px);
-        
-        padding: 15px 20px;
-        margin-bottom: 20px;
+        position: sticky; top: 0; z-index: 100;
+        background: rgba(15, 12, 41, 0.85);
+        backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+        padding: 15px 20px; margin-bottom: 20px;
         border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        border-radius: 0 0 25px 25px; /* Neeche se gol */
+        border-radius: 0 0 25px 25px;
         box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-        
-        flex-direction: column;
+        flex-direction: row; /* Row me rakho (Menu + Logo) */
         gap: 15px;
+        flex-wrap: wrap;
     }
 
-    /* Logo Styling Update */
+    /* Logo adjustment */
     .logo { 
-        justify-content: center; 
-        width: 100%; 
-        font-size: 1.5rem;
-        margin-bottom: 5px;
+        justify-content: flex-start; /* Left align */
+        font-size: 1.4rem;
+        flex-grow: 1;
     }
 
-    /* Search Bar: Full Width & Modern */
+    /* Search Bar: Full Width niche aa jayega */
     .search-box {
-        width: 100%;
-        background: rgba(255,255,255,0.08);
-        padding: 12px 20px;
+        width: 100%; order: 3;
+        background: rgba(255,255,255,0.08); padding: 12px 20px;
     }
     .search-box input { width: 100%; font-size: 1rem; }
 
-    /* Tabs: Full Width Scrolling */
-    .nav-tabs {
-        width: 100%;
-        justify-content: space-between; /* Failaa do */
-        background: transparent;
-        border: none;
-        padding: 0;
-    }
-    .nav-tabs button {
-        flex-grow: 1; /* Barabar hissa */
-        justify-content: center;
-        padding: 10px;
-        font-size: 0.9rem;
-        background: rgba(255,255,255,0.05);
-    }
-    .nav-tabs button.active-tab {
-        background: var(--secondary);
-        box-shadow: 0 5px 15px rgba(31, 221, 255, 0.3);
-    }
-
-    /* 3. Grid Fix: Chipka-Chipki Band! 🛑 */
+    /* Grid Fix */
     .grid {
-        display: grid;
-        /* Strict 2 Columns */
         grid-template-columns: repeat(2, 1fr); 
-        
-        /* 🔥 BADA GAP (Space between books) */
         gap: 20px; 
-        
-        /* 🔥 SIDE PADDING (Screen ke kinare se doori) */
         padding: 0 20px 100px 20px; 
     }
 
-    /* Section Titles ko bhi padding do */
-    .section-title {
-        padding-left: 20px;
-        margin-bottom: 15px;
-        font-size: 1.4rem;
-    }
-
-    /* Filter Bar Scroll Fix */
-    .filter-container {
-        padding-left: 20px; /* Start me gap */
-        padding-right: 20px;
-    }
+    .section-title { padding-left: 20px; margin-bottom: 15px; font-size: 1.4rem; }
+    .filter-container { padding-left: 20px; padding-right: 20px; }
 }

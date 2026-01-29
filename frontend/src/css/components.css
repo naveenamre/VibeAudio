@@ -244,6 +244,91 @@
     font-weight: bold; box-shadow: 0 0 20px rgba(255, 75, 31, 0.5);
 }
 
+/* --- 🕒 HISTORY CARD DETAILED UI (New Addition) --- */
+.history-layout {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    text-align: left;
+    width: 100%;
+}
+
+.history-layout img {
+    width: 70px !important;
+    height: 70px !important;
+    border-radius: 10px;
+    object-fit: cover;
+    margin: 0 !important; /* Reset old margin */
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.history-info {
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+.history-info h3 {
+    font-size: 0.95rem;
+    margin-bottom: 4px;
+    white-space: nowrap; 
+    overflow: hidden; 
+    text-overflow: ellipsis;
+}
+
+.chapter-badge {
+    color: var(--secondary);
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 6px;
+}
+
+/* Mini Progress Bar inside Card */
+.mini-progress-track {
+    background: rgba(255,255,255,0.1);
+    height: 4px;
+    border-radius: 2px;
+    width: 100%;
+    overflow: hidden;
+}
+
+.mini-progress-fill {
+    background: var(--secondary);
+    height: 100%;
+    border-radius: 2px;
+}
+
+/* Resume Play Button on Card */
+.resume-btn {
+    background: rgba(31, 221, 255, 0.15);
+    border: 1px solid var(--secondary);
+    color: var(--secondary);
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    transition: 0.3s;
+    flex-shrink: 0;
+}
+.book-card:hover .resume-btn {
+    background: var(--secondary);
+    color: black;
+    transform: scale(1.1);
+}
+
+/* --- 🍔 SIDEBAR ACTIVE STATE (New Addition) --- */
+.sidebar-nav button.active {
+    background: var(--secondary); /* Neon Blue Background */
+    color: black; /* Text Black */
+    font-weight: 700;
+    box-shadow: 0 0 15px rgba(31, 221, 255, 0.4);
+    padding-left: 20px;
+}
+
+.sidebar-nav button.active i {
+    color: black; /* Icon bhi Black */
+}
+
 /* --- 📱 MOBILE OPTIMIZATION & STABILITY FIX --- */
 @media (max-width: 768px) {
     /* Cards ki diet - Chhota karo */

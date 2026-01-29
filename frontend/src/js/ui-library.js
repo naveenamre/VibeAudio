@@ -1,4 +1,4 @@
-// --- 📚 UI LIBRARY MODULE (Mobile Stable Version) ---
+// --- 📚 UI LIBRARY MODULE (History Click Fix) ---
 import { fetchUserProgress } from './api.js';
 
 // --- RENDER LIBRARY ---
@@ -18,7 +18,6 @@ export function renderLibrary(books, openPlayerCallback) {
         const card = document.createElement('div');
         card.className = 'book-card';
         
-        // ✨ UPDATE: Content ko wrap kiya hai better structure ke liye
         card.innerHTML = `
             <img class="lazy-img" src="${placeholder}" data-src="${book.cover}" alt="${book.title}">
             <div class="card-content">
@@ -30,72 +29,102 @@ export function renderLibrary(books, openPlayerCallback) {
         card.onclick = () => openPlayerCallback(book);
         grid.appendChild(card);
 
-        // Observer logic (Simple version for external module)
         const img = card.querySelector('img');
         if(window.imageObserver) window.imageObserver.observe(img);
     });
 
-    // 🌟 JADU START: Tilt sirf PC pe lagao (Mobile pe flicker rokne ke liye)
     if (window.matchMedia("(min-width: 768px)").matches && window.VanillaTilt) {
         window.VanillaTilt.init(document.querySelectorAll("#book-grid .book-card"), {
-            max: 15,          // Kitna jhukega (Degrees)
-            speed: 400,       // Wapas aane ki speed
-            glare: true,      // Chamak (Glare)
-            "max-glare": 0.3, // Chamak ki intensity
-            scale: 1.05,      // Hover karne pe thoda bada hoga
-            gyroscope: false  // ⚠️ Phone wala gyroscope OFF kar diya
+            max: 15, speed: 400, glare: true, "max-glare": 0.3, scale: 1.05, gyroscope: false  
         });
     }
 }
 
-// --- RENDER HISTORY ---
+// --- RENDER HISTORY (Click Fix Added) ---
 export async function renderHistory(allBooks, openPlayerCallback) {
     const grid = document.getElementById('history-grid');
     if (!grid) return;
 
     grid.innerHTML = '<div class="loading-spinner">Loading History...</div>';
-    const historyData = await fetchUserProgress();
     
-    if (!historyData || historyData.length === 0) {
-        grid.innerHTML = '<p class="empty-msg">No history yet. Start vibing!</p>';
-        return;
-    }
-
-    grid.innerHTML = ''; 
-
-    historyData.forEach(progress => {
-        const book = allBooks.find(b => b.bookId == progress.bookId); 
-        if (book) {
-            const percent = Math.min(100, Math.floor((progress.currentTime / progress.totalDuration) * 100)) || 0;
-            const card = document.createElement('div');
-            card.className = 'book-card history-card';
-            card.innerHTML = `
-                <div class="history-cover-wrapper">
-                    <img src="${book.cover}">
-                    <div class="progress-overlay">
-                        <div class="progress-bar-fill" style="width: ${percent}%"></div>
-                    </div>
-                </div>
-                <div class="history-info">
-                    <h3>${book.title}</h3>
-                    <p class="percent-text">${percent}% Completed</p>
-                </div>
-            `;
-            card.onclick = () => openPlayerCallback(book);
-            grid.appendChild(card);
-            
-            // ✨ History Cards: Tilt sirf Desktop pe
-            if (window.matchMedia("(min-width: 768px)").matches && window.VanillaTilt) {
-                window.VanillaTilt.init(card, {
-                    max: 10,
-                    speed: 400,
-                    glare: true,
-                    "max-glare": 0.2,
-                    scale: 1.02
-                });
-            }
+    try {
+        const historyData = await fetchUserProgress();
+        
+        if (!historyData || historyData.length === 0) {
+            grid.innerHTML = '<p class="empty-msg">No history yet. Start vibing!</p>';
+            return;
         }
-    });
+
+        grid.innerHTML = ''; 
+
+        historyData.forEach(progress => {
+            const book = allBooks.find(b => b.bookId == progress.bookId); 
+            
+            if (book) {
+                // Safe Access for Chapter Name
+                const currentChapIndex = progress.chapterIndex || 0;
+                let chapName = `Chapter ${currentChapIndex + 1}`; 
+
+                if (book.chapters && book.chapters[currentChapIndex]) {
+                    chapName = book.chapters[currentChapIndex].name;
+                }
+
+                const cleanChapterName = chapName.replace(/^Chapter\s+\d+[:\s-]*/i, '').replace(/^\d+[\.\s]+/, '').trim();
+                const percent = Math.min(100, Math.floor((progress.currentTime / progress.totalDuration) * 100)) || 0;
+
+                const card = document.createElement('div');
+                card.className = 'book-card';
+                
+                card.innerHTML = `
+                    <div class="history-layout">
+                        <img src="${book.cover}" loading="lazy" style="width:70px; height:70px; border-radius:10px; object-fit:cover;">
+                        
+                        <div class="history-info">
+                            <h3 style="margin-bottom:2px;">${book.title}</h3>
+                            <div class="chapter-badge">
+                                <i class="fas fa-headphones" style="font-size:0.7rem;"></i> 
+                                <span>${cleanChapterName}</span>
+                            </div>
+                            
+                            <div class="mini-progress-track">
+                                <div class="mini-progress-fill" style="width: ${percent}%"></div>
+                            </div>
+                            <p style="font-size:0.7rem; color:#888; margin-top:4px;">${percent}% Completed</p>
+                        </div>
+                        
+                        <div class="resume-btn">
+                            <i class="fas fa-play"></i>
+                        </div>
+                    </div>
+                `;
+
+                // 🔥 MAIN FIX: Click logic updated
+                card.onclick = () => {
+                    // Hum book object ke saath 'savedState' bhi bhej rahe hain
+                    // Taki player samajh jaye ki kahan se resume karna hai
+                    const bookWithResumeData = { 
+                        ...book, 
+                        savedState: {
+                            chapterIndex: progress.chapterIndex,
+                            currentTime: progress.currentTime
+                        }
+                    };
+                    openPlayerCallback(bookWithResumeData);
+                };
+
+                grid.appendChild(card);
+                
+                if (window.matchMedia("(min-width: 768px)").matches && window.VanillaTilt) {
+                    window.VanillaTilt.init(card, {
+                        max: 10, speed: 400, glare: true, "max-glare": 0.1, scale: 1.02
+                    });
+                }
+            }
+        });
+    } catch (error) {
+        console.error("History Render Error:", error);
+        grid.innerHTML = '<p class="empty-msg" style="color:#ff4444">Error loading history.</p>';
+    }
 }
 
 // --- FILTERS ---
