@@ -54,7 +54,7 @@
     border: 1px solid rgba(31, 221, 255, 0.2);
 }
 
-/* --- 📜 AUDIBLE STYLE CHAPTER LIST (New Addition) --- */
+/* --- 📜 AUDIBLE STYLE CHAPTER LIST --- */
 .chapter-list-container {
     margin-top: 20px;
     padding-bottom: 20px;
@@ -244,12 +244,23 @@
     font-weight: bold; box-shadow: 0 0 20px rgba(255, 75, 31, 0.5);
 }
 
-/* --- 📱 MOBILE OPTIMIZATION (Hulk Fix) --- */
+/* --- 📱 MOBILE OPTIMIZATION & STABILITY FIX --- */
 @media (max-width: 768px) {
     /* Cards ki diet - Chhota karo */
     .book-card {
         padding: 10px; 
         border-radius: 15px;
+        
+        /* 🔥 STABILITY FIX: No 3D on Mobile */
+        transform: none !important; 
+        will-change: auto;
+        transition: transform 0.2s ease;
+    }
+
+    /* Active State (Smooth press effect instead of Tilt) */
+    .book-card:active {
+        transform: scale(0.96) !important;
+        background: rgba(255,255,255,0.15);
     }
 
     .book-card img {
