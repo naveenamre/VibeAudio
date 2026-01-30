@@ -26,7 +26,6 @@
     <link rel="stylesheet" href="../css/components.css">
     <link rel="stylesheet" href="../css/player.css">
     <link rel="icon" type="image/png" href="../icons/favicon.png">
-    <link rel="manifest" href="../../public/manifest.json">
     <meta name="theme-color" content="#0f0c29">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3208/3208726.png">
 
@@ -78,11 +77,10 @@
         <section id="view-about" class="view-section hidden fade-in">
             <div class="profile-card">
                 <h2>⚡ About VibeAudio</h2>
-                <p style="color:#aaa; margin-top:10px;">Version 2.0 (Stable)</p>
+                <p style="color:#aaa; margin-top:10px;">Version 2.0 (Lite)</p>
                 <div style="margin:20px 0; text-align:left; color:#ddd; font-size:0.9rem; line-height:1.6;">
                     <p>🎧 <strong>Immersive Audio:</strong> Experience books like never before.</p>
                     <p>☁ <strong>Cloud Sync:</strong> Your progress is saved everywhere.</p>
-                    <p>📱 <strong>Offline Ready:</strong> Works even when internet is gone.</p>
                     <p>👨‍💻 <strong>Developer:</strong> Crafted with ❤️ by Naksh.</p>
                 </div>
                 <button class="action-btn" onclick="app.goBack()">Go to Library</button>
@@ -220,44 +218,10 @@
 
     <audio id="audio-element" crossorigin="anonymous"></audio>
 
-    <div id="update-toast">
-        <p>🚀 New Update Available!</p>
-        <button id="reload-btn">Update Now</button>
-    </div>
-
     <script type="module" src="../js/ui.js"></script>
-
-    <script>
-        let newWorker;
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                // Correct path to sw.js (root se relative)
-                navigator.serviceWorker.register('../../sw.js').then(reg => {
-                    console.log('✅ Service Worker Registered');
-                    reg.addEventListener('updatefound', () => {
-                        newWorker = reg.installing;
-                        newWorker.addEventListener('statechange', () => {
-                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                const toast = document.getElementById('update-toast');
-                                if (toast) toast.classList.add('show');
-                            }
-                        });
-                    });
-                }).catch(err => console.log('❌ SW Fail:', err));
-            });
-        }
-        const reloadBtn = document.getElementById('reload-btn');
-        if (reloadBtn) {
-            reloadBtn.addEventListener('click', () => {
-                if (newWorker) newWorker.postMessage({ action: 'skipWaiting' });
-                window.location.reload();
-            });
-        }
-    </script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.7.0/vanilla-tilt.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js"></script>
 
 </body>
-
 </html>

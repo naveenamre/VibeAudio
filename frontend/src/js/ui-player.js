@@ -1,4 +1,5 @@
-// --- 🎧 UI PLAYER MODULE (Smartest PWA Edition 🧠) ---
+// frontend/src/js/ui-player.js
+
 import { fetchBookDetails, fetchUserProgress } from './api.js';
 import * as Player from './player.js';
 
@@ -8,10 +9,11 @@ const speeds = [1, 1.25, 1.5, 2, 0.8];
 let currentSpeedIndex = 0;
 const sleepTimes = [0, 15, 30, 60];
 let currentSleepIndex = 0;
-let lastPreloadedUrl = null; // 🛑 Duplicate download rokne ke liye
+// ❌ Removed: lastPreloadedUrl (Ab zarurat nahi)
 
 // --- OPEN PLAYER ---
 export async function openPlayerUI(partialBook, allBooks, switchViewCallback) {
+    // ... (Ye part same rahega, copy-paste mat karna agar change nahi kiya to)
     switchViewCallback('player');
 
     // 1. UI Update
@@ -28,7 +30,6 @@ export async function openPlayerUI(partialBook, allBooks, switchViewCallback) {
     // 2. DATA PREPARATION
     let finalBook = partialBook;
 
-    // Chapters check (History se aaye ho toh fetch karo)
     if (!finalBook.chapters || finalBook.chapters.length === 0) {
         list.innerHTML = `
             <div class="skeleton-loader"></div>
@@ -54,11 +55,11 @@ export async function openPlayerUI(partialBook, allBooks, switchViewCallback) {
     setupPlayButton(finalBook);
     setupPlayerListeners();
 
-    // 4. RESUME LOGIC & PRELOAD TRIGGER
+    // 4. RESUME LOGIC
     if (finalBook.savedState) {
-        console.log(`🚀 Resuming History: Ch ${finalBook.savedState.chapterIndex + 1}`);
         if (finalBook.chapters[finalBook.savedState.chapterIndex]) {
             Player.loadBook(finalBook, finalBook.savedState.chapterIndex);
+            // ✅ Clean call, no preload trigger
             updateUI(true, finalBook, finalBook.chapters[finalBook.savedState.chapterIndex]);
         } else {
             Player.loadBook(finalBook, 0);
@@ -69,41 +70,15 @@ export async function openPlayerUI(partialBook, allBooks, switchViewCallback) {
         if (currentState.book && currentState.book.bookId === finalBook.bookId) {
             updateUI(true, finalBook, finalBook.chapters[currentState.currentChapterIndex]);
         } else {
-            console.log("Starting New Book");
             Player.loadBook(finalBook, 0);
             updateUI(true, finalBook, finalBook.chapters[0]);
         }
     }
 }
 
-// 🧠 SMART PRELOADER (The Magic Function)
-async function preloadNextChapter(book, currentChapterIndex) {
-    const nextIndex = currentChapterIndex + 1;
-    
-    // Check agar next chapter exist karta hai
-    if (book.chapters && book.chapters[nextIndex]) {
-        const nextChapter = book.chapters[nextIndex];
-        
-        // Agar pehle se download kar rakha hai toh wapas mat karo
-        if (lastPreloadedUrl === nextChapter.url) return;
+// ❌ DELETED: preloadNextChapter() function poora uda diya.
 
-        console.log(`⏳ Smart Preload: Downloading '${nextChapter.name}' in background...`);
-        lastPreloadedUrl = nextChapter.url;
-
-        try {
-            // Simple fetch request bhejenge
-            // Hamara Service Worker (sw.js) isse intercept karega aur Cache me daal dega!
-            const response = await fetch(nextChapter.url);
-            if (response.ok) {
-                console.log(`✅ Cached: '${nextChapter.name}' is ready for offline!`);
-            }
-        } catch (e) {
-            console.warn("Preload failed (Internet issue?):", e);
-        }
-    }
-}
-
-// 🌈 HELPER: Theme
+// 🌈 HELPER: Theme (Same as before)
 function applyChameleonTheme(imageUrl) {
     const root = document.documentElement;
     const body = document.body;
@@ -139,7 +114,7 @@ function applyChameleonTheme(imageUrl) {
     img.onerror = resetTheme;
 }
 
-// --- RENDER LIST ---
+// --- RENDER LIST (Same as before) ---
 function renderChapterList(book) {
     const list = document.getElementById('chapter-list');
     const totalChapters = document.getElementById('total-chapters');
@@ -155,7 +130,6 @@ function renderChapterList(book) {
     book.chapters.forEach((chap, idx) => {
         const li = document.createElement('li');
         li.className = `chapter-item ${idx === currentIndex ? 'active' : ''}`;
-        
         const cleanTitle = chap.name.replace(/^Chapter\s+\d+[:\s-]*/i, '').replace(/^\d+[\.\s]+/, '').trim();
 
         li.innerHTML = `
@@ -167,7 +141,6 @@ function renderChapterList(book) {
                 <i class="${idx === currentIndex ? 'fas fa-chart-bar' : 'fas fa-play'}" style="font-size: 0.8rem;"></i>
             </div>
         `;
-        
         li.onclick = () => { 
             Player.loadBook(book, idx); 
             updateUI(true, book, book.chapters[idx]); 
@@ -176,8 +149,9 @@ function renderChapterList(book) {
     });
 }
 
-// --- LISTENERS ---
+// --- LISTENERS (Same as before) ---
 export function setupPlayerListeners() {
+    // ... (Code same as original file, no changes needed here)
     const speedBtn = document.getElementById('speed-btn');
     const audio = Player.getAudioElement();
     
@@ -222,7 +196,7 @@ export function setupPlayerListeners() {
     }
 }
 
-// --- BUTTONS ---
+// --- BUTTONS (Same as before) ---
 function setupPlayButton(book) {
     const mainBtn = document.getElementById('main-play-btn');
     if (!mainBtn) return;
@@ -251,7 +225,7 @@ function setupPlayButton(book) {
     };
 }
 
-// --- COMMENTS ---
+// --- COMMENTS (Same as before) ---
 function renderComments(comments) {
     const list = document.getElementById('comments-list');
     if(list) {
@@ -268,7 +242,7 @@ export function renderSingleComment(c) {
     list.appendChild(div);
 }
 
-// --- 🔄 UI UPDATE (Ab yahan se Preload trigger hoga) ---
+// --- 🔄 UI UPDATE (Fixed) ---
 export function updateUI(isPlaying, book = null, chapter = null) {
     const playBtn = document.getElementById('play-btn');
     const mainPlayBtn = document.getElementById('main-play-btn');
@@ -284,12 +258,7 @@ export function updateUI(isPlaying, book = null, chapter = null) {
         const cleanName = chapter.name.replace(/^Chapter\s+\d+[:\s-]*/i, '').replace(/^\d+[\.\s]+/, '').trim();
         document.getElementById('mini-chapter').innerText = cleanName;
 
-        // 🔥 TRIGGER BACKGROUND DOWNLOAD
-        // Jaise hi naya chapter load ho, agla wala download pe laga do
-        const currentIdx = book.chapters.findIndex(c => c.url === chapter.url);
-        if (currentIdx !== -1) {
-            preloadNextChapter(book, currentIdx);
-        }
+        // ❌ REMOVED: Preload Trigger Logic yahan se uda diya.
     }
 
     const state = Player.getCurrentState();
