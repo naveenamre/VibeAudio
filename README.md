@@ -3,7 +3,7 @@
 
 **Experience Books Like Never Before.** A modern, lightweight, and immersive free audiobook platform built for the web.
 
-![VibeAudio Banner](page.png) 
+![VibeAudio Banner](https://github.com/naveenamre/VibeAudio/blob/main/page.png?raw=true) 
 *(Bhai yahan apni website ka screenshot ya logo laga dena)*
 
 ---
