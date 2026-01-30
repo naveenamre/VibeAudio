@@ -3,8 +3,8 @@
 
 **Experience Books Like Never Before.** A modern, lightweight, and immersive free audiobook platform built for the web.
 
-![VibeAudio Banner](https://github.com/naveenamre/VibeAudio/blob/main/page.png?raw=true) 
-*(Bhai yahan apni website ka screenshot ya logo laga dena)*
+![VibeAudio Banner] 
+
 
 ---
 
@@ -139,14 +139,5 @@ Distributed under the MIT License. See `LICENSE` for more information.
 **Naveen Amre** *Code, Vibe, Repeat.*
 
 ---
-
-```
-
----
-
-### 🔥 Pro Tip:
-Is file mein jahan **"Banner Image"** ka link hai, wahan future mein apne app ka ek badhiya screenshot laga dena. Wo "First Impression" ke liye bahut zaroori hota hai GitHub par.
-
-Ab project poora **Portfolio Ready** lag raha hai! 🚀✨
 
 ```
