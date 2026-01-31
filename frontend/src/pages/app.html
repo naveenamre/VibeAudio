@@ -10,9 +10,12 @@
         (function () {
             // Check Login Status
             const userId = localStorage.getItem("vibe_user_id");
+
             if (!userId) {
                 console.warn("⛔ Access Denied! Redirecting to Login...");
-                window.location.href = "../../index.html";
+                
+                // 🔥 UPDATE: Ab ye seedha Main Domain (Root) pe le jayega
+                window.location.href = "/"; 
             }
         })();
     </script>
