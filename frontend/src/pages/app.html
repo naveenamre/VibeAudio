@@ -8,12 +8,10 @@
 
     <script>
         (function () {
-            // Check kar ki banda login hai ya nahi
+            // Check Login Status
             const userId = localStorage.getItem("vibe_user_id");
-
             if (!userId) {
                 console.warn("⛔ Access Denied! Redirecting to Login...");
-                // Agar ID nahi mili, toh wapas bahar (Login Page) phenk do
                 window.location.href = "../../index.html";
             }
         })();
@@ -207,7 +205,11 @@
             </div>
         </div>
 
-        <div class="extra-controls mobile-hide" style="display: flex; gap: 10px;">
+        <div class="extra-controls" style="display: flex; gap: 10px;">
+            <button id="download-btn" title="Download Offline" style="display: none;">
+                <i class="fas fa-download"></i>
+            </button>
+
             <button id="sleep-timer-btn" title="Sleep Timer">
                 <i class="fas fa-moon"></i>
             </button>

@@ -1,5 +1,5 @@
-// --- 🎵 PLAYER LOGIC MODULE (Fixed Imports & Time Resume) ---
-import { saveUserProgress, fetchUserProgress } from './api.js'; // ✅ Fixed Name
+// --- 🎵 PLAYER LOGIC MODULE (Persistent Offline Storage) ---
+import { saveUserProgress } from './api.js'; 
 
 let audio = document.getElementById('audio-element') || new Audio();
 let currentBook = null;
@@ -17,12 +17,10 @@ export function getCurrentState() {
     }; 
 }
 
-// --- 📂 LOAD BOOK (With Time Resume) ---
-// ✨ UPDATE: Added 'startTime' parameter for accurate resuming
+// --- 📂 LOAD BOOK (Checking Android Storage First) ---
 export async function loadBook(book, chapterIndex = 0, startTime = 0) {
     if (!book || !book.chapters || !book.chapters[chapterIndex]) return;
 
-    // Resume Logic: Agar same chapter aur same book hai, toh bas play karo
     if (currentBook && currentBook.bookId === book.bookId && currentChapterIndex === chapterIndex && audio.src) {
         console.log("⚠️ Already loaded. Resuming...");
         playAudioSafe();
@@ -31,101 +29,154 @@ export async function loadBook(book, chapterIndex = 0, startTime = 0) {
 
     currentBook = book;
     currentChapterIndex = chapterIndex;
-    
-    stopProgressTracker(); // Purana save loop roko
+    stopProgressTracker();
     audio.pause();
 
     const chapter = book.chapters[chapterIndex];
-    console.log(`📂 Loading: ${chapter.name} at ${startTime}s`);
+    const fileName = `${book.bookId}_${chapterIndex}.mp3`; // Unique Filename
 
-    audio.src = chapter.url;
+    console.log(`📂 Loading: ${chapter.name}`);
+
+    // 🔥 SMART LOAD: Check Android Storage First
+    let offlinePath = "";
+    if (window.AndroidInterface) {
+        // Android returns "file://..." if exists, else empty
+        offlinePath = window.AndroidInterface.checkFile(fileName);
+    }
+
+    if (offlinePath) {
+        console.log("⚡ Playing from PERMANENT Offline Storage!", offlinePath);
+        audio.src = offlinePath;
+    } else {
+        console.log("🌐 Playing from Network...");
+        audio.src = chapter.url;
+    }
     
-    // ✨ MAGIC: Metadata load hone ka wait karo fir Seek karo
+    // Metadata Load Event
     audio.onloadedmetadata = () => {
-        if (startTime > 0) {
-            audio.currentTime = startTime;
-        }
-        playAudioSafe(); // Safe play call
+        if (startTime > 0) audio.currentTime = startTime;
+        playAudioSafe();
     };
 
-    // Fallback: Agar metadata event miss ho jaye
     audio.load();
 
-    // 📱 LOCK SCREEN CONTROLS (Media Session API)
     if ('mediaSession' in navigator) {
         updateMediaSession(book, chapter);
         setupMediaHandlers();
     }
-
+    sendToAndroid(true);
     startProgressTracker();
+    updateUIState(true);
 }
 
-// 📱 HELPER: Media Session UI Update
+// --- 📥 DOWNLOAD FEATURE (Using Android Bridge) ---
+export function downloadCurrentChapter(onProgress) {
+    if (!currentBook || !window.AndroidInterface) return;
+    const chapter = currentBook.chapters[currentChapterIndex];
+    const fileName = `${currentBook.bookId}_${currentChapterIndex}.mp3`;
+
+    console.log("📥 Requesting Native Download:", chapter.name);
+
+    // Global Callback for Android
+    window.onDownloadComplete = (success, path) => {
+        if(success) {
+            console.log("✅ Native Download Complete:", path);
+            if(onProgress) onProgress(true);
+            updateUIState(audio.paused ? false : true);
+        } else {
+            console.error("❌ Native Download Failed");
+            if(onProgress) onProgress(false);
+        }
+        delete window.onDownloadComplete; // Cleanup
+    };
+
+    // Call Android
+    window.AndroidInterface.downloadFile(chapter.url, fileName, "onDownloadComplete");
+}
+
+export async function isChapterDownloaded() {
+    if (!currentBook || !window.AndroidInterface) return false;
+    const fileName = `${currentBook.bookId}_${currentChapterIndex}.mp3`;
+    const path = window.AndroidInterface.checkFile(fileName);
+    return path !== "";
+}
+
+export async function deleteChapter() {
+    if (!currentBook || !window.AndroidInterface) return;
+    const fileName = `${currentBook.bookId}_${currentChapterIndex}.mp3`;
+    window.AndroidInterface.deleteFile(fileName);
+    console.log("🗑️ Deleted from Storage");
+    updateUIState(audio.paused ? false : true);
+}
+
+// --- STANDARD FUNCTIONS (Same as before) ---
 function updateMediaSession(book, chapter) {
+    if (!('mediaSession' in navigator)) return;
+    let imageUrl = book.coverImage || book.cover || 'public/icons/logo.png';
+    try { imageUrl = new URL(imageUrl, window.location.href).href; } catch (e) {}
     navigator.mediaSession.metadata = new MediaMetadata({
         title: chapter.name.replace(/^Chapter\s+\d+[:\s-]*/i, '').replace(/^\d+[\.\s]+/, '').trim(),
         artist: book.author || "Vibe Audio",
         album: book.title,
-        artwork: [
-            { src: book.cover, sizes: '96x96', type: 'image/png' },
-            { src: book.cover, sizes: '128x128', type: 'image/png' },
-            { src: book.cover, sizes: '512x512', type: 'image/png' }
-        ]
+        artwork: [{ src: imageUrl, sizes: '512x512', type: 'image/png' }]
     });
+    navigator.mediaSession.playbackState = "none";
 }
 
 function setupMediaHandlers() {
-    navigator.mediaSession.setActionHandler('play', () => { togglePlay(); updateUIState(true); });
-    navigator.mediaSession.setActionHandler('pause', () => { togglePlay(); updateUIState(false); });
-    navigator.mediaSession.setActionHandler('previoustrack', prevChapter);
-    navigator.mediaSession.setActionHandler('nexttrack', nextChapter);
-    navigator.mediaSession.setActionHandler('seekbackward', () => skip(-10));
-    navigator.mediaSession.setActionHandler('seekforward', () => skip(10));
-}
-
-// 🛡️ SAFE PLAY HELPER (No Red Errors)
-async function playAudioSafe() {
-    try {
-        await audio.play();
-        updateUIState(true);
-    } catch (err) {
-        if (err.name !== 'AbortError') {
-            console.warn("⚠️ Autoplay blocked (Click Play manually):", err);
-            updateUIState(false); 
-        }
+    if (!('mediaSession' in navigator)) return;
+    const actionHandlers = [
+        ['play',          () => { togglePlay(); updateUIState(true); }],
+        ['pause',         () => { togglePlay(); updateUIState(false); }],
+        ['previoustrack', prevChapter],
+        ['nexttrack',     nextChapter],
+        ['seekbackward',  () => skip(-10)],
+        ['seekforward',   () => skip(10)]
+    ];
+    for (const [action, handler] of actionHandlers) {
+        try { navigator.mediaSession.setActionHandler(action, handler); } catch (e) {}
     }
 }
 
-// --- ⏯️ CONTROLS ---
+async function playAudioSafe() {
+    try {
+        await audio.play();
+        if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "playing";
+        updateUIState(true);
+        sendToAndroid(true);
+    } catch (err) {
+        if (err.name !== 'AbortError') { updateUIState(false); }
+    }
+}
+
 export function togglePlay() {
     if (audio.paused) {
         playAudioSafe();
         return true;
     } else {
         audio.pause();
+        if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "paused";
         updateUIState(false);
+        sendToAndroid(false);
         stopProgressTracker();
-        // Pause karte waqt turant save karo (Fixed function call)
         if(currentBook) saveUserProgress(currentBook.bookId, currentChapterIndex, audio.currentTime);
         return false;
     }
 }
 
-export function skip(seconds) {
-    audio.currentTime += seconds;
-}
-
-export function seekTo(percent) {
-    if (audio.duration) {
-        audio.currentTime = (percent / 100) * audio.duration;
+export function skip(seconds) { audio.currentTime += seconds; }
+export function seekTo(percent) { if (audio.duration) audio.currentTime = (percent / 100) * audio.duration; }
+export function setPlaybackSpeed(speed) { audio.playbackRate = speed; }
+export function setSleepTimer(minutes, callback) {
+    if (window.sleepTimer) clearTimeout(window.sleepTimer);
+    if (minutes > 0) {
+        window.sleepTimer = setTimeout(() => { togglePlay(); if (callback) callback(); }, minutes * 60 * 1000);
     }
 }
 
-// --- ⏭️ NAVIGATION ---
 export function nextChapter() {
     if (currentBook && currentChapterIndex < currentBook.chapters.length - 1) {
-        loadBook(currentBook, currentChapterIndex + 1, 0); // Next chapter hamesha 0 se start hoga
-        updateUIState(true); 
+        loadBook(currentBook, currentChapterIndex + 1, 0);
         return true;
     }
     return false;
@@ -134,16 +185,22 @@ export function nextChapter() {
 export function prevChapter() {
     if (currentChapterIndex > 0) {
         loadBook(currentBook, currentChapterIndex - 1, 0);
-        updateUIState(true); 
         return true;
     }
     return false;
 }
 
-// --- 💾 PROGRESS TRACKER (Cloud Sync) ---
+function sendToAndroid(isPlaying) {
+    if (window.AndroidInterface && currentBook) {
+        const chapter = currentBook.chapters[currentChapterIndex];
+        let imageUrl = currentBook.coverImage || currentBook.cover || 'https://vibeaudio.pages.dev/frontend/public/icons/logo.png';
+        try { imageUrl = new URL(imageUrl, window.location.href).href; } catch (e) {}
+        try { window.AndroidInterface.updateMediaNotification(chapter.name, currentBook.title, imageUrl, isPlaying); } catch(e) {}
+    }
+}
+
 function startProgressTracker() {
     stopProgressTracker();
-    // Har 10 second mein save karo
     progressInterval = setInterval(() => {
         if (!audio.paused && currentBook) {
             saveUserProgress(currentBook.bookId, currentChapterIndex, audio.currentTime);
@@ -151,17 +208,16 @@ function startProgressTracker() {
     }, 10000);
 }
 
-function stopProgressTracker() {
-    if (progressInterval) clearInterval(progressInterval);
-}
+function stopProgressTracker() { if (progressInterval) clearInterval(progressInterval); }
 
-// --- 🔄 UI NOTIFIER Helper ---
-function updateUIState(isPlaying) {
+async function updateUIState(isPlaying) {
+    const isDownloaded = await isChapterDownloaded();
     const event = new CustomEvent('player-state-change', { 
         detail: { 
             isPlaying: isPlaying,
             book: currentBook,
-            chapter: currentBook ? currentBook.chapters[currentChapterIndex] : null
+            chapter: currentBook ? currentBook.chapters[currentChapterIndex] : null,
+            isDownloaded: isDownloaded
         } 
     });
     window.dispatchEvent(event);

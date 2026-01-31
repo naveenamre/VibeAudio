@@ -1,5 +1,5 @@
-// --- 🖥️ UI CONTROLLER (Clerk Ready - Cleaned Up) ---
-import { fetchAllBooks, fetchUserProgress, getLocalUserProfile, syncUserProfile } from './api.js'; 
+// --- 🖥️ UI CONTROLLER (App-Ready: Back Button, Native Controls & Features) ---
+import { fetchAllBooks, getLocalUserProfile, syncUserProfile } from './api.js'; 
 import * as Player from './player.js';
 
 // Import New Modules
@@ -10,41 +10,44 @@ let allBooks = []; // 📚 Global Master Copy
 
 // --- 🌏 GLOBAL APP OBJECT ---
 window.app = {
+    // Basic Nav
     switchView: (id) => switchView(id),
-    goBack: () => switchView('library'),
+    goBack: () => window.history.back(), 
     filterLibrary: (category) => filterLibraryLogic(category),
     
-    // Player functions pass-through
+    // Player Controls (For Android Bridge) 🔥
+    togglePlay: () => {
+        const isPlaying = Player.togglePlay();
+        PlayerUI.updateUI(isPlaying);
+    },
+    nextChapter: () => {
+        if(Player.nextChapter()) PlayerUI.updateUI(true);
+    },
+    prevChapter: () => {
+        if(Player.prevChapter()) PlayerUI.updateUI(true);
+    },
+    
+    // Seek
     seekToComment: (time) => {
         const audio = Player.getAudioElement();
         if(audio.duration) { Player.seekTo((time/audio.duration)*100); Player.togglePlay(); }
     },
 
-    // 🔄 SYNC DATA (Fake Animation for User Satisfaction)
+    // Sync
     syncData: async () => {
         const btn = document.querySelector('.btn-secondary'); 
         if(!btn) return;
-        
         const icon = btn.querySelector('i');
         const originalText = btn.innerHTML;
-        
-        // 1. Animation Start
         if(icon) icon.classList.add('fa-spin');
         btn.innerHTML = `<i class="fas fa-sync fa-spin"></i> Syncing...`;
         btn.disabled = true;
-
-        // 2. Real Sync Call
         await syncUserProfile();
-
-        // 3. Success Feedback
         if(icon) icon.classList.remove('fa-spin');
         btn.innerHTML = `<i class="fas fa-check"></i> Synced!`;
         btn.style.borderColor = "#00ff00";
         btn.style.color = "#00ff00";
-        
         showToast("☁️ Data synced with Cloud!");
-
-        // 4. Reset after 3s
         setTimeout(() => {
             btn.innerHTML = originalText;
             btn.disabled = false;
@@ -53,24 +56,14 @@ window.app = {
         }, 3000);
     },
 
-    // 🔥 NEW: PROPER LOGOUT FUNCTION
+    // Logout
     logout: async () => {
         console.log("👋 Logging out...");
-        
-        // 1. Clerk session khatam karo (Server Logout)
         if (window.Clerk) {
-            try {
-                await window.Clerk.signOut();
-            } catch (e) {
-                console.warn("Clerk signout issue:", e);
-            }
+            try { await window.Clerk.signOut(); } catch (e) { console.warn("Clerk signout issue:", e); }
         }
-
-        // 2. Local cleaning (Client Logout)
         localStorage.removeItem("vibe_user_id");
         localStorage.removeItem("vibe_user_name");
-        
-        // 3. Wapas Login Page bhejo
         window.location.href = "../../index.html";
     }
 };
@@ -78,9 +71,19 @@ window.app = {
 // --- 🚀 INIT ---
 async function init() {
     console.log("🚀 VibeAudio UI Starting...");
-    setupImageObserver(); // Watchman start
+    setupImageObserver(); 
 
-    // 1. Get User Profile from LocalStorage (Clerk Data)
+    // Android Back Button Logic
+    window.addEventListener('popstate', (event) => {
+        if (event.state && event.state.view) {
+            switchView(event.state.view, false);
+        } else {
+            switchView('library', false);
+        }
+    });
+    history.replaceState({ view: 'library' }, null, "#library");
+
+    // Load User
     const user = getLocalUserProfile();
     if (user.name) {
         const nameDisplay = document.getElementById('user-name-display');
@@ -89,13 +92,10 @@ async function init() {
         if(avatar) avatar.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=ff4b1f&color=fff&bold=true`;
     }
 
-    // 2. Sync User with Backend (Quietly)
     syncUserProfile();
 
-    // 3. Load Data
+    // Load Books
     allBooks = await fetchAllBooks(); 
-    
-    // Sort
     if(allBooks.length > 0) {
         allBooks.sort((a, b) => {
             const numA = parseInt(a.bookId.replace(/\D/g, '')) || 0; 
@@ -104,42 +104,37 @@ async function init() {
         });
     }
 
-    // 4. Render Library & Filters
+    // Render UI
     LibraryUI.renderCategoryFilters(allBooks);
     LibraryUI.renderLibrary(allBooks, (book) => PlayerUI.openPlayerUI(book, allBooks, switchView));
-    
-    // 5. Render History
     LibraryUI.renderHistory(allBooks, (book) => PlayerUI.openPlayerUI(book, allBooks, switchView));
     
     setupListeners();
 }
 
 // --- 🧭 NAVIGATION ---
-function switchView(id) {
+function switchView(id, pushHistory = true) {
+    if (pushHistory) history.pushState({ view: id }, null, `#${id}`);
+
     document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
-    
     const view = document.getElementById(`view-${id}`);
     if (view) {
         view.classList.remove('hidden');
         if(window.gsap) gsap.fromTo(view, {opacity:0, y:10}, {opacity:1, y:0, duration:0.3});
     }
 
-    // 🍔 SIDEBAR HIGHLIGHT LOGIC
     document.querySelectorAll('.sidebar-nav button').forEach(btn => btn.classList.remove('active'));
     const activeBtn = document.querySelector(`.sidebar-nav button[onclick*="'${id}'"]`);
     if(activeBtn) activeBtn.classList.add('active');
 
-    // 👇 Player Mode Trigger
     if (id === 'player') {
         document.body.classList.add('player-mode');
     } else {
         document.body.classList.remove('player-mode');
     }
 
-    // History tab refresh logic
     if (id === 'history') LibraryUI.renderHistory(allBooks, (book) => PlayerUI.openPlayerUI(book, allBooks, switchView));
 
-    // 🦎 RESET THEME
     if (id === 'library') {
         document.documentElement.style.setProperty('--primary', '#ff4b1f');
         document.body.style.background = ""; 
@@ -148,7 +143,7 @@ function switchView(id) {
     }
 }
 
-// --- 🔍 FILTER LOGIC ---
+// --- 🔍 FILTER ---
 function filterLibraryLogic(category) {
     document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
     const btnId = category === 'All' ? 'filter-all' : `filter-${category}`;
@@ -163,7 +158,7 @@ function filterLibraryLogic(category) {
     }
 }
 
-// --- 🎮 CONTROLS & LISTENERS ---
+// --- 🎮 LISTENERS ---
 function setupListeners() {
     const playBtn = document.getElementById('play-btn');
     const prevBtn = document.getElementById('prev-btn');
@@ -175,7 +170,7 @@ function setupListeners() {
     const postBtn = document.getElementById('post-comment-btn');
     const searchInput = document.getElementById('search-input');
     
-    // 🍔 SIDEBAR LOGIC
+    // Sidebar
     const menuBtn = document.getElementById('menu-btn');
     const closeBtn = document.getElementById('close-sidebar');
     const overlay = document.getElementById('sidebar-overlay');
@@ -197,7 +192,6 @@ function setupListeners() {
     if(menuBtn) menuBtn.onclick = () => toggleSidebar(true);
     if(closeBtn) closeBtn.onclick = () => toggleSidebar(false);
     if(overlay) overlay.onclick = () => toggleSidebar(false);
-
     document.querySelectorAll('.sidebar-nav button').forEach(btn => {
         btn.addEventListener('click', () => toggleSidebar(false));
     });
@@ -214,7 +208,7 @@ function setupListeners() {
         });
     }
 
-    // Comment Post
+    // Comment
     if(postBtn) {
         postBtn.onclick = () => {
             const input = document.getElementById('comment-input');
@@ -228,17 +222,14 @@ function setupListeners() {
         };
     }
 
-    // Player Controls
-    if(playBtn) playBtn.onclick = () => {
-        const isPlaying = Player.togglePlay();
-        PlayerUI.updateUI(isPlaying);
-    };
-    if (prevBtn) prevBtn.onclick = () => { if(Player.prevChapter()) PlayerUI.updateUI(true); };
-    if (nextBtn) nextBtn.onclick = () => { if(Player.nextChapter()) PlayerUI.updateUI(true); };
+    // Player Buttons (Use global functions)
+    if(playBtn) playBtn.onclick = window.app.togglePlay;
+    if (prevBtn) prevBtn.onclick = window.app.prevChapter;
+    if (nextBtn) nextBtn.onclick = window.app.nextChapter;
     if(seekBack) seekBack.onclick = () => Player.skip(-10);
     if(seekFwd) seekFwd.onclick = () => Player.skip(10);
     
-    // 🔥 PROGRESS BAR DRAG
+    // Progress
     if(progress) {
         progress.addEventListener('input', (e) => {
             const pct = e.target.value;
@@ -247,7 +238,6 @@ function setupListeners() {
         });
     }
 
-    // Audio Events
     audio.ontimeupdate = () => {
         const state = Player.getCurrentState();
         if (state.duration && progress) {
@@ -262,9 +252,45 @@ function setupListeners() {
         if(Player.nextChapter()) PlayerUI.updateUI(true);
         else PlayerUI.updateUI(false);
     };
+
+    // Speed & Sleep
+    const speedBtn = document.getElementById('speed-btn');
+    if (speedBtn) {
+        speedBtn.onclick = () => {
+            const currentSpeed = parseFloat(speedBtn.innerText.replace('x', ''));
+            const speeds = [1, 1.25, 1.5, 2];
+            let nextIndex = speeds.indexOf(currentSpeed) + 1;
+            if (nextIndex >= speeds.length) nextIndex = 0;
+            const nextSpeed = speeds[nextIndex];
+            Player.setPlaybackSpeed(nextSpeed);
+            speedBtn.innerText = `${nextSpeed}x`;
+            showToast(`🚀 Speed: ${nextSpeed}x`);
+        };
+    }
+
+    const sleepBtn = document.getElementById('sleep-timer-btn');
+    if (sleepBtn) {
+        sleepBtn.onclick = () => {
+            let currentMode = parseInt(sleepBtn.dataset.mode || "0");
+            const modes = [0, 15, 30, 60];
+            let nextIndex = modes.indexOf(currentMode) + 1;
+            if (nextIndex >= modes.length) nextIndex = 0;
+            const nextMode = modes[nextIndex];
+            Player.setSleepTimer(nextMode, () => showToast("🌙 Sleep Timer ended"));
+            sleepBtn.dataset.mode = nextMode;
+            if (nextMode === 0) {
+                sleepBtn.innerHTML = '<i class="fas fa-moon"></i>';
+                sleepBtn.style.color = "";
+                showToast("🌙 Sleep Timer OFF");
+            } else {
+                sleepBtn.innerHTML = `<span style="font-size:0.8rem; font-weight:bold;">${nextMode}m</span>`;
+                sleepBtn.style.color = "#1fddff";
+                showToast(`🌙 Sleep Timer set for ${nextMode} mins`);
+            }
+        };
+    }
 }
 
-// --- 🕵️‍♂️ IMAGE WATCHMAN ---
 function setupImageObserver() {
     window.imageObserver = new IntersectionObserver((entries, observer) => {
         entries.forEach(entry => {
@@ -278,7 +304,6 @@ function setupImageObserver() {
     }, { rootMargin: "100px 0px", threshold: 0.01 });
 }
 
-// --- 🍞 HELPER: TOAST MSG ---
 function showToast(msg) {
     const toast = document.createElement('div');
     toast.className = 'toast-msg';
@@ -287,7 +312,6 @@ function showToast(msg) {
     setTimeout(() => toast.remove(), 3000);
 }
 
-// --- 🎨 STYLES ---
 const style = document.createElement('style');
 style.textContent = `
     .lazy-img { opacity: 0; transition: opacity 0.6s ease-in-out; }

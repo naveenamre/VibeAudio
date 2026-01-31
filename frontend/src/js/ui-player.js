@@ -9,11 +9,9 @@ const speeds = [1, 1.25, 1.5, 2, 0.8];
 let currentSpeedIndex = 0;
 const sleepTimes = [0, 15, 30, 60];
 let currentSleepIndex = 0;
-// ❌ Removed: lastPreloadedUrl (Ab zarurat nahi)
 
 // --- OPEN PLAYER ---
 export async function openPlayerUI(partialBook, allBooks, switchViewCallback) {
-    // ... (Ye part same rahega, copy-paste mat karna agar change nahi kiya to)
     switchViewCallback('player');
 
     // 1. UI Update
@@ -59,7 +57,6 @@ export async function openPlayerUI(partialBook, allBooks, switchViewCallback) {
     if (finalBook.savedState) {
         if (finalBook.chapters[finalBook.savedState.chapterIndex]) {
             Player.loadBook(finalBook, finalBook.savedState.chapterIndex);
-            // ✅ Clean call, no preload trigger
             updateUI(true, finalBook, finalBook.chapters[finalBook.savedState.chapterIndex]);
         } else {
             Player.loadBook(finalBook, 0);
@@ -76,9 +73,7 @@ export async function openPlayerUI(partialBook, allBooks, switchViewCallback) {
     }
 }
 
-// ❌ DELETED: preloadNextChapter() function poora uda diya.
-
-// 🌈 HELPER: Theme (Same as before)
+// 🌈 HELPER: Theme
 function applyChameleonTheme(imageUrl) {
     const root = document.documentElement;
     const body = document.body;
@@ -114,7 +109,7 @@ function applyChameleonTheme(imageUrl) {
     img.onerror = resetTheme;
 }
 
-// --- RENDER LIST (Same as before) ---
+// --- RENDER LIST ---
 function renderChapterList(book) {
     const list = document.getElementById('chapter-list');
     const totalChapters = document.getElementById('total-chapters');
@@ -149,9 +144,9 @@ function renderChapterList(book) {
     });
 }
 
-// --- LISTENERS (Same as before) ---
+// --- LISTENERS (Updated with Download Button) ---
 export function setupPlayerListeners() {
-    // ... (Code same as original file, no changes needed here)
+    // 1. Existing Buttons
     const speedBtn = document.getElementById('speed-btn');
     const audio = Player.getAudioElement();
     
@@ -194,9 +189,46 @@ export function setupPlayerListeners() {
             }
         };
     }
+
+    // 🔥 2. NEW: DOWNLOAD BUTTON (Only for App)
+    if (document.body.classList.contains('is-android')) {
+        const dlBtn = document.getElementById('download-btn');
+        if (dlBtn) {
+            dlBtn.style.display = "flex"; // Show button if hidden
+            
+            // Remove old listeners
+            const newDlBtn = dlBtn.cloneNode(true);
+            dlBtn.parentNode.replaceChild(newDlBtn, dlBtn);
+
+            newDlBtn.onclick = async () => {
+                const isDownloaded = await Player.isChapterDownloaded();
+                
+                if (isDownloaded) {
+                    // Delete
+                    await Player.deleteChapter();
+                    newDlBtn.innerHTML = `<i class="fas fa-download"></i>`;
+                    newDlBtn.style.color = "";
+                    showToast("🗑️ Removed from downloads");
+                } else {
+                    // Download
+                    newDlBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
+                    await Player.downloadCurrentChapter((success) => {
+                        if(success) {
+                            newDlBtn.innerHTML = `<i class="fas fa-check"></i>`;
+                            newDlBtn.style.color = "#00ff00";
+                            showToast("✅ Downloaded for Offline!");
+                        } else {
+                            newDlBtn.innerHTML = `<i class="fas fa-exclamation-triangle"></i>`;
+                            showToast("❌ Download Failed");
+                        }
+                    });
+                }
+            };
+        }
+    }
 }
 
-// --- BUTTONS (Same as before) ---
+// --- BUTTONS ---
 function setupPlayButton(book) {
     const mainBtn = document.getElementById('main-play-btn');
     if (!mainBtn) return;
@@ -225,7 +257,7 @@ function setupPlayButton(book) {
     };
 }
 
-// --- COMMENTS (Same as before) ---
+// --- COMMENTS ---
 function renderComments(comments) {
     const list = document.getElementById('comments-list');
     if(list) {
@@ -242,7 +274,7 @@ export function renderSingleComment(c) {
     list.appendChild(div);
 }
 
-// --- 🔄 UI UPDATE (Fixed) ---
+// --- 🔄 UI UPDATE (Fixed with Download Status) ---
 export function updateUI(isPlaying, book = null, chapter = null) {
     const playBtn = document.getElementById('play-btn');
     const mainPlayBtn = document.getElementById('main-play-btn');
@@ -257,8 +289,6 @@ export function updateUI(isPlaying, book = null, chapter = null) {
         document.getElementById('mini-title').innerText = book.title;
         const cleanName = chapter.name.replace(/^Chapter\s+\d+[:\s-]*/i, '').replace(/^\d+[\.\s]+/, '').trim();
         document.getElementById('mini-chapter').innerText = cleanName;
-
-        // ❌ REMOVED: Preload Trigger Logic yahan se uda diya.
     }
 
     const state = Player.getCurrentState();
@@ -272,6 +302,22 @@ export function updateUI(isPlaying, book = null, chapter = null) {
                 li.querySelector('.chapter-status').innerHTML = `<i class="fas fa-play" style="font-size: 0.8rem;"></i>`;
             }
         });
+
+        // 🔥 Check Download Status for UI
+        if (document.body.classList.contains('is-android')) {
+            const dlBtn = document.getElementById('download-btn');
+            if (dlBtn) {
+                Player.isChapterDownloaded().then(isDownloaded => {
+                    if (isDownloaded) {
+                        dlBtn.innerHTML = `<i class="fas fa-check"></i>`;
+                        dlBtn.style.color = "#00ff00";
+                    } else {
+                        dlBtn.innerHTML = `<i class="fas fa-download"></i>`;
+                        dlBtn.style.color = "";
+                    }
+                });
+            }
+        }
     }
 }
 
