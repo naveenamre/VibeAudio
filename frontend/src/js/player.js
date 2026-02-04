@@ -1,6 +1,8 @@
 // --- 🎵 PLAYER LOGIC MODULE (Persistent Offline Storage) ---
 import { saveUserProgress } from './api.js'; 
 
+console.log("💿 Player Module Loading...");
+
 let audio = document.getElementById('audio-element') || new Audio();
 let currentBook = null;
 let currentChapterIndex = 0;
@@ -17,7 +19,7 @@ export function getCurrentState() {
     }; 
 }
 
-// --- 📂 LOAD BOOK (Checking Android Storage First) ---
+// --- 📂 LOAD BOOK ---
 export async function loadBook(book, chapterIndex = 0, startTime = 0) {
     if (!book || !book.chapters || !book.chapters[chapterIndex]) return;
 
@@ -33,26 +35,23 @@ export async function loadBook(book, chapterIndex = 0, startTime = 0) {
     audio.pause();
 
     const chapter = book.chapters[chapterIndex];
-    const fileName = `${book.bookId}_${chapterIndex}.mp3`; // Unique Filename
+    const fileName = `${book.bookId}_${chapterIndex}.mp3`; 
 
     console.log(`📂 Loading: ${chapter.name}`);
 
-    // 🔥 SMART LOAD: Check Android Storage First
     let offlinePath = "";
     if (window.AndroidInterface) {
-        // Android returns "file://..." if exists, else empty
         offlinePath = window.AndroidInterface.checkFile(fileName);
     }
 
     if (offlinePath) {
-        console.log("⚡ Playing from PERMANENT Offline Storage!", offlinePath);
+        console.log("⚡ Playing from Offline Storage!", offlinePath);
         audio.src = offlinePath;
     } else {
         console.log("🌐 Playing from Network...");
         audio.src = chapter.url;
     }
     
-    // Metadata Load Event
     audio.onloadedmetadata = () => {
         if (startTime > 0) audio.currentTime = startTime;
         playAudioSafe();
@@ -69,28 +68,26 @@ export async function loadBook(book, chapterIndex = 0, startTime = 0) {
     updateUIState(true);
 }
 
-// --- 📥 DOWNLOAD FEATURE (Using Android Bridge) ---
+// --- 📥 DOWNLOAD FEATURE ---
 export function downloadCurrentChapter(onProgress) {
     if (!currentBook || !window.AndroidInterface) return;
     const chapter = currentBook.chapters[currentChapterIndex];
     const fileName = `${currentBook.bookId}_${currentChapterIndex}.mp3`;
 
-    console.log("📥 Requesting Native Download:", chapter.name);
+    console.log("📥 Requesting Download:", chapter.name);
 
-    // Global Callback for Android
     window.onDownloadComplete = (success, path) => {
         if(success) {
-            console.log("✅ Native Download Complete:", path);
+            console.log("✅ Download Complete:", path);
             if(onProgress) onProgress(true);
             updateUIState(audio.paused ? false : true);
         } else {
-            console.error("❌ Native Download Failed");
+            console.error("❌ Download Failed");
             if(onProgress) onProgress(false);
         }
-        delete window.onDownloadComplete; // Cleanup
+        delete window.onDownloadComplete; 
     };
 
-    // Call Android
     window.AndroidInterface.downloadFile(chapter.url, fileName, "onDownloadComplete");
 }
 
@@ -105,11 +102,11 @@ export async function deleteChapter() {
     if (!currentBook || !window.AndroidInterface) return;
     const fileName = `${currentBook.bookId}_${currentChapterIndex}.mp3`;
     window.AndroidInterface.deleteFile(fileName);
-    console.log("🗑️ Deleted from Storage");
+    console.log("🗑️ Deleted");
     updateUIState(audio.paused ? false : true);
 }
 
-// --- STANDARD FUNCTIONS (Same as before) ---
+// --- HELPERS ---
 function updateMediaSession(book, chapter) {
     if (!('mediaSession' in navigator)) return;
     let imageUrl = book.coverImage || book.cover || 'public/icons/logo.png';
@@ -120,18 +117,17 @@ function updateMediaSession(book, chapter) {
         album: book.title,
         artwork: [{ src: imageUrl, sizes: '512x512', type: 'image/png' }]
     });
-    navigator.mediaSession.playbackState = "none";
 }
 
 function setupMediaHandlers() {
     if (!('mediaSession' in navigator)) return;
     const actionHandlers = [
-        ['play',          () => { togglePlay(); updateUIState(true); }],
-        ['pause',         () => { togglePlay(); updateUIState(false); }],
+        ['play', () => { togglePlay(); updateUIState(true); }],
+        ['pause', () => { togglePlay(); updateUIState(false); }],
         ['previoustrack', prevChapter],
-        ['nexttrack',     nextChapter],
-        ['seekbackward',  () => skip(-10)],
-        ['seekforward',   () => skip(10)]
+        ['nexttrack', nextChapter],
+        ['seekbackward', () => skip(-10)],
+        ['seekforward', () => skip(10)]
     ];
     for (const [action, handler] of actionHandlers) {
         try { navigator.mediaSession.setActionHandler(action, handler); } catch (e) {}
@@ -145,7 +141,7 @@ async function playAudioSafe() {
         updateUIState(true);
         sendToAndroid(true);
     } catch (err) {
-        if (err.name !== 'AbortError') { updateUIState(false); }
+        if (err.name !== 'AbortError') updateUIState(false);
     }
 }
 
@@ -159,11 +155,8 @@ export function togglePlay() {
         updateUIState(false);
         sendToAndroid(false);
         stopProgressTracker();
-        
-        // 🔥 FIX: Added audio.duration (Parameter 4)
-        if(currentBook) {
-            saveUserProgress(currentBook.bookId, currentChapterIndex, audio.currentTime, audio.duration);
-        }
+        // 🔥 Save on Pause
+        if(currentBook) saveUserProgress(currentBook.bookId, currentChapterIndex, audio.currentTime, audio.duration);
         return false;
     }
 }
@@ -171,6 +164,7 @@ export function togglePlay() {
 export function skip(seconds) { audio.currentTime += seconds; }
 export function seekTo(percent) { if (audio.duration) audio.currentTime = (percent / 100) * audio.duration; }
 export function setPlaybackSpeed(speed) { audio.playbackRate = speed; }
+
 export function setSleepTimer(minutes, callback) {
     if (window.sleepTimer) clearTimeout(window.sleepTimer);
     if (minutes > 0) {
@@ -207,7 +201,6 @@ function startProgressTracker() {
     stopProgressTracker();
     progressInterval = setInterval(() => {
         if (!audio.paused && currentBook) {
-            // 🔥 FIX: Added audio.duration (Parameter 4)
             saveUserProgress(currentBook.bookId, currentChapterIndex, audio.currentTime, audio.duration);
         }
     }, 10000);

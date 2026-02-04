@@ -1,8 +1,9 @@
 // --- 🖥️ UI CONTROLLER (App-Ready: Back Button, Native Controls & Features) ---
 import { fetchAllBooks, getLocalUserProfile, syncUserProfile } from './api.js'; 
-import * as Player from './player.js';
 
-// Import New Modules
+// ✅ FIX: Use Named Imports to prevent "is not a function" error
+import { togglePlay, nextChapter, prevChapter, skip, seekTo, getAudioElement, getCurrentState, setPlaybackSpeed, setSleepTimer } from './player.js';
+
 import * as LibraryUI from './ui-library.js';
 import * as PlayerUI from './ui-player.js';
 
@@ -17,20 +18,20 @@ window.app = {
     
     // Player Controls (For Android Bridge) 🔥
     togglePlay: () => {
-        const isPlaying = Player.togglePlay();
+        const isPlaying = togglePlay();
         PlayerUI.updateUI(isPlaying);
     },
     nextChapter: () => {
-        if(Player.nextChapter()) PlayerUI.updateUI(true);
+        if(nextChapter()) PlayerUI.updateUI(true);
     },
     prevChapter: () => {
-        if(Player.prevChapter()) PlayerUI.updateUI(true);
+        if(prevChapter()) PlayerUI.updateUI(true);
     },
     
     // Seek
     seekToComment: (time) => {
-        const audio = Player.getAudioElement();
-        if(audio.duration) { Player.seekTo((time/audio.duration)*100); Player.togglePlay(); }
+        const audio = getAudioElement();
+        if(audio.duration) { seekTo((time/audio.duration)*100); togglePlay(); }
     },
 
     // Sync
@@ -166,7 +167,7 @@ function setupListeners() {
     const seekBack = document.getElementById('seek-back-btn');
     const seekFwd = document.getElementById('seek-fwd-btn');
     const progress = document.getElementById('progress-bar');
-    const audio = Player.getAudioElement();
+    const audio = getAudioElement();
     const postBtn = document.getElementById('post-comment-btn');
     const searchInput = document.getElementById('search-input');
     
@@ -214,7 +215,7 @@ function setupListeners() {
             const input = document.getElementById('comment-input');
             const text = input.value;
             if(!text) return;
-            const state = Player.getCurrentState();
+            const state = getCurrentState();
             const currentTime = Math.floor(state.currentTime || 0);
             const newComment = { time: currentTime, user: "You", text: text };
             PlayerUI.renderSingleComment(newComment); 
@@ -226,20 +227,20 @@ function setupListeners() {
     if(playBtn) playBtn.onclick = window.app.togglePlay;
     if (prevBtn) prevBtn.onclick = window.app.prevChapter;
     if (nextBtn) nextBtn.onclick = window.app.nextChapter;
-    if(seekBack) seekBack.onclick = () => Player.skip(-10);
-    if(seekFwd) seekFwd.onclick = () => Player.skip(10);
+    if(seekBack) seekBack.onclick = () => skip(-10);
+    if(seekFwd) seekFwd.onclick = () => skip(10);
     
     // Progress
     if(progress) {
         progress.addEventListener('input', (e) => {
             const pct = e.target.value;
-            Player.seekTo(pct);
+            seekTo(pct);
             progress.style.backgroundSize = `${pct}% 100%`; 
         });
     }
 
     audio.ontimeupdate = () => {
-        const state = Player.getCurrentState();
+        const state = getCurrentState();
         if (state.duration && progress) {
             const pct = (state.currentTime / state.duration) * 100;
             progress.value = pct;
@@ -249,7 +250,7 @@ function setupListeners() {
         }
     };
     audio.onended = () => {
-        if(Player.nextChapter()) PlayerUI.updateUI(true);
+        if(nextChapter()) PlayerUI.updateUI(true);
         else PlayerUI.updateUI(false);
     };
 
@@ -262,7 +263,7 @@ function setupListeners() {
             let nextIndex = speeds.indexOf(currentSpeed) + 1;
             if (nextIndex >= speeds.length) nextIndex = 0;
             const nextSpeed = speeds[nextIndex];
-            Player.setPlaybackSpeed(nextSpeed);
+            setPlaybackSpeed(nextSpeed);
             speedBtn.innerText = `${nextSpeed}x`;
             showToast(`🚀 Speed: ${nextSpeed}x`);
         };
@@ -276,7 +277,7 @@ function setupListeners() {
             let nextIndex = modes.indexOf(currentMode) + 1;
             if (nextIndex >= modes.length) nextIndex = 0;
             const nextMode = modes[nextIndex];
-            Player.setSleepTimer(nextMode, () => showToast("🌙 Sleep Timer ended"));
+            setSleepTimer(nextMode, () => showToast("🌙 Sleep Timer ended"));
             sleepBtn.dataset.mode = nextMode;
             if (nextMode === 0) {
                 sleepBtn.innerHTML = '<i class="fas fa-moon"></i>';

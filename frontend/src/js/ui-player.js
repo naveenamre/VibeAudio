@@ -1,7 +1,6 @@
-// frontend/src/js/ui-player.js
-
 import { fetchBookDetails, fetchUserProgress } from './api.js';
-import * as Player from './player.js';
+// ✅ FIX: Use Named Imports to avoid "is not a function" errors
+import { loadBook, getCurrentState, getAudioElement, togglePlay, skip, setPlaybackSpeed, setSleepTimer, isChapterDownloaded, downloadCurrentChapter, deleteChapter } from './player.js';
 
 // --- ⏱️ GLOBAL STATE ---
 let sleepTimer = null;
@@ -56,35 +55,35 @@ export async function openPlayerUI(partialBook, allBooks, switchViewCallback) {
     // 4. RESUME LOGIC
     if (finalBook.savedState) {
         if (finalBook.chapters[finalBook.savedState.chapterIndex]) {
-            Player.loadBook(finalBook, finalBook.savedState.chapterIndex);
+            // ✅ Fix: Pass saved time to loadBook
+            loadBook(finalBook, finalBook.savedState.chapterIndex, finalBook.savedState.currentTime);
             updateUI(true, finalBook, finalBook.chapters[finalBook.savedState.chapterIndex]);
         } else {
-            Player.loadBook(finalBook, 0);
+            loadBook(finalBook, 0);
             updateUI(true, finalBook, finalBook.chapters[0]);
         }
     } else {
-        const currentState = Player.getCurrentState();
+        const currentState = getCurrentState();
         if (currentState.book && currentState.book.bookId === finalBook.bookId) {
             updateUI(true, finalBook, finalBook.chapters[currentState.currentChapterIndex]);
         } else {
-            Player.loadBook(finalBook, 0);
-            updateUI(true, finalBook, finalBook.chapters[0]);
+            // Fetch history to see if we should resume
+            fetchUserProgress().then(history => {
+                 const saved = history.find(h => h.bookId == finalBook.bookId);
+                 if (saved) {
+                     loadBook(finalBook, saved.chapterIndex, saved.currentTime);
+                 } else {
+                     loadBook(finalBook, 0);
+                 }
+                 updateUI(true, finalBook, finalBook.chapters[saved ? saved.chapterIndex : 0]);
+            });
         }
     }
 }
 
 // 🌈 HELPER: Theme
 function applyChameleonTheme(imageUrl) {
-    const root = document.documentElement;
-    const body = document.body;
-    const resetTheme = () => {
-        root.style.setProperty('--primary', '#ff4b1f');
-        body.style.background = "";
-        const playBtn = document.getElementById('play-btn');
-        if(playBtn) playBtn.style.boxShadow = 'none';
-    };
-
-    if (!window.ColorThief) { resetTheme(); return; }
+    if (!window.ColorThief) return;
 
     const colorThief = new ColorThief();
     const img = new Image();
@@ -95,18 +94,13 @@ function applyChameleonTheme(imageUrl) {
         try {
             const color = colorThief.getColor(img);
             const rgb = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
-            const darkRgb = `rgb(${Math.floor(color[0]*0.2)}, ${Math.floor(color[1]*0.2)}, ${Math.floor(color[2]*0.2)})`;
-            
-            root.style.setProperty('--primary', rgb);
-            body.style.background = `linear-gradient(-45deg, ${darkRgb}, #000000, ${rgb}, #0f0f0f)`;
-            body.style.backgroundSize = "400% 400%";
+            document.documentElement.style.setProperty('--primary', rgb);
             const playBtn = document.getElementById('play-btn');
             if(playBtn) playBtn.style.boxShadow = `0 0 30px ${rgb}`;
         } catch (e) {
-            resetTheme();
+            // theme failure, ignore
         }
     };
-    img.onerror = resetTheme;
 }
 
 // --- RENDER LIST ---
@@ -117,9 +111,9 @@ function renderChapterList(book) {
     
     list.innerHTML = '';
     
-    const currentState = Player.getCurrentState();
+    const currentState = getCurrentState();
     const currentIndex = (currentState.book && currentState.book.bookId === book.bookId) 
-                         ? Player.getCurrentState().currentChapterIndex 
+                         ? currentState.currentChapterIndex 
                          : -1;
     
     book.chapters.forEach((chap, idx) => {
@@ -137,18 +131,18 @@ function renderChapterList(book) {
             </div>
         `;
         li.onclick = () => { 
-            Player.loadBook(book, idx); 
+            loadBook(book, idx); 
             updateUI(true, book, book.chapters[idx]); 
         };
         list.appendChild(li);
     });
 }
 
-// --- LISTENERS (Updated with Download Button) ---
+// --- LISTENERS ---
 export function setupPlayerListeners() {
     // 1. Existing Buttons
     const speedBtn = document.getElementById('speed-btn');
-    const audio = Player.getAudioElement();
+    const audio = getAudioElement();
     
     if(speedBtn) {
         const newBtn = speedBtn.cloneNode(true);
@@ -156,7 +150,7 @@ export function setupPlayerListeners() {
         newBtn.onclick = () => {
             currentSpeedIndex = (currentSpeedIndex + 1) % speeds.length;
             const newSpeed = speeds[currentSpeedIndex];
-            audio.playbackRate = newSpeed;
+            setPlaybackSpeed(newSpeed);
             newBtn.innerText = `${newSpeed}x`;
             showToast(`Speed: ${newSpeed}x ⚡`);
         };
@@ -169,19 +163,20 @@ export function setupPlayerListeners() {
         newSleepBtn.onclick = () => {
             currentSleepIndex = (currentSleepIndex + 1) % sleepTimes.length;
             const minutes = sleepTimes[currentSleepIndex];
-            if (sleepTimer) clearTimeout(sleepTimer);
             
+            // clear old timer if setting new one
+            setSleepTimer(minutes, () => {
+                 togglePlay();
+                 updateUI(false);
+                 newSleepBtn.innerHTML = `<i class="fas fa-moon"></i>`;
+                 newSleepBtn.style.color = "";
+                 currentSleepIndex = 0;
+            });
+
             if (minutes > 0) {
                 newSleepBtn.innerHTML = `<span style="font-size:0.8rem; font-weight:bold">${minutes}m</span>`;
                 newSleepBtn.style.color = "var(--secondary)";
                 showToast(`Sleep Timer: ${minutes} mins 🌙`);
-                sleepTimer = setTimeout(() => {
-                    Player.togglePlay();
-                    updateUI(false);
-                    newSleepBtn.innerHTML = `<i class="fas fa-moon"></i>`;
-                    newSleepBtn.style.color = "";
-                    currentSleepIndex = 0;
-                }, minutes * 60 * 1000);
             } else {
                 newSleepBtn.innerHTML = `<i class="fas fa-moon"></i>`;
                 newSleepBtn.style.color = "";
@@ -190,29 +185,26 @@ export function setupPlayerListeners() {
         };
     }
 
-    // 🔥 2. NEW: DOWNLOAD BUTTON (Only for App)
+    // 2. DOWNLOAD BUTTON (Only for App)
     if (document.body.classList.contains('is-android')) {
         const dlBtn = document.getElementById('download-btn');
         if (dlBtn) {
-            dlBtn.style.display = "flex"; // Show button if hidden
+            dlBtn.style.display = "flex"; 
             
-            // Remove old listeners
             const newDlBtn = dlBtn.cloneNode(true);
             dlBtn.parentNode.replaceChild(newDlBtn, dlBtn);
 
             newDlBtn.onclick = async () => {
-                const isDownloaded = await Player.isChapterDownloaded();
+                const isDownloaded = await isChapterDownloaded();
                 
                 if (isDownloaded) {
-                    // Delete
-                    await Player.deleteChapter();
+                    await deleteChapter();
                     newDlBtn.innerHTML = `<i class="fas fa-download"></i>`;
                     newDlBtn.style.color = "";
                     showToast("🗑️ Removed from downloads");
                 } else {
-                    // Download
                     newDlBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
-                    await Player.downloadCurrentChapter((success) => {
+                    await downloadCurrentChapter((success) => {
                         if(success) {
                             newDlBtn.innerHTML = `<i class="fas fa-check"></i>`;
                             newDlBtn.style.color = "#00ff00";
@@ -243,15 +235,16 @@ function setupPlayButton(book) {
             const savedState = history.find(h => h.bookId == book.bookId);
 
             if (savedState) {
-                Player.loadBook(book, savedState.chapterIndex);
+                // ✅ Fix: Resume from correct time
+                loadBook(book, savedState.chapterIndex, savedState.currentTime);
             } else {
-                Player.loadBook(book, 0);
+                loadBook(book, 0);
             }
             const chIndex = savedState ? savedState.chapterIndex : 0;
             updateUI(true, book, book.chapters[chIndex]);
         } catch (e) {
             console.error(e);
-            Player.loadBook(book, 0);
+            loadBook(book, 0);
             updateUI(true, book, book.chapters[0]);
         }
     };
@@ -274,7 +267,7 @@ export function renderSingleComment(c) {
     list.appendChild(div);
 }
 
-// --- 🔄 UI UPDATE (Fixed with Download Status) ---
+// --- 🔄 UI UPDATE ---
 export function updateUI(isPlaying, book = null, chapter = null) {
     const playBtn = document.getElementById('play-btn');
     const mainPlayBtn = document.getElementById('main-play-btn');
@@ -291,7 +284,7 @@ export function updateUI(isPlaying, book = null, chapter = null) {
         document.getElementById('mini-chapter').innerText = cleanName;
     }
 
-    const state = Player.getCurrentState();
+    const state = getCurrentState();
     if (state.book) {
         document.querySelectorAll('#chapter-list .chapter-item').forEach((li, idx) => {
             if (idx === state.currentChapterIndex) {
@@ -303,11 +296,11 @@ export function updateUI(isPlaying, book = null, chapter = null) {
             }
         });
 
-        // 🔥 Check Download Status for UI
+        // Download Status Check
         if (document.body.classList.contains('is-android')) {
             const dlBtn = document.getElementById('download-btn');
             if (dlBtn) {
-                Player.isChapterDownloaded().then(isDownloaded => {
+                isChapterDownloaded().then(isDownloaded => {
                     if (isDownloaded) {
                         dlBtn.innerHTML = `<i class="fas fa-check"></i>`;
                         dlBtn.style.color = "#00ff00";
