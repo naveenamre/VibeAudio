@@ -1,21 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vibe Audio • Log In</title>
-    
+
+    <script>
+        if (!Array.prototype.at) {
+            Array.prototype.at = function (n) {
+                n = Math.trunc(n) || 0;
+                if (n < 0) n += this.length;
+                if (n < 0 || n >= this.length) return undefined;
+                return this[n];
+            };
+        }
+        if (!String.prototype.at) {
+            String.prototype.at = function (n) {
+                n = Math.trunc(n) || 0;
+                if (n < 0) n += this.length;
+                if (n < 0 || n >= this.length) return undefined;
+                return this[n];
+            };
+        }
+    </script>
+
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <script
-        crossorigin="anonymous"
-        data-clerk-publishable-key="pk_test_cXVhbGl0eS1oYXJlLTk5LmNsZXJrLmFjY291bnRzLmRldiQ"
-        src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
-        type="text/javascript"
-    ></script>
-
-    
+    <script crossorigin="anonymous" data-clerk-publishable-key="pk_test_cXVhbGl0eS1oYXJlLTk5LmNsZXJrLmFjY291bnRzLmRldiQ"
+        src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js" type="text/javascript"></script>
 
     <style>
         :root {
@@ -47,7 +61,8 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: clamp(300px, 60vw, 600px); /* Smart Sizing */
+            width: clamp(300px, 60vw, 600px);
+            /* Smart Sizing */
             height: clamp(300px, 60vw, 600px);
             border-radius: 50%;
             background: var(--accent-glow);
@@ -58,8 +73,15 @@
         }
 
         @keyframes pulse {
-            0% { transform: translate(-50%, -50%) scale(1); opacity: 0.25; }
-            100% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.4; }
+            0% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 0.25;
+            }
+
+            100% {
+                transform: translate(-50%, -50%) scale(1.1);
+                opacity: 0.4;
+            }
         }
 
         /* Glass Card */
@@ -68,24 +90,28 @@
             max-width: 400px;
             padding: 2.5rem 2rem;
             text-align: center;
-            
+
             background: var(--glass-bg);
             border-radius: 24px;
-            backdrop-filter: blur(40px); /* Heavy Blur for Premium Feel */
+            backdrop-filter: blur(40px);
+            /* Heavy Blur for Premium Feel */
             -webkit-backdrop-filter: blur(40px);
             border: 1px solid var(--glass-border);
-            
-            box-shadow: 
-                0 20px 40px rgba(0,0,0,0.4),
+
+            box-shadow:
+                0 20px 40px rgba(0, 0, 0, 0.4),
                 inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-            
+
             animation: slideUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
             opacity: 0;
             transform: translateY(30px);
         }
 
         @keyframes slideUp {
-            to { opacity: 1; transform: translateY(0); }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .logo {
@@ -93,7 +119,7 @@
             height: 72px;
             margin-bottom: 1rem;
             border-radius: 18px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
             transition: transform 0.3s ease;
         }
 
@@ -131,8 +157,14 @@
                 padding: 2rem 1.5rem;
                 width: 85%;
             }
-            h1 { font-size: 1.6rem; }
-            .bg-glow { filter: blur(80px); }
+
+            h1 {
+                font-size: 1.6rem;
+            }
+
+            .bg-glow {
+                filter: blur(80px);
+            }
         }
     </style>
 </head>
@@ -142,7 +174,7 @@
     <div class="bg-glow"></div>
 
     <div class="login-card">
-        <img src="src/icons/favicon.png" class="logo" alt="Vibe Logo" onerror="this.style.display='none'"/>
+        <img src="src/icons/favicon.png" class="logo" alt="Vibe Logo" onerror="this.style.display='none'" />
 
         <h1>Vibe Audio</h1>
         <p>Your personal soundscape awaits.</p>
@@ -221,4 +253,5 @@
     </script>
 
 </body>
+
 </html>

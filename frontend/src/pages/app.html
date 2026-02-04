@@ -6,6 +6,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vibe Audio ☁️</title>
 
+    <script>
+        if (!Array.prototype.at) {
+            Array.prototype.at = function (n) {
+                n = Math.trunc(n) || 0;
+                if (n < 0) n += this.length;
+                if (n < 0 || n >= this.length) return undefined;
+                return this[n];
+            };
+        }
+        if (!String.prototype.at) {
+            String.prototype.at = function (n) {
+                n = Math.trunc(n) || 0;
+                if (n < 0) n += this.length;
+                if (n < 0 || n >= this.length) return undefined;
+                return this[n];
+            };
+        }
+    </script>
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
 
@@ -27,25 +46,25 @@
         window.addEventListener("load", async function () {
             try {
                 console.log("⏳ Waiting for Clerk...");
-                // 1. Wait for Clerk to initialize fully
+                // 1. Clerk ko load hone do (Cookies check karega)
                 await Clerk.load();
 
-                // 2. Check Session from Cookies (Not just LocalStorage)
+                // 2. Ab check karo Session
                 if (!Clerk.user) {
-                    console.warn("⛔ Access Denied! No Active Session. Redirecting...");
+                    console.warn("⛔ No Active Session. Redirecting to Login...");
+                    // Agar koi user nahi mila, tabhi bahar bhejo
                     window.location.href = "../../index.html"; 
                 } else {
                     console.log("✅ User Verified:", Clerk.user.firstName);
                     
-                    // 3. Silent Restore: Update LocalStorage for UI usage
+                    // 3. Silent Restore: LocalStorage wapas bhar do
                     localStorage.setItem("vibe_user_id", Clerk.user.id);
                     localStorage.setItem("vibe_user_name", Clerk.user.firstName);
                     
-                    // Stay here, enjoy the Vibe! 🎧
+                    // YAHIN RUKO, Redirect mat karo!
                 }
             } catch (err) {
                 console.error("❌ Clerk Error:", err);
-                // Safety net: If Clerk fails to load, go to login
                 window.location.href = "../../index.html";
             }
         });
