@@ -159,7 +159,11 @@ export function togglePlay() {
         updateUIState(false);
         sendToAndroid(false);
         stopProgressTracker();
-        if(currentBook) saveUserProgress(currentBook.bookId, currentChapterIndex, audio.currentTime);
+        
+        // 🔥 FIX: Added audio.duration (Parameter 4)
+        if(currentBook) {
+            saveUserProgress(currentBook.bookId, currentChapterIndex, audio.currentTime, audio.duration);
+        }
         return false;
     }
 }
@@ -203,7 +207,8 @@ function startProgressTracker() {
     stopProgressTracker();
     progressInterval = setInterval(() => {
         if (!audio.paused && currentBook) {
-            saveUserProgress(currentBook.bookId, currentChapterIndex, audio.currentTime);
+            // 🔥 FIX: Added audio.duration (Parameter 4)
+            saveUserProgress(currentBook.bookId, currentChapterIndex, audio.currentTime, audio.duration);
         }
     }, 10000);
 }
