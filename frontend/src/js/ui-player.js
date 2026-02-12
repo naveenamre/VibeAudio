@@ -1,6 +1,6 @@
 import { fetchBookDetails, fetchUserProgress } from './api.js';
 // ✅ FIX: Use Named Imports to avoid "is not a function" errors
-import { loadBook, getCurrentState, getAudioElement, togglePlay, skip, setPlaybackSpeed, setSleepTimer, isChapterDownloaded, downloadCurrentChapter, deleteChapter } from './player.js';
+import { loadBook, getCurrentState, getAudioElement, togglePlay, skip, setPlaybackSpeed, setSleepTimer, isChapterDownloaded, downloadCurrentChapter, deleteChapter, setLanguage, getCurrentLang } from './player.js';
 
 // --- ⏱️ GLOBAL STATE ---
 let sleepTimer = null;
@@ -46,6 +46,24 @@ export async function openPlayerUI(partialBook, allBooks, switchViewCallback) {
         }
     }
 
+    // 🆕 LANGUAGE TOGGLE SETUP
+    const langContainer = document.getElementById('lang-toggle-container'); 
+    
+    if (finalBook.chapters_en && finalBook.chapters_en.length > 0) {
+        langContainer.innerHTML = `
+            <div class="lang-switch">
+                <button class="lang-btn ${getCurrentLang() === 'hi' ? 'active' : ''}" id="btn-hi">HINDI</button>
+                <button class="lang-btn ${getCurrentLang() === 'en' ? 'active' : ''}" id="btn-en">ENG</button>
+            </div>
+        `;
+        langContainer.classList.remove('hidden');
+
+        document.getElementById('btn-hi').onclick = () => toggleLangUI('hi', finalBook);
+        document.getElementById('btn-en').onclick = () => toggleLangUI('en', finalBook);
+    } else {
+        langContainer.classList.add('hidden'); 
+    }
+
     // 3. SETUP
     renderChapterList(finalBook);
     renderComments(finalBook.comments || []);
@@ -54,18 +72,13 @@ export async function openPlayerUI(partialBook, allBooks, switchViewCallback) {
 
     // 4. RESUME LOGIC
     if (finalBook.savedState) {
-        if (finalBook.chapters[finalBook.savedState.chapterIndex]) {
-            // ✅ Fix: Pass saved time to loadBook
-            loadBook(finalBook, finalBook.savedState.chapterIndex, finalBook.savedState.currentTime);
-            updateUI(true, finalBook, finalBook.chapters[finalBook.savedState.chapterIndex]);
-        } else {
-            loadBook(finalBook, 0);
-            updateUI(true, finalBook, finalBook.chapters[0]);
-        }
+        // Basic check, logic handles language internally via activeChapters
+        loadBook(finalBook, finalBook.savedState.chapterIndex, finalBook.savedState.currentTime);
+        updateUI(true, finalBook); 
     } else {
         const currentState = getCurrentState();
         if (currentState.book && currentState.book.bookId === finalBook.bookId) {
-            updateUI(true, finalBook, finalBook.chapters[currentState.currentChapterIndex]);
+            updateUI(true, finalBook);
         } else {
             // Fetch history to see if we should resume
             fetchUserProgress().then(history => {
@@ -75,7 +88,7 @@ export async function openPlayerUI(partialBook, allBooks, switchViewCallback) {
                  } else {
                      loadBook(finalBook, 0);
                  }
-                 updateUI(true, finalBook, finalBook.chapters[saved ? saved.chapterIndex : 0]);
+                 updateUI(true, finalBook);
             });
         }
     }
@@ -107,16 +120,21 @@ function applyChameleonTheme(imageUrl) {
 function renderChapterList(book) {
     const list = document.getElementById('chapter-list');
     const totalChapters = document.getElementById('total-chapters');
-    if(totalChapters) totalChapters.innerText = `${book.chapters.length} Chapters`;
+    
+    // 🔥 Determine which chapters to show based on language
+    // Logic: If Lang is EN and EN chapters exist, show EN. Else show Default (Hindi).
+    const chaptersToShow = (getCurrentLang() === 'en' && book.chapters_en) ? book.chapters_en : book.chapters;
+
+    if(totalChapters) totalChapters.innerText = `${chaptersToShow.length} Chapters`;
     
     list.innerHTML = '';
     
     const currentState = getCurrentState();
     const currentIndex = (currentState.book && currentState.book.bookId === book.bookId) 
-                         ? currentState.currentChapterIndex 
-                         : -1;
+                          ? currentState.currentChapterIndex 
+                          : -1;
     
-    book.chapters.forEach((chap, idx) => {
+    chaptersToShow.forEach((chap, idx) => {
         const li = document.createElement('li');
         li.className = `chapter-item ${idx === currentIndex ? 'active' : ''}`;
         const cleanTitle = chap.name.replace(/^Chapter\s+\d+[:\s-]*/i, '').replace(/^\d+[\.\s]+/, '').trim();
@@ -132,11 +150,25 @@ function renderChapterList(book) {
         `;
         li.onclick = () => { 
             loadBook(book, idx); 
-            updateUI(true, book, book.chapters[idx]); 
+            updateUI(true, book, chaptersToShow[idx]); 
         };
         list.appendChild(li);
     });
 }
+
+// 🆕 Helper to handle UI toggle
+function toggleLangUI(lang, book) {
+    // 1. Update Buttons Visual
+    document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(`btn-${lang}`).classList.add('active');
+
+    // 2. Player Logic Call
+    setLanguage(lang);
+
+    // 3. Re-render List (Update titles)
+    renderChapterList(book);
+}
+
 
 // --- LISTENERS ---
 export function setupPlayerListeners() {
@@ -235,17 +267,16 @@ function setupPlayButton(book) {
             const savedState = history.find(h => h.bookId == book.bookId);
 
             if (savedState) {
-                // ✅ Fix: Resume from correct time
+                // Resume from correct time
                 loadBook(book, savedState.chapterIndex, savedState.currentTime);
             } else {
                 loadBook(book, 0);
             }
-            const chIndex = savedState ? savedState.chapterIndex : 0;
-            updateUI(true, book, book.chapters[chIndex]);
+            updateUI(true, book);
         } catch (e) {
             console.error(e);
             loadBook(book, 0);
-            updateUI(true, book, book.chapters[0]);
+            updateUI(true, book);
         }
     };
 }
@@ -276,6 +307,17 @@ export function updateUI(isPlaying, book = null, chapter = null) {
     if(playBtn) playBtn.innerHTML = isPlaying ? `<i class="fas fa-pause"></i>` : `<i class="fas fa-play"></i>`;
     if(mainPlayBtn) mainPlayBtn.innerHTML = isPlaying ? `<i class="fas fa-pause"></i> Pause` : `<i class="fas fa-play"></i> Resume`;
 
+    // Retrieve state to get the correct active chapter
+    const state = getCurrentState();
+
+    if (book && !chapter) {
+         // If chapter not passed, try to get from state
+         if (state.book && state.book.bookId === book.bookId) {
+             // Logic handles activeChapters internally
+             chapter = state.book.activeChapters ? state.book.activeChapters[state.currentChapterIndex] : book.chapters[state.currentChapterIndex];
+         }
+    }
+
     if (book && chapter) {
         miniPlayer.classList.remove('hidden');
         document.getElementById('mini-cover').src = book.cover;
@@ -284,7 +326,6 @@ export function updateUI(isPlaying, book = null, chapter = null) {
         document.getElementById('mini-chapter').innerText = cleanName;
     }
 
-    const state = getCurrentState();
     if (state.book) {
         document.querySelectorAll('#chapter-list .chapter-item').forEach((li, idx) => {
             if (idx === state.currentChapterIndex) {

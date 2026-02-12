@@ -1,6 +1,6 @@
-// --- 📡 API MANAGER (Clerk & Cloud Integrated) ---
+// --- 📡 API MANAGER (Hybrid: Local + Cloud Sync) ---
 
-// 👇 TERE LAMBDA URLS (Make sure these are correct)
+// 👇 TERE LAMBDA URLS
 const API_URL = "https://5adznqob5lrnexreqzi5fmrzly0gzsuz.lambda-url.ap-south-1.on.aws/"; 
 const DETAILS_API_URL = "https://sjl6oq3rk6tssebvh3pzrvoy6e0tzhfb.lambda-url.ap-south-1.on.aws/"; 
 const PROGRESS_URL = "https://rrsv2aw64zkkgpdhkamz57ftr40tchro.lambda-url.ap-south-1.on.aws/"; 
@@ -12,8 +12,7 @@ function getUserId() {
     const userId = localStorage.getItem("vibe_user_id");
     if (!userId) {
         if (window.location.pathname.includes('app.html')) {
-            // Silently fail or redirect if critical
-            // window.location.href = "../../index.html";
+            // window.location.href = "../../index.html"; // Optional redirect
         }
         return null;
     }
@@ -44,7 +43,7 @@ export async function syncUserProfile() {
         const result = await response.json();
         console.log("✅ User Synced:", result);
     } catch (e) {
-        console.warn("⚠️ Sync Network Error:", e);
+        console.warn("⚠️ Sync Network Error (Offline?):", e);
     }
 }
 
@@ -76,19 +75,20 @@ export async function fetchBookDetails(bookId) {
     }
 }
 
-// --- 💾 3. SAVE PROGRESS (FIXED & ROBUST) ---
+// --- 💾 3. SAVE PROGRESS (HYBRID: LOCAL + CLOUD) ---
 export async function saveUserProgress(bookId, chapterIndex, currentTime, totalDuration) {
     const userId = getUserId();
     if (!userId) return;
 
-    // 🔥 FIX: Handle Infinity/NaN duration
+    // 🔥 FIX: Don't save if played less than 5 seconds (Prevents 0:00 overwrite loops)
+    if (currentTime < 5) {
+        // console.log("⏳ Skipping Save: Not enough progress (<5s)");
+        return;
+    }
+
+    // Handle Infinity/NaN
     let safeDuration = totalDuration;
-    
     if (!safeDuration || isNaN(safeDuration) || !isFinite(safeDuration)) {
-        // Agar duration pata nahi hai, toh 0 mat bhejo (nahi to backend "Finished" maan lega).
-        // Ek dummy bada value bhej do ya 0 bhej ke backend logic sambhalo.
-        // Filhal hum 0 bhej rahe hain par console warn karenge.
-        console.warn("⚠️ Duration is Infinity/NaN. Saving anyway.");
         safeDuration = 0; 
     }
 
@@ -98,57 +98,103 @@ export async function saveUserProgress(bookId, chapterIndex, currentTime, totalD
         chapterIndex: chapterIndex,
         currentTime: currentTime,
         totalDuration: safeDuration,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString() // Timestamp for conflict resolution
     };
 
-    console.log("💾 Saving Progress... ", payload);
-
+    // 🔥 STEP 1: Always Save to LocalStorage (Offline Support)
     try {
-        const response = await fetch(PROGRESS_URL, {
-            method: "POST",
-            keepalive: true, 
-            credentials: "omit",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-        });
+        const localKey = `vibe_progress_${bookId}`;
+        localStorage.setItem(localKey, JSON.stringify(payload));
+        // console.log("💾 Saved Locally:", bookId);
+    } catch (e) {
+        console.error("Local Save Failed:", e);
+    }
 
-        const result = await response.json();
+    // 🔥 STEP 2: Try Cloud Save (If Online)
+    if (navigator.onLine) {
+        try {
+            const response = await fetch(PROGRESS_URL, {
+                method: "POST",
+                keepalive: true, 
+                credentials: "omit",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
 
-        if (!response.ok) {
-            console.error("❌ SAVE FAILED (Server):", result);
-        } else {
-            console.log("✅ Progress Saved!");
+            if (!response.ok) {
+                console.warn("❌ Cloud Save Failed (Will use Local)");
+            } else {
+                // console.log("☁️ Saved to Cloud!");
+            }
+        } catch (error) {
+            console.warn("⚠️ Network Error (Saved Locally Only)");
         }
-
-    } catch (error) {
-        console.error("❌ Save Network Error:", error);
+    } else {
+        console.log("📴 Offline: Progress saved locally.");
     }
 }
 
-// --- 🔄 4. FETCH PROGRESS ---
+// --- 🔄 4. FETCH PROGRESS (SMART MERGE) ---
 export async function fetchUserProgress() {
     const userId = getUserId();
     if (!userId) return [];
 
-    console.log("📥 Fetching User History...");
+    console.log("📥 Fetching History (Checking Local & Cloud)...");
 
+    let cloudData = [];
+    let localData = [];
+
+    // 1. Get Local Data
     try {
-        const response = await fetch(`${GET_PROGRESS_URL}?userId=${userId}`);
-        const data = await response.json();
-
-        if (!response.ok) {
-            console.error("❌ FETCH HISTORY FAILED:", data);
-            return [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key.startsWith("vibe_progress_")) {
+                const item = JSON.parse(localStorage.getItem(key));
+                if (item.userId === userId) {
+                    localData.push(item);
+                }
+            }
         }
-        
-        console.log("✅ History Loaded:", data.length || 0, "items");
-        
-        // Handle Wrapper Format (agar backend { progress: [...] } bhej raha ho)
-        return data.progress || data || []; 
-    } catch (error) {
-        console.error("❌ History Network Error:", error);
-        return [];
+    } catch (e) { console.error("Local Read Error:", e); }
+
+    // 2. Get Cloud Data (If Online)
+    if (navigator.onLine) {
+        try {
+            const response = await fetch(`${GET_PROGRESS_URL}?userId=${userId}`);
+            const data = await response.json();
+            if (response.ok) {
+                cloudData = data.progress || data || [];
+            }
+        } catch (error) {
+            console.warn("⚠️ Cloud Fetch Failed (Using Local Only):", error);
+        }
     }
+
+    // 3. MERGE LOGIC (Latest Wins) 🏆
+    const mergedMap = new Map();
+
+    // Add Cloud Data First
+    cloudData.forEach(item => mergedMap.set(item.bookId, item));
+
+    // Override with Local Data if Local is Newer
+    localData.forEach(localItem => {
+        const cloudItem = mergedMap.get(localItem.bookId);
+        if (!cloudItem) {
+            mergedMap.set(localItem.bookId, localItem); // New offline book
+        } else {
+            const localTime = new Date(localItem.updatedAt).getTime();
+            const cloudTime = new Date(cloudItem.updatedAt || 0).getTime();
+            
+            if (localTime > cloudTime) {
+                console.log(`🔄 Using Local Data for ${localItem.bookId} (Newer)`);
+                mergedMap.set(localItem.bookId, localItem);
+            }
+        }
+    });
+
+    const finalHistory = Array.from(mergedMap.values());
+    console.log(`✅ History Ready: ${finalHistory.length} items`);
+    return finalHistory;
 }
 
 // --- 👤 5. GET LOCAL USER DATA ---

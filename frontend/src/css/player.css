@@ -204,3 +204,38 @@ input[type=range]::-moz-range-thumb {
     .mobile-hide { display: none; }
     .track-info img { display: none; }
 }
+
+/* Language Switcher */
+#lang-toggle-container {
+    display: flex;
+    justify-content: center;
+    margin: 15px 0;
+}
+
+.lang-switch {
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 25px;
+    padding: 4px;
+    display: inline-flex;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+}
+
+.lang-btn {
+    background: transparent;
+    color: #aaa;
+    border: none;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    letter-spacing: 0.5px;
+}
+
+.lang-btn.active {
+    background: linear-gradient(135deg, #ff4b1f, #ff9068); /* Tera Brand Color */
+    color: #fff;
+    box-shadow: 0 2px 10px rgba(255, 75, 31, 0.4);
+}

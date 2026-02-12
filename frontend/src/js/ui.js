@@ -1,5 +1,5 @@
 // --- 🖥️ UI CONTROLLER (App-Ready: Back Button, Native Controls & Features) ---
-import { fetchAllBooks, getLocalUserProfile, syncUserProfile } from './api.js'; 
+import { fetchAllBooks, getLocalUserProfile, syncUserProfile, saveUserProgress } from './api.js'; 
 
 // ✅ FIX: Use Named Imports to prevent "is not a function" error
 import { togglePlay, nextChapter, prevChapter, skip, seekTo, getAudioElement, getCurrentState, setPlaybackSpeed, setSleepTimer } from './player.js';
@@ -83,6 +83,19 @@ async function init() {
         }
     });
     history.replaceState({ view: 'library' }, null, "#library");
+
+    // 🔥 SAVE ON EXIT / MINIMIZE (Critical for Offline)
+    document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "hidden") {
+            const state = getCurrentState();
+            // Only save if playing and progress is significant (>5s)
+            if (state.book && state.currentTime > 5) {
+                console.log("💤 App Backgrounded - Saving Progress...");
+                // Pass duration to ensure backend doesn't mark as finished prematurely
+                saveUserProgress(state.book.bookId, state.currentChapterIndex, state.currentTime, state.duration);
+            }
+        }
+    });
 
     // Load User
     const user = getLocalUserProfile();
