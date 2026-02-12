@@ -1,5 +1,5 @@
 import { fetchBookDetails, fetchUserProgress } from './api.js';
-// ✅ FIX: Use Named Imports to avoid "is not a function" errors
+// ✅ FIX: Use Named Imports
 import { loadBook, getCurrentState, getAudioElement, togglePlay, skip, setPlaybackSpeed, setSleepTimer, isChapterDownloaded, downloadCurrentChapter, deleteChapter, setLanguage, getCurrentLang } from './player.js';
 
 // --- ⏱️ GLOBAL STATE ---
@@ -72,7 +72,6 @@ export async function openPlayerUI(partialBook, allBooks, switchViewCallback) {
 
     // 4. RESUME LOGIC
     if (finalBook.savedState) {
-        // Basic check, logic handles language internally via activeChapters
         loadBook(finalBook, finalBook.savedState.chapterIndex, finalBook.savedState.currentTime);
         updateUI(true, finalBook); 
     } else {
@@ -80,7 +79,6 @@ export async function openPlayerUI(partialBook, allBooks, switchViewCallback) {
         if (currentState.book && currentState.book.bookId === finalBook.bookId) {
             updateUI(true, finalBook);
         } else {
-            // Fetch history to see if we should resume
             fetchUserProgress().then(history => {
                  const saved = history.find(h => h.bookId == finalBook.bookId);
                  if (saved) {
@@ -97,12 +95,10 @@ export async function openPlayerUI(partialBook, allBooks, switchViewCallback) {
 // 🌈 HELPER: Theme
 function applyChameleonTheme(imageUrl) {
     if (!window.ColorThief) return;
-
     const colorThief = new ColorThief();
     const img = new Image();
     img.crossOrigin = "Anonymous"; 
     img.src = imageUrl;
-
     img.onload = function() {
         try {
             const color = colorThief.getColor(img);
@@ -110,22 +106,18 @@ function applyChameleonTheme(imageUrl) {
             document.documentElement.style.setProperty('--primary', rgb);
             const playBtn = document.getElementById('play-btn');
             if(playBtn) playBtn.style.boxShadow = `0 0 30px ${rgb}`;
-        } catch (e) {
-            // theme failure, ignore
-        }
+        } catch (e) {}
     };
 }
 
-// --- RENDER LIST ---
+// --- 📂 RENDER LIST (With Premium Glow & Folding) ---
 function renderChapterList(book) {
     const list = document.getElementById('chapter-list');
     const totalChapters = document.getElementById('total-chapters');
     
-    // 🔥 Determine which chapters to show based on language
-    // Logic: If Lang is EN and EN chapters exist, show EN. Else show Default (Hindi).
     const chaptersToShow = (getCurrentLang() === 'en' && book.chapters_en) ? book.chapters_en : book.chapters;
 
-    if(totalChapters) totalChapters.innerText = `${chaptersToShow.length} Chapters`;
+    if(totalChapters) totalChapters.innerText = `${chaptersToShow.length} Parts`;
     
     list.innerHTML = '';
     
@@ -134,9 +126,57 @@ function renderChapterList(book) {
                           ? currentState.currentChapterIndex 
                           : -1;
     
+    // Find active section
+    let activeSectionName = "";
+    if (currentIndex !== -1 && chaptersToShow[currentIndex].section) {
+        activeSectionName = chaptersToShow[currentIndex].section;
+    }
+
+    let lastSection = null; 
+
     chaptersToShow.forEach((chap, idx) => {
+        // Safe ID generation helper
+        const getSafeId = (str) => str.replace(/[^a-zA-Z0-9]/g, '');
+
+        // 🔥 SECTION HEADER LOGIC
+        if (chap.section && chap.section !== lastSection) {
+            const sectionHeader = document.createElement('li');
+            sectionHeader.className = 'section-header';
+            
+            // Check if open
+            const isOpen = (chap.section === activeSectionName);
+            const safeSectionId = getSafeId(chap.section); 
+            
+            // 🔥 Apply Active Glow Class if Open
+            if (isOpen) {
+                sectionHeader.classList.add('active-header');
+            }
+            
+            sectionHeader.innerHTML = `
+                <span>${chap.section}</span>
+                <i class="fas fa-chevron-down ${isOpen ? 'rotate' : ''}"></i>
+            `;
+            
+            // 🔥 Direct Click Listener
+            sectionHeader.onclick = () => toggleSectionGroup(safeSectionId, sectionHeader);
+            
+            list.appendChild(sectionHeader);
+            lastSection = chap.section;
+        }
+
         const li = document.createElement('li');
+        
+        // 🔥 Assign Data Attribute (Reliable)
+        const safeSectionId = chap.section ? getSafeId(chap.section) : 'default';
+        li.setAttribute('data-section-group', safeSectionId);
+        
         li.className = `chapter-item ${idx === currentIndex ? 'active' : ''}`;
+        
+        // Auto-Collapse logic
+        if (chap.section && chap.section !== activeSectionName) {
+            li.classList.add('collapsed');
+        }
+
         const cleanTitle = chap.name.replace(/^Chapter\s+\d+[:\s-]*/i, '').replace(/^\d+[\.\s]+/, '').trim();
 
         li.innerHTML = `
@@ -156,16 +196,38 @@ function renderChapterList(book) {
     });
 }
 
+// 📂 INTERNAL TOGGLE FUNCTION (Updates Glow & Icon)
+function toggleSectionGroup(sectionId, headerElement) {
+    const items = document.querySelectorAll(`[data-section-group="${sectionId}"]`);
+    const icon = headerElement.querySelector('i');
+    let isExpanding = false;
+
+    // Toggle Items Visibility
+    items.forEach(item => {
+        if (item.classList.contains('collapsed')) {
+            item.classList.remove('collapsed'); // Show
+            isExpanding = true;
+        } else {
+            item.classList.add('collapsed'); // Hide
+            isExpanding = false;
+        }
+    });
+
+    // Toggle Styles (Rotate & Glow)
+    if (isExpanding) {
+        icon.classList.add('rotate');
+        headerElement.classList.add('active-header'); // 🔥 Glow ON
+    } else {
+        icon.classList.remove('rotate');
+        headerElement.classList.remove('active-header'); // 🌑 Glow OFF
+    }
+}
+
 // 🆕 Helper to handle UI toggle
 function toggleLangUI(lang, book) {
-    // 1. Update Buttons Visual
     document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(`btn-${lang}`).classList.add('active');
-
-    // 2. Player Logic Call
     setLanguage(lang);
-
-    // 3. Re-render List (Update titles)
     renderChapterList(book);
 }
 
@@ -174,8 +236,6 @@ function toggleLangUI(lang, book) {
 export function setupPlayerListeners() {
     // 1. Existing Buttons
     const speedBtn = document.getElementById('speed-btn');
-    const audio = getAudioElement();
-    
     if(speedBtn) {
         const newBtn = speedBtn.cloneNode(true);
         speedBtn.parentNode.replaceChild(newBtn, speedBtn);
@@ -195,8 +255,6 @@ export function setupPlayerListeners() {
         newSleepBtn.onclick = () => {
             currentSleepIndex = (currentSleepIndex + 1) % sleepTimes.length;
             const minutes = sleepTimes[currentSleepIndex];
-            
-            // clear old timer if setting new one
             setSleepTimer(minutes, () => {
                  togglePlay();
                  updateUI(false);
@@ -204,7 +262,6 @@ export function setupPlayerListeners() {
                  newSleepBtn.style.color = "";
                  currentSleepIndex = 0;
             });
-
             if (minutes > 0) {
                 newSleepBtn.innerHTML = `<span style="font-size:0.8rem; font-weight:bold">${minutes}m</span>`;
                 newSleepBtn.style.color = "var(--secondary)";
@@ -222,13 +279,10 @@ export function setupPlayerListeners() {
         const dlBtn = document.getElementById('download-btn');
         if (dlBtn) {
             dlBtn.style.display = "flex"; 
-            
             const newDlBtn = dlBtn.cloneNode(true);
             dlBtn.parentNode.replaceChild(newDlBtn, dlBtn);
-
             newDlBtn.onclick = async () => {
                 const isDownloaded = await isChapterDownloaded();
-                
                 if (isDownloaded) {
                     await deleteChapter();
                     newDlBtn.innerHTML = `<i class="fas fa-download"></i>`;
@@ -256,22 +310,15 @@ export function setupPlayerListeners() {
 function setupPlayButton(book) {
     const mainBtn = document.getElementById('main-play-btn');
     if (!mainBtn) return;
-
     const newBtn = mainBtn.cloneNode(true);
     mainBtn.parentNode.replaceChild(newBtn, mainBtn);
-
     newBtn.onclick = async () => {
         newBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Loading...`;
         try {
             const history = await fetchUserProgress();
             const savedState = history.find(h => h.bookId == book.bookId);
-
-            if (savedState) {
-                // Resume from correct time
-                loadBook(book, savedState.chapterIndex, savedState.currentTime);
-            } else {
-                loadBook(book, 0);
-            }
+            if (savedState) loadBook(book, savedState.chapterIndex, savedState.currentTime);
+            else loadBook(book, 0);
             updateUI(true, book);
         } catch (e) {
             console.error(e);
@@ -307,13 +354,10 @@ export function updateUI(isPlaying, book = null, chapter = null) {
     if(playBtn) playBtn.innerHTML = isPlaying ? `<i class="fas fa-pause"></i>` : `<i class="fas fa-play"></i>`;
     if(mainPlayBtn) mainPlayBtn.innerHTML = isPlaying ? `<i class="fas fa-pause"></i> Pause` : `<i class="fas fa-play"></i> Resume`;
 
-    // Retrieve state to get the correct active chapter
     const state = getCurrentState();
 
     if (book && !chapter) {
-         // If chapter not passed, try to get from state
          if (state.book && state.book.bookId === book.bookId) {
-             // Logic handles activeChapters internally
              chapter = state.book.activeChapters ? state.book.activeChapters[state.currentChapterIndex] : book.chapters[state.currentChapterIndex];
          }
     }
@@ -337,7 +381,6 @@ export function updateUI(isPlaying, book = null, chapter = null) {
             }
         });
 
-        // Download Status Check
         if (document.body.classList.contains('is-android')) {
             const dlBtn = document.getElementById('download-btn');
             if (dlBtn) {

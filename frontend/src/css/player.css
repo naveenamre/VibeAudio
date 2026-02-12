@@ -20,16 +20,93 @@
 .player-header-card img { width: 180px; border-radius: 15px; box-shadow: 0 15px 40px rgba(0,0,0,0.6); z-index: 1; position: relative; }
 .player-header-card .info { z-index: 1; position: relative; width: 100%; }
 
-/* Chapter List */
-.chapter-list-container ul { list-style: none; }
-.chapter-list-container li {
+/* --- 📜 Chapter List & Section Headers --- */
+.chapter-list-container ul { list-style: none; padding: 0; }
+
+.chapter-list-container li.chapter-item {
     padding: 15px; margin-bottom: 10px; background: rgba(255,255,255,0.02); border-radius: 12px;
     cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.2s;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
 }
-.chapter-list-container li:hover { background: rgba(255,255,255,0.08); }
+
+.chapter-list-container li.chapter-item:hover { background: rgba(255,255,255,0.08); }
+
 .chapter-list-container li.active { 
     background: linear-gradient(90deg, rgba(31, 221, 255, 0.1), transparent);
     border-left: 4px solid var(--secondary); color: var(--secondary);
+}
+
+/* --- 🔥 PREMIUM SECTION HEADERS --- */
+
+.section-header {
+    /* Layout & Spacing */
+    padding: 14px 20px;
+    margin-top: 20px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    
+    /* Glassmorphism Look */
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    
+    /* Sticky Magic */
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* Hover Effect */
+.section-header:hover {
+    background: rgba(255, 255, 255, 0.07);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Text Style */
+.section-header span {
+    font-size: 0.85rem;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.8);
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+/* Arrow Icon Container */
+.section-header i {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.5);
+    background: rgba(0, 0, 0, 0.2);
+    padding: 8px;
+    border-radius: 50%;
+    transition: all 0.4s ease;
+}
+
+/* --- ✨ ACTIVE STATE (Jab Open Ho) --- */
+.section-header.active-header {
+    background: linear-gradient(90deg, rgba(255, 75, 31, 0.15), rgba(255, 255, 255, 0.02));
+    border-left: 4px solid #ff4b1f; /* Tera Orange Accent Color */
+    border-color: rgba(255, 75, 31, 0.3);
+}
+
+.section-header.active-header span {
+    color: #fff;
+    text-shadow: 0 0 10px rgba(255, 75, 31, 0.5);
+}
+
+.section-header.active-header i {
+    background: #ff4b1f;
+    color: #fff;
+    transform: rotate(180deg);
+    box-shadow: 0 0 15px rgba(255, 75, 31, 0.6);
 }
 
 /* --- 🎹 ULTRA PREMIUM PLAYER BAR --- */
@@ -141,7 +218,7 @@ input[type=range] {
     cursor: pointer;
     transition: height 0.2s ease;
     
-    /* Dynamic Fill Magic (Left side color, Right side empty) */
+    /* Dynamic Fill Magic */
     background-image: linear-gradient(var(--primary, #ff4b1f), var(--primary, #ff4b1f));
     background-size: 0% 100%;
     background-repeat: no-repeat;
@@ -149,7 +226,7 @@ input[type=range] {
 
 input[type=range]:focus { outline: none; }
 
-/* 🔥 Hover Effect: Jab mouse upar aaye toh track mota ho jaye */
+/* 🔥 Hover Effect */
 input[type=range]:hover {
     height: 10px; 
 }
@@ -238,4 +315,21 @@ input[type=range]::-moz-range-thumb {
     background: linear-gradient(135deg, #ff4b1f, #ff9068); /* Tera Brand Color */
     color: #fff;
     box-shadow: 0 2px 10px rgba(255, 75, 31, 0.4);
+}
+
+/* --- 🔥 CRITICAL FIX FOR FOLDING --- */
+
+/* Jab item collapsed ho, toh usse zabardasti chupao */
+.chapter-list-container li.chapter-item.collapsed {
+    display: none !important;
+}
+
+/* Animation jab wo wapas aaye */
+.chapter-list-container li.chapter-item:not(.collapsed) {
+    animation: slideDown 0.3s ease forwards;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
 }

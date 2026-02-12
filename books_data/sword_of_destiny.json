@@ -7,14 +7,96 @@
   "//_COMMENT_COVER": "Niche dekho: Agar R2 hai to Folder/File.jpg, agar bahar ka hai to https://...",
   "cover": "https://m.media-amazon.com/images/I/81hWogpLBcL._SL1500_.jpg",
 
-  "chapters": [
-    {
-      "name": "Chapter 1: The boy who lived",
-      "url": "Sword of Destiny/01-chapter.m4a"
+  "chapters_en": [
+    { 
+      "section": "The Bounds of Reason", 
+      "name": "Part 1", 
+      "url": ".../chapter_001.m4a" 
     },
-    {
-      "name": "Chapter 2: Vanishing Glass",
-      "url": "Sword of Destiny/02-chapter.ogg"
+    { 
+      "section": "The Bounds of Reason", 
+      "name": "Part 2", 
+      "url": ".../chapter_002.m4a" 
+    },
+    { 
+      "section": "The Bounds of Reason", 
+      "name": "Part 2", 
+      "url": ".../chapter_002.m4a" 
+    },
+    { 
+      "section": "The Bounds of Reason", 
+      "name": "Part 3", 
+      "url": ".../chapter_003.m4a" 
+    },
+    { 
+      "section": "The Bounds of Reason", 
+      "name": "Part 4", 
+      "url": ".../chapter_004.m4a" 
+    },
+    { 
+      "section": "The Bounds of Reason", 
+      "name": "Part 5", 
+      "url": ".../chapter_005.m4a" 
+    },
+    { 
+      "section": "The Bounds of Reason", 
+      "name": "Part 6", 
+      "url": ".../chapter_006.m4a" 
+    },
+    { 
+      "section": "The Bounds of Reason", 
+      "name": "Part 7", 
+      "url": ".../chapter_007.m4a" 
+    },
+    { 
+      "section": "The Bounds of Reason", 
+      "name": "Part 8", 
+      "url": ".../chapter_008.m4a" 
+    },
+    { 
+      "section": "A Shard of Ice", 
+      "name": "Part 1", 
+      "url": ".../chapter_001.m4a" 
+    },
+    { 
+      "section": "A Shard of Ice", 
+      "name": "Part 2", 
+      "url": ".../chapter_002.m4a" 
+    },
+    { 
+      "section": "A Shard of Ice", 
+      "name": "Part 2", 
+      "url": ".../chapter_002.m4a" 
+    },
+    { 
+      "section": "A Shard of Ice", 
+      "name": "Part 3", 
+      "url": ".../chapter_003.m4a" 
+    },
+    { 
+      "section": "A Shard of Ice", 
+      "name": "Part 4", 
+      "url": ".../chapter_004.m4a" 
+    },
+    { 
+      "section": "A Shard of Ice", 
+      "name": "Part 5", 
+      "url": ".../chapter_005.m4a" 
+    },
+    { 
+      "section": "A Shard of Ice", 
+      "name": "Part 6", 
+      "url": ".../chapter_006.m4a" 
+    },
+    { 
+      "section": "A Shard of Ice", 
+      "name": "Part 7", 
+      "url": ".../chapter_007.m4a" 
+    },
+    { 
+      "section": "A Shard of Ice", 
+      "name": "Part 8", 
+      "url": ".../chapter_008.m4a" 
     }
   ]
 }
