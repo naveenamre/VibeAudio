@@ -4,7 +4,7 @@ import { renderChapterList, toggleLangUI } from './ui-player-list.js';
 import { applyChameleonTheme, renderComments, showToast, formatTime } from './ui-player-helpers.js';
 
 // --- GLOBAL STATE ---
-const speeds = [1, 1.25, 1.5, 2, 0.8];
+const speeds = [1, 1.25, 1.5, 2, 0.95, 0.9, 0.8];
 let currentSpeedIndex = 0;
 const sleepTimes = [0, 15, 30, 60];
 let currentSleepIndex = 0;
