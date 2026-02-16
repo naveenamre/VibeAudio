@@ -1,10 +1,11 @@
 import { fetchBookDetails, fetchUserProgress } from './api.js';
-import { loadBook, getCurrentState, getAudioElement, togglePlay, skip, setPlaybackSpeed, setSleepTimer, isChapterDownloaded, downloadCurrentChapter, deleteChapter, getCurrentLang } from './player.js';
+// ✅ FIX: Import toggleVocalBoost
+import { loadBook, getCurrentState, getAudioElement, togglePlay, skip, setPlaybackSpeed, setSleepTimer, isChapterDownloaded, downloadCurrentChapter, deleteChapter, getCurrentLang, toggleVocalBoost } from './player.js';
 import { renderChapterList, toggleLangUI } from './ui-player-list.js';
 import { applyChameleonTheme, renderComments, showToast, formatTime } from './ui-player-helpers.js';
 
 // --- GLOBAL STATE ---
-const speeds = [1, 1.25, 1.5, 2, 0.95, 0.9, 0.8];
+const speeds = [1, 1.25, 1.5, 2, 0.95, 0.9, 0.8]; // ✅ Updated Speeds
 let currentSpeedIndex = 0;
 const sleepTimes = [0, 15, 30, 60];
 let currentSleepIndex = 0;
@@ -109,7 +110,7 @@ export function updateUI(isPlaying, book = null, chapter = null) {
             }
         });
         
-        // Download Check Logic Here (Condensed)
+        // Download Check Logic
         if (document.body.classList.contains('is-android')) {
             const dlBtn = document.getElementById('download-btn');
             if (dlBtn) {
@@ -140,18 +141,65 @@ function setupPlayButton(book) {
 }
 
 export function setupPlayerListeners() {
-    const speedBtn = document.getElementById('speed-btn');
-    if(speedBtn) {
-        const newBtn = speedBtn.cloneNode(true);
-        speedBtn.parentNode.replaceChild(newBtn, speedBtn);
-        newBtn.onclick = () => {
+    // 1. SPEED BUTTON
+    const speedBtnRef = document.getElementById('speed-btn');
+    if(speedBtnRef) {
+        // Clone to remove old listeners
+        const newSpeedBtn = speedBtnRef.cloneNode(true);
+        speedBtnRef.parentNode.replaceChild(newSpeedBtn, speedBtnRef);
+        newSpeedBtn.onclick = () => {
             currentSpeedIndex = (currentSpeedIndex + 1) % speeds.length;
-            setPlaybackSpeed(speeds[currentSpeedIndex]);
-            newBtn.innerText = `${speeds[currentSpeedIndex]}x`;
-            showToast(`Speed: ${speeds[currentSpeedIndex]}x ⚡`);
+            const newSpeed = speeds[currentSpeedIndex];
+            setPlaybackSpeed(newSpeed);
+            newSpeedBtn.innerText = `${newSpeed}x`;
+            showToast(`Speed: ${newSpeed}x ⚡`);
         };
     }
-    // Sleep Timer logic same as before...
+
+    // 2. 🎙️ VOCAL BOOST BUTTON (Fixed Safe Insert)
+    let boostBtn = document.getElementById('vocal-boost-btn');
+
+    if (!boostBtn) {
+        boostBtn = document.createElement('button');
+        boostBtn.id = 'vocal-boost-btn';
+        boostBtn.title = "Vocal Clarity Booster";
+        boostBtn.innerHTML = '<i class="fas fa-microphone-alt"></i>';
+        
+        // 🔥 SAFE PARENT CHECK (Crucial Fix)
+        const currentSpeedBtn = document.getElementById('speed-btn'); // Re-select fresh
+        if (currentSpeedBtn && currentSpeedBtn.parentNode) {
+            currentSpeedBtn.parentNode.insertBefore(boostBtn, currentSpeedBtn);
+        } else {
+            // Fallback: Just add to extra-controls if speed btn is missing
+            const extraControls = document.querySelector('.extra-controls');
+            if(extraControls) extraControls.appendChild(boostBtn);
+        }
+    }
+
+    if (boostBtn) {
+        // Clone to clean listeners
+        const newBoostBtn = boostBtn.cloneNode(true);
+        boostBtn.parentNode.replaceChild(newBoostBtn, boostBtn);
+        
+        newBoostBtn.onclick = () => {
+            const isBoosting = newBoostBtn.classList.toggle('active');
+            toggleVocalBoost(isBoosting); 
+
+            if (isBoosting) {
+                newBoostBtn.style.color = "#ff4b1f"; 
+                newBoostBtn.style.borderColor = "#ff4b1f";
+                newBoostBtn.style.boxShadow = "0 0 15px rgba(255, 75, 31, 0.5)";
+                showToast("🗣️ Vocal Boost Active!");
+            } else {
+                newBoostBtn.style.color = "";
+                newBoostBtn.style.borderColor = "";
+                newBoostBtn.style.boxShadow = "";
+                showToast("🔊 Normal Sound");
+            }
+        };
+    }
+
+    // 3. SLEEP TIMER
     const sleepBtn = document.getElementById('sleep-timer-btn');
     if(sleepBtn) {
         const newSleepBtn = sleepBtn.cloneNode(true);
@@ -159,13 +207,26 @@ export function setupPlayerListeners() {
         newSleepBtn.onclick = () => {
             currentSleepIndex = (currentSleepIndex + 1) % sleepTimes.length;
             const minutes = sleepTimes[currentSleepIndex];
-            setSleepTimer(minutes, () => { togglePlay(); updateUI(false); newSleepBtn.innerHTML = `<i class="fas fa-moon"></i>`; currentSleepIndex = 0; });
-            if(minutes > 0) { newSleepBtn.innerHTML = `<span>${minutes}m</span>`; showToast(`Sleep: ${minutes}m 🌙`); } 
-            else { newSleepBtn.innerHTML = `<i class="fas fa-moon"></i>`; showToast("Sleep: Off ❌"); }
+            setSleepTimer(minutes, () => { 
+                togglePlay(); 
+                updateUI(false); 
+                newSleepBtn.innerHTML = `<i class="fas fa-moon"></i>`; 
+                newSleepBtn.style.color = ""; 
+                currentSleepIndex = 0; 
+            });
+            if(minutes > 0) { 
+                newSleepBtn.innerHTML = `<span style="font-size:0.8rem; font-weight:bold">${minutes}m</span>`; 
+                newSleepBtn.style.color = "var(--secondary)";
+                showToast(`Sleep: ${minutes}m 🌙`); 
+            } else { 
+                newSleepBtn.innerHTML = `<i class="fas fa-moon"></i>`; 
+                newSleepBtn.style.color = "";
+                showToast("Sleep: Off ❌"); 
+            }
         };
     }
     
-    // Download logic same as before...
+    // 4. DOWNLOAD BUTTON (Android Only)
     if (document.body.classList.contains('is-android')) {
         const dlBtn = document.getElementById('download-btn');
         if (dlBtn) {
@@ -174,8 +235,24 @@ export function setupPlayerListeners() {
             dlBtn.parentNode.replaceChild(newDlBtn, dlBtn);
             newDlBtn.onclick = async () => {
                 const isDl = await isChapterDownloaded();
-                if (isDl) { await deleteChapter(); newDlBtn.innerHTML = `<i class="fas fa-download"></i>`; showToast("Removed"); } 
-                else { newDlBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`; await downloadCurrentChapter(s => { if(s) { newDlBtn.innerHTML = `<i class="fas fa-check"></i>`; showToast("Downloaded!"); } }); }
+                if (isDl) { 
+                    await deleteChapter(); 
+                    newDlBtn.innerHTML = `<i class="fas fa-download"></i>`; 
+                    newDlBtn.style.color = "";
+                    showToast("🗑️ Removed from downloads"); 
+                } else { 
+                    newDlBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`; 
+                    await downloadCurrentChapter(s => { 
+                        if(s) { 
+                            newDlBtn.innerHTML = `<i class="fas fa-check"></i>`; 
+                            newDlBtn.style.color = "#00ff00";
+                            showToast("✅ Downloaded for Offline!"); 
+                        } else {
+                             newDlBtn.innerHTML = `<i class="fas fa-exclamation-triangle"></i>`;
+                             showToast("❌ Download Failed");
+                        }
+                    }); 
+                }
             };
         }
     }

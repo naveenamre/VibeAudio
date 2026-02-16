@@ -11,8 +11,67 @@ let currentBook = null;
 let currentChapterIndex = 0;
 let progressInterval = null;
 
-// 🔥 CHANGE 1: Load saved language or default to Hindi
+// 🔥 Load saved language or default to Hindi
 let currentLang = localStorage.getItem('vibe_pref_lang') || 'hi'; 
+
+// --- 🎛️ AUDIO CONTEXT (Vocal Booster Logic) ---
+let audioCtx;
+let source;
+let vocalPeakingFilter; // Boosts Voice
+let bassCutFilter;      // Cuts Muddy Bass
+
+function initAudioContext() {
+    // Audio Context sirf tab banega jab user interact karega (Browser Policy)
+    if (!audioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContext();
+        
+        // Create source only once
+        if (!source) {
+             source = audioCtx.createMediaElementSource(audio);
+        }
+        
+        // 1. Bass Cut (High Pass Filter) - Sabse pehle gandagi saaf karo
+        bassCutFilter = audioCtx.createBiquadFilter();
+        bassCutFilter.type = "highpass";
+        bassCutFilter.frequency.value = 0; // Default OFF (Let bass pass)
+        bassCutFilter.Q.value = 0.7;
+
+        // 2. Vocal Boost (Peaking Filter) - Phir awaz chamkao
+        vocalPeakingFilter = audioCtx.createBiquadFilter();
+        vocalPeakingFilter.type = "peaking";
+        vocalPeakingFilter.frequency.value = 2500; // 2.5kHz = Human Voice Sweet Spot
+        vocalPeakingFilter.Q.value = 1.0;          // Width of boost
+        vocalPeakingFilter.gain.value = 0;         // Default 0 (OFF)
+
+        // CHAIN: Source -> BassCut -> VocalBoost -> Speakers
+        source.connect(bassCutFilter);
+        bassCutFilter.connect(vocalPeakingFilter);
+        vocalPeakingFilter.connect(audioCtx.destination);
+    }
+}
+
+export function toggleVocalBoost(enable) {
+    initAudioContext(); // Ensure setup is ready
+
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+
+    if (enable) {
+        console.log("🗣️ Vocal Boost: ON (Cutting Bass, Boosting Mids)");
+        // Apply Magic (Smooth transition)
+        vocalPeakingFilter.gain.setTargetAtTime(10, audioCtx.currentTime, 0.2); // Boost +10dB
+        bassCutFilter.frequency.setTargetAtTime(150, audioCtx.currentTime, 0.2); // Cut Bass below 150Hz
+    } else {
+        console.log("🗣️ Vocal Boost: OFF");
+        // Back to Normal
+        vocalPeakingFilter.gain.setTargetAtTime(0, audioCtx.currentTime, 0.2);
+        bassCutFilter.frequency.setTargetAtTime(0, audioCtx.currentTime, 0.2); 
+    }
+    
+    return enable;
+}
 
 // --- 🎧 HELPERS ---
 export function getAudioElement() { return audio; }
@@ -67,10 +126,6 @@ export async function loadBook(book, chapterIndex = 0, startTime = 0) {
         } else {
             // Warna Hindi (Default)
             book.activeChapters = book.chapters; 
-            
-            // Note: Hum yahan currentLang ko zabardasti 'hi' set nahi kar rahe 
-            // taaki agar user 'en' pasand karta hai par is book mein nahi hai,
-            // toh agli book ke liye uski pasand yaad rahe.
         }
     }
 

@@ -333,3 +333,24 @@ input[type=range]::-moz-range-thumb {
     from { opacity: 0; transform: translateY(-10px); }
     to { opacity: 1; transform: translateY(0); }
 }
+
+/* Vocal Boost Button */
+#vocal-boost-btn {
+    background: rgba(255,255,255,0.05); 
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #ddd; 
+    padding: 8px 14px; 
+    border-radius: 12px;
+    font-size: 1rem; 
+    cursor: pointer; 
+    transition: 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+#vocal-boost-btn:hover {
+    background: rgba(255,255,255,0.1);
+    transform: translateY(-2px);
+}
+
+#vocal-boost-btn.active {
+    background: rgba(255, 75, 31, 0.1); /* Subtle orange bg */
+}
