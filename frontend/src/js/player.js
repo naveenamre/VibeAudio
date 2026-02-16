@@ -14,11 +14,12 @@ let progressInterval = null;
 // 🔥 Load saved language or default to Hindi
 let currentLang = localStorage.getItem('vibe_pref_lang') || 'hi'; 
 
-// --- 🎛️ AUDIO CONTEXT (Vocal Booster Logic) ---
+// --- 🎛️ AUDIO CONTEXT (Vocal Booster v2 - Ultra Clarity) ---
 let audioCtx;
 let source;
-let vocalPeakingFilter; // Boosts Voice
-let bassCutFilter;      // Cuts Muddy Bass
+let vocalPeakingFilter; // Mid Range (Body)
+let bassCutFilter;      // Low Range (Mud)
+let trebleBoostFilter;  // High Range (Crispness/Uccharan) 🔥
 
 function initAudioContext() {
     // Audio Context sirf tab banega jab user interact karega (Browser Policy)
@@ -31,23 +32,30 @@ function initAudioContext() {
              source = audioCtx.createMediaElementSource(audio);
         }
         
-        // 1. Bass Cut (High Pass Filter) - Sabse pehle gandagi saaf karo
+        // 1. Bass Cut (High Pass Filter) - Goonj hatata hai
         bassCutFilter = audioCtx.createBiquadFilter();
         bassCutFilter.type = "highpass";
-        bassCutFilter.frequency.value = 0; // Default OFF (Let bass pass)
+        bassCutFilter.frequency.value = 0; // Default OFF
         bassCutFilter.Q.value = 0.7;
 
-        // 2. Vocal Boost (Peaking Filter) - Phir awaz chamkao
+        // 2. Vocal Boost (Peaking Filter) - Awaz ko aage lata hai
         vocalPeakingFilter = audioCtx.createBiquadFilter();
         vocalPeakingFilter.type = "peaking";
         vocalPeakingFilter.frequency.value = 2500; // 2.5kHz = Human Voice Sweet Spot
         vocalPeakingFilter.Q.value = 1.0;          // Width of boost
-        vocalPeakingFilter.gain.value = 0;         // Default 0 (OFF)
+        vocalPeakingFilter.gain.value = 0;         // Default 0
 
-        // CHAIN: Source -> BassCut -> VocalBoost -> Speakers
+        // 3. Treble Boost (High Shelf) - Uccharan (S/T sounds) clear karta hai
+        trebleBoostFilter = audioCtx.createBiquadFilter();
+        trebleBoostFilter.type = "highshelf";
+        trebleBoostFilter.frequency.value = 5000; // 5kHz+ frequencies
+        trebleBoostFilter.gain.value = 0;
+
+        // CHAIN: Source -> Bass -> Mid -> Treble -> Speakers
         source.connect(bassCutFilter);
         bassCutFilter.connect(vocalPeakingFilter);
-        vocalPeakingFilter.connect(audioCtx.destination);
+        vocalPeakingFilter.connect(trebleBoostFilter);
+        trebleBoostFilter.connect(audioCtx.destination);
     }
 }
 
@@ -59,15 +67,26 @@ export function toggleVocalBoost(enable) {
     }
 
     if (enable) {
-        console.log("🗣️ Vocal Boost: ON (Cutting Bass, Boosting Mids)");
-        // Apply Magic (Smooth transition)
-        vocalPeakingFilter.gain.setTargetAtTime(10, audioCtx.currentTime, 0.2); // Boost +10dB
-        bassCutFilter.frequency.setTargetAtTime(150, audioCtx.currentTime, 0.2); // Cut Bass below 150Hz
+        console.log("🗣️ Vocal Boost: ULTRA CLARITY MODE ON");
+        const t = audioCtx.currentTime;
+        // Apply Magic (Smooth transition 0.2s)
+        
+        // 1. Cut Muddy Bass (Below 150Hz)
+        bassCutFilter.frequency.setTargetAtTime(150, t, 0.2);
+        
+        // 2. Boost Voice Body (+8dB)
+        vocalPeakingFilter.gain.setTargetAtTime(8, t, 0.2); 
+        
+        // 3. Sharpen Pronunciation (+6dB)
+        trebleBoostFilter.gain.setTargetAtTime(6, t, 0.2); 
+
     } else {
         console.log("🗣️ Vocal Boost: OFF");
+        const t = audioCtx.currentTime;
         // Back to Normal
-        vocalPeakingFilter.gain.setTargetAtTime(0, audioCtx.currentTime, 0.2);
-        bassCutFilter.frequency.setTargetAtTime(0, audioCtx.currentTime, 0.2); 
+        bassCutFilter.frequency.setTargetAtTime(0, t, 0.2);
+        vocalPeakingFilter.gain.setTargetAtTime(0, t, 0.2);
+        trebleBoostFilter.gain.setTargetAtTime(0, t, 0.2);
     }
     
     return enable;
@@ -99,7 +118,7 @@ export function setLanguage(lang) {
 
     currentLang = lang;
     
-    // 🔥 CHANGE 2: Save preference permanently
+    // Save preference
     localStorage.setItem('vibe_pref_lang', lang);
 
     // Swap Arrays
@@ -109,7 +128,6 @@ export function setLanguage(lang) {
         currentBook.activeChapters = currentBook.chapters; // Default Hindi
     }
 
-    // Reset to 0:00
     console.log(`🗣️ Language Switched to: ${lang.toUpperCase()}`);
     loadBook(currentBook, currentChapterIndex, 0);
 }
@@ -118,13 +136,11 @@ export function setLanguage(lang) {
 export async function loadBook(book, chapterIndex = 0, startTime = 0) {
     if (!book) return;
 
-    // 🔥 Initialize Active Chapters based on Saved Language
+    // Initialize Active Chapters based on Saved Language
     if (!book.activeChapters) {
-        // Agar user ki pasand English hai AUR English available hai
         if (currentLang === 'en' && book.chapters_en) {
             book.activeChapters = book.chapters_en;
         } else {
-            // Warna Hindi (Default)
             book.activeChapters = book.chapters; 
         }
     }
@@ -175,7 +191,7 @@ export async function loadBook(book, chapterIndex = 0, startTime = 0) {
     audio.onloadedmetadata = null;
     audio.onloadedmetadata = () => {
         if (startTime > 0) {
-            console.log(`⏩ Seeking to ${formatTime(startTime)}`);
+            console.log(`⏩ Seeking to ${startTime}s`);
             audio.currentTime = startTime;
         }
         playAudioSafe();
@@ -336,10 +352,4 @@ async function updateUIState(isPlaying) {
         } 
     });
     window.dispatchEvent(event);
-}
-
-function formatTime(s) {
-    const m = Math.floor(s/60);
-    const sec = Math.floor(s%60);
-    return `${m}:${sec<10?'0'+sec:sec}`;
 }
