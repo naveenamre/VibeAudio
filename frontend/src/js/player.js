@@ -14,79 +14,92 @@ let progressInterval = null;
 // 🔥 Load saved language or default to Hindi
 let currentLang = localStorage.getItem('vibe_pref_lang') || 'hi'; 
 
-// --- 🎛️ AUDIO CONTEXT (Vocal Booster v2 - Ultra Clarity) ---
+// --- 🎛️ AUDIO CONTEXT (God Mode: EQ + Compressor) ---
 let audioCtx;
 let source;
-let vocalPeakingFilter; // Mid Range (Body)
-let bassCutFilter;      // Low Range (Mud)
-let trebleBoostFilter;  // High Range (Crispness/Uccharan) 🔥
+let vocalPeakingFilter; // Mid
+let bassCutFilter;      // Low
+let trebleBoostFilter;  // High
+let compressor;         // 🔥 The Volume Leveler
 
 function initAudioContext() {
-    // Audio Context sirf tab banega jab user interact karega (Browser Policy)
     if (!audioCtx) {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         audioCtx = new AudioContext();
         
-        // Create source only once
         if (!source) {
              source = audioCtx.createMediaElementSource(audio);
         }
         
-        // 1. Bass Cut (High Pass Filter) - Goonj hatata hai
+        // 1. FILTERS (EQ)
         bassCutFilter = audioCtx.createBiquadFilter();
         bassCutFilter.type = "highpass";
-        bassCutFilter.frequency.value = 0; // Default OFF
+        bassCutFilter.frequency.value = 0; 
         bassCutFilter.Q.value = 0.7;
 
-        // 2. Vocal Boost (Peaking Filter) - Awaz ko aage lata hai
         vocalPeakingFilter = audioCtx.createBiquadFilter();
         vocalPeakingFilter.type = "peaking";
-        vocalPeakingFilter.frequency.value = 2500; // 2.5kHz = Human Voice Sweet Spot
-        vocalPeakingFilter.Q.value = 1.0;          // Width of boost
-        vocalPeakingFilter.gain.value = 0;         // Default 0
+        vocalPeakingFilter.frequency.value = 2500; 
+        vocalPeakingFilter.Q.value = 1.0;
+        vocalPeakingFilter.gain.value = 0;
 
-        // 3. Treble Boost (High Shelf) - Uccharan (S/T sounds) clear karta hai
         trebleBoostFilter = audioCtx.createBiquadFilter();
         trebleBoostFilter.type = "highshelf";
-        trebleBoostFilter.frequency.value = 5000; // 5kHz+ frequencies
+        trebleBoostFilter.frequency.value = 5000; 
         trebleBoostFilter.gain.value = 0;
 
-        // CHAIN: Source -> Bass -> Mid -> Treble -> Speakers
+        // 2. 🔥 DYNAMIC COMPRESSOR (Auto Volume Balancer)
+        compressor = audioCtx.createDynamicsCompressor();
+        // Default Settings (Transparent - No Effect yet)
+        compressor.threshold.value = -50;  
+        compressor.knee.value = 40;
+        compressor.ratio.value = 1; // 1 means NO compression initially
+        compressor.attack.value = 0;
+        compressor.release.value = 0.25;
+
+        // CHAIN: Source -> Bass -> Mid -> Treble -> Compressor -> Speakers
         source.connect(bassCutFilter);
         bassCutFilter.connect(vocalPeakingFilter);
         vocalPeakingFilter.connect(trebleBoostFilter);
-        trebleBoostFilter.connect(audioCtx.destination);
+        trebleBoostFilter.connect(compressor); // ✅ Added to chain
+        compressor.connect(audioCtx.destination);
     }
 }
 
 export function toggleVocalBoost(enable) {
-    initAudioContext(); // Ensure setup is ready
+    initAudioContext(); 
 
     if (audioCtx.state === 'suspended') {
         audioCtx.resume();
     }
 
+    const t = audioCtx.currentTime;
+
     if (enable) {
-        console.log("🗣️ Vocal Boost: ULTRA CLARITY MODE ON");
-        const t = audioCtx.currentTime;
-        // Apply Magic (Smooth transition 0.2s)
+        console.log("🗣️ Vocal Boost: GOD MODE (EQ + Compression)");
         
-        // 1. Cut Muddy Bass (Below 150Hz)
+        // 1. EQ Settings (Clarity)
         bassCutFilter.frequency.setTargetAtTime(150, t, 0.2);
-        
-        // 2. Boost Voice Body (+8dB)
         vocalPeakingFilter.gain.setTargetAtTime(8, t, 0.2); 
-        
-        // 3. Sharpen Pronunciation (+6dB)
         trebleBoostFilter.gain.setTargetAtTime(6, t, 0.2); 
+
+        // 2. 🔥 Compressor Settings (Broadcast Voice)
+        // Ratio 12:1 means heavy compression (Radio style voice)
+        compressor.threshold.setTargetAtTime(-24, t, 0.2); // Start compressing earlier
+        compressor.ratio.setTargetAtTime(12, t, 0.2);      // Squeeze the loud sounds
+        compressor.attack.setTargetAtTime(0.003, t, 0.2);  // Fast reaction to shouts
 
     } else {
         console.log("🗣️ Vocal Boost: OFF");
-        const t = audioCtx.currentTime;
-        // Back to Normal
+        
+        // Reset EQ
         bassCutFilter.frequency.setTargetAtTime(0, t, 0.2);
         vocalPeakingFilter.gain.setTargetAtTime(0, t, 0.2);
         trebleBoostFilter.gain.setTargetAtTime(0, t, 0.2);
+
+        // Reset Compressor
+        compressor.threshold.setTargetAtTime(-50, t, 0.2);
+        compressor.ratio.setTargetAtTime(1, t, 0.2); // Stop compressing
     }
     
     return enable;
@@ -352,4 +365,10 @@ async function updateUIState(isPlaying) {
         } 
     });
     window.dispatchEvent(event);
+}
+
+function formatTime(s) {
+    const m = Math.floor(s/60);
+    const sec = Math.floor(s%60);
+    return `${m}:${sec<10?'0'+sec:sec}`;
 }
