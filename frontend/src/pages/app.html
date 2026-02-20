@@ -7,6 +7,14 @@
     <title>Vibe Audio ☁️</title>
 
     <script>
+        // Agar URL ke end mein index.html hai, toh usko chupchap hata do bina page reload kiye
+        if (window.location.pathname.endsWith('index.html')) {
+            window.history.replaceState(null, '', window.location.href.replace('index.html', ''));
+        }
+    </script>
+
+
+    <script>
         if (!Array.prototype.at) {
             Array.prototype.at = function (n) {
                 n = Math.trunc(n) || 0;
