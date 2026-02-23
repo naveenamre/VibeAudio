@@ -1,11 +1,10 @@
-import { fetchBookDetails, fetchUserProgress } from './api.js';
-// ✅ FIX: Import toggleVocalBoost
+import { fetchUserProgress } from './api.js'; // 🗑️ fetchBookDetails hata diya
 import { loadBook, getCurrentState, getAudioElement, togglePlay, skip, setPlaybackSpeed, setSleepTimer, isChapterDownloaded, downloadCurrentChapter, deleteChapter, getCurrentLang, toggleVocalBoost } from './player.js';
 import { renderChapterList, toggleLangUI } from './ui-player-list.js';
 import { applyChameleonTheme, renderComments, showToast, formatTime } from './ui-player-helpers.js';
 
 // --- GLOBAL STATE ---
-const speeds = [1, 1.25, 1.5, 2, 0.95, 0.9, 0.8]; // ✅ Updated Speeds
+const speeds = [1, 1.25, 1.5, 2, 0.95, 0.9, 0.8]; 
 let currentSpeedIndex = 0;
 const sleepTimes = [0, 15, 30, 60];
 let currentSleepIndex = 0;
@@ -22,19 +21,8 @@ export async function openPlayerUI(partialBook, allBooks, switchViewCallback) {
     applyChameleonTheme(partialBook.cover);
     document.getElementById('chapter-list').innerHTML = '';
 
-    // Data Fetching
+    // ⚡ ASLI MAGIC: Data already CDN se aa chuka hai, seedha assign karo!
     let finalBook = partialBook;
-    if (!finalBook.chapters || finalBook.chapters.length === 0) {
-        document.getElementById('chapter-list').innerHTML = `<div class="skeleton-loader"></div><p style="text-align:center; opacity:0.7;">Fetching...</p>`;
-        const fullBook = await fetchBookDetails(partialBook.bookId);
-        if (fullBook) {
-            finalBook = { ...partialBook, ...fullBook };
-            const index = allBooks.findIndex(b => b.bookId === partialBook.bookId);
-            if (index !== -1) allBooks[index] = finalBook;
-        } else {
-            return;
-        }
-    }
 
     // Language Toggle
     const langContainer = document.getElementById('lang-toggle-container'); 
@@ -144,7 +132,6 @@ export function setupPlayerListeners() {
     // 1. SPEED BUTTON
     const speedBtnRef = document.getElementById('speed-btn');
     if(speedBtnRef) {
-        // Clone to remove old listeners
         const newSpeedBtn = speedBtnRef.cloneNode(true);
         speedBtnRef.parentNode.replaceChild(newSpeedBtn, speedBtnRef);
         newSpeedBtn.onclick = () => {
@@ -156,7 +143,7 @@ export function setupPlayerListeners() {
         };
     }
 
-    // 2. 🎙️ VOCAL BOOST BUTTON (Fixed Safe Insert)
+    // 2. 🎙️ VOCAL BOOST BUTTON
     let boostBtn = document.getElementById('vocal-boost-btn');
 
     if (!boostBtn) {
@@ -165,19 +152,16 @@ export function setupPlayerListeners() {
         boostBtn.title = "Vocal Clarity Booster";
         boostBtn.innerHTML = '<i class="fas fa-microphone-alt"></i>';
         
-        // 🔥 SAFE PARENT CHECK (Crucial Fix)
-        const currentSpeedBtn = document.getElementById('speed-btn'); // Re-select fresh
+        const currentSpeedBtn = document.getElementById('speed-btn'); 
         if (currentSpeedBtn && currentSpeedBtn.parentNode) {
             currentSpeedBtn.parentNode.insertBefore(boostBtn, currentSpeedBtn);
         } else {
-            // Fallback: Just add to extra-controls if speed btn is missing
             const extraControls = document.querySelector('.extra-controls');
             if(extraControls) extraControls.appendChild(boostBtn);
         }
     }
 
     if (boostBtn) {
-        // Clone to clean listeners
         const newBoostBtn = boostBtn.cloneNode(true);
         boostBtn.parentNode.replaceChild(newBoostBtn, boostBtn);
         
