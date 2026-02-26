@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import { fetchUserProgress } from './api.js'; // 🗑️ fetchBookDetails hata diya
+=======
+import { fetchUserProgress } from './api.js'; // 🗑️ fetchBookDetails hamesha ke liye uda diya!
+>>>>>>> 8ddcc18 (db)
 import { loadBook, getCurrentState, getAudioElement, togglePlay, skip, setPlaybackSpeed, setSleepTimer, isChapterDownloaded, downloadCurrentChapter, deleteChapter, getCurrentLang, toggleVocalBoost } from './player.js';
 import { renderChapterList, toggleLangUI } from './ui-player-list.js';
 import { applyChameleonTheme, renderComments, showToast, formatTime } from './ui-player-helpers.js';
@@ -21,7 +25,11 @@ export async function openPlayerUI(partialBook, allBooks, switchViewCallback) {
     applyChameleonTheme(partialBook.cover);
     document.getElementById('chapter-list').innerHTML = '';
 
+<<<<<<< HEAD
     // ⚡ ASLI MAGIC: Data already CDN se aa chuka hai, seedha assign karo!
+=======
+    // ⚡ ASLI MAGIC: Data already catalog.json me aa chuka hai! Koi API call, koi loading nahi.
+>>>>>>> 8ddcc18 (db)
     let finalBook = partialBook;
 
     // Language Toggle
