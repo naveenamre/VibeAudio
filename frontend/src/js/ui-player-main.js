@@ -1,4 +1,4 @@
-import { fetchUserProgress } from './api.js'; // 🗑️ fetchBookDetails hamesha ke liye uda diya!
+import { fetchBookDetails, fetchUserProgress } from './api.js'; 
 import { loadBook, getCurrentState, getAudioElement, togglePlay, skip, setPlaybackSpeed, setSleepTimer, isChapterDownloaded, downloadCurrentChapter, deleteChapter, getCurrentLang, toggleVocalBoost } from './player.js';
 import { renderChapterList, toggleLangUI } from './ui-player-list.js';
 import { applyChameleonTheme, renderComments, showToast, formatTime } from './ui-player-helpers.js';
@@ -13,18 +13,44 @@ let currentSleepIndex = 0;
 export async function openPlayerUI(partialBook, allBooks, switchViewCallback) {
     switchViewCallback('player');
     
-    // UI Init
+    // 1. 🖼️ QUICK UI INIT: Metadata turant dikhao (Zero Perception Lag)
     document.getElementById('detail-cover').src = partialBook.cover;
     document.getElementById('detail-title').innerText = partialBook.title;
     document.getElementById('detail-author').innerText = partialBook.author;
     document.getElementById('blur-bg').style.backgroundImage = `url('${partialBook.cover}')`;
     applyChameleonTheme(partialBook.cover);
-    document.getElementById('chapter-list').innerHTML = '';
+    
+    // Loading State dikhao jab tak chapters aa rahe hain
+    const chapterListEl = document.getElementById('chapter-list');
+    chapterListEl.innerHTML = `
+        <div class="skeleton-loader" style="padding: 20px; text-align: center; color: var(--text-dim);">
+            <i class="fas fa-spinner fa-spin"></i> Fetching Chapters from Cloudflare...
+        </div>`;
 
-    // ⚡ ASLI MAGIC: Data already catalog.json me aa chuka hai! Koi API call, koi loading nahi.
     let finalBook = partialBook;
 
-    // Language Toggle
+    // ⚡ 2. DATA FETCHING: Agar chapters nahi hain, toh dataPath se mangvao
+    if (!finalBook.chapters || finalBook.chapters.length === 0) {
+        try {
+            const fullBookDetails = await fetchBookDetails(partialBook.dataPath);
+            if (fullBookDetails) {
+                // Merge partial metadata with full chapter details
+                finalBook = { ...partialBook, ...fullBookDetails };
+                
+                // Cache update kar lo taaki dubara usi session mein fetch na karna pade
+                const index = allBooks.findIndex(b => b.bookId === partialBook.bookId);
+                if (index !== -1) allBooks[index] = finalBook;
+            } else {
+                chapterListEl.innerHTML = `<p style="color:red; text-align:center; padding:20px;">Failed to load book data. Check connection!</p>`;
+                return;
+            }
+        } catch (error) {
+            console.error("Failed to hydrate book details:", error);
+            return;
+        }
+    }
+
+    // 3. 🌐 Language Toggle Setup
     const langContainer = document.getElementById('lang-toggle-container'); 
     if (finalBook.chapters_en && finalBook.chapters_en.length > 0) {
         langContainer.innerHTML = `
@@ -39,13 +65,13 @@ export async function openPlayerUI(partialBook, allBooks, switchViewCallback) {
         langContainer.classList.add('hidden'); 
     }
 
-    // Setup
+    // 4. ✅ Setup & Render
     renderChapterList(finalBook);
     renderComments(finalBook.comments || []);
     setupPlayButton(finalBook);
     setupPlayerListeners();
 
-    // Resume Logic
+    // 5. 🔄 Resume Logic
     if (finalBook.savedState) {
         loadBook(finalBook, finalBook.savedState.chapterIndex, finalBook.savedState.currentTime);
         updateUI(true, finalBook); 
@@ -98,7 +124,6 @@ export function updateUI(isPlaying, book = null, chapter = null) {
             }
         });
         
-        // Download Check Logic
         if (document.body.classList.contains('is-android')) {
             const dlBtn = document.getElementById('download-btn');
             if (dlBtn) {
@@ -145,38 +170,29 @@ export function setupPlayerListeners() {
 
     // 2. 🎙️ VOCAL BOOST BUTTON
     let boostBtn = document.getElementById('vocal-boost-btn');
-
     if (!boostBtn) {
         boostBtn = document.createElement('button');
         boostBtn.id = 'vocal-boost-btn';
         boostBtn.title = "Vocal Clarity Booster";
         boostBtn.innerHTML = '<i class="fas fa-microphone-alt"></i>';
-        
         const currentSpeedBtn = document.getElementById('speed-btn'); 
         if (currentSpeedBtn && currentSpeedBtn.parentNode) {
             currentSpeedBtn.parentNode.insertBefore(boostBtn, currentSpeedBtn);
-        } else {
-            const extraControls = document.querySelector('.extra-controls');
-            if(extraControls) extraControls.appendChild(boostBtn);
         }
     }
 
     if (boostBtn) {
         const newBoostBtn = boostBtn.cloneNode(true);
         boostBtn.parentNode.replaceChild(newBoostBtn, boostBtn);
-        
         newBoostBtn.onclick = () => {
             const isBoosting = newBoostBtn.classList.toggle('active');
             toggleVocalBoost(isBoosting); 
-
             if (isBoosting) {
                 newBoostBtn.style.color = "#ff4b1f"; 
-                newBoostBtn.style.borderColor = "#ff4b1f";
                 newBoostBtn.style.boxShadow = "0 0 15px rgba(255, 75, 31, 0.5)";
                 showToast("🗣️ Vocal Boost Active!");
             } else {
                 newBoostBtn.style.color = "";
-                newBoostBtn.style.borderColor = "";
                 newBoostBtn.style.boxShadow = "";
                 showToast("🔊 Normal Sound");
             }
@@ -222,7 +238,6 @@ export function setupPlayerListeners() {
                 if (isDl) { 
                     await deleteChapter(); 
                     newDlBtn.innerHTML = `<i class="fas fa-download"></i>`; 
-                    newDlBtn.style.color = "";
                     showToast("🗑️ Removed from downloads"); 
                 } else { 
                     newDlBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`; 

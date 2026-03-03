@@ -1,29 +1,55 @@
-// --- 📚 UI LIBRARY MODULE (History Click Fix) ---
+// --- 📚 UI LIBRARY MODULE (Function Name Fix) ---
 import { fetchUserProgress } from './api.js';
 
-// --- RENDER LIBRARY ---
+// --- 1. RENDER CATEGORY FILTERS (Naam waapas sahi kar diya!) ---
+export function renderCategoryFilters(allBooks) {
+    const container = document.getElementById('category-filters'); 
+    if(!container) return;
+
+    // Unique genres aur moods nikalna filters ke liye
+    const moods = new Set(['All']);
+    allBooks.forEach(book => {
+        if (book.genre) moods.add(book.genre);
+        if (book.moods) book.moods.forEach(m => moods.add(m));
+    });
+
+    container.innerHTML = Array.from(moods).map(mood => `
+        <button class="filter-btn ${mood === 'All' ? 'active' : ''}" 
+                id="filter-${mood.replace(/\s+/g, '-')}"
+                onclick="window.app.filterLibrary('${mood}')">
+            ${mood}
+        </button>
+    `).join('');
+}
+
+// --- 2. RENDER LIBRARY GRID ---
 export function renderLibrary(books, openPlayerCallback) {
     const grid = document.getElementById('book-grid');
     if (!grid) return;
     grid.innerHTML = '';
 
-    if (!books.length) { grid.innerHTML = '<p>No books found for this vibe.</p>'; return; }
+    if (!books.length) { 
+        grid.innerHTML = '<div class="empty-state"><p>Iss vibe ki koi book nahi mili. 🏜️</p></div>'; 
+        return; 
+    }
 
     const placeholder = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 
     books.forEach(book => {
-        const moodHTML = book.moods ? 
-            `<div class="mood-tags">${book.moods.map(m => `<span class="mood-tag">${m}</span>`).join('')}</div>` : '';
+        const moodHTML = (book.moods || []).map(m => `<span class="mood-tag">${m}</span>`).join('');
+        const genreHTML = book.genre ? `<span class="mood-tag genre-accent">${book.genre}</span>` : '';
 
         const card = document.createElement('div');
         card.className = 'book-card';
-        
         card.innerHTML = `
-            <img class="lazy-img" src="${placeholder}" data-src="${book.cover}" alt="${book.title}">
+            <div class="img-container">
+                <img class="lazy-img" src="${placeholder}" data-src="${book.cover}" alt="${book.title}">
+                <div class="book-badge">${book.totalChapters || 0} Parts</div>
+            </div>
             <div class="card-content">
                 <h3>${book.title}</h3>
                 <p>${book.author}</p>
-                ${moodHTML}
+                <div class="mood-tags">${genreHTML}${moodHTML}</div>
             </div>`;
         
         card.onclick = () => openPlayerCallback(book);
@@ -35,112 +61,66 @@ export function renderLibrary(books, openPlayerCallback) {
 
     if (window.matchMedia("(min-width: 768px)").matches && window.VanillaTilt) {
         window.VanillaTilt.init(document.querySelectorAll("#book-grid .book-card"), {
-            max: 15, speed: 400, glare: true, "max-glare": 0.3, scale: 1.05, gyroscope: false  
+            max: 12, speed: 400, glare: true, "max-glare": 0.2, scale: 1.05
         });
     }
 }
 
-// --- RENDER HISTORY (Click Fix Added) ---
+// --- 3. RENDER HISTORY ---
 export async function renderHistory(allBooks, openPlayerCallback) {
     const grid = document.getElementById('history-grid');
     if (!grid) return;
 
-    grid.innerHTML = '<div class="loading-spinner">Loading History...</div>';
+    grid.innerHTML = '<div class="shimmer-loader"><i class="fas fa-spinner fa-spin"></i> Fetching your history...</div>';
     
     try {
         const historyData = await fetchUserProgress();
         
         if (!historyData || historyData.length === 0) {
-            grid.innerHTML = '<p class="empty-msg">No history yet. Start vibing!</p>';
+            grid.innerHTML = '<p class="empty-msg">Abhi tak kuch nahi suna? Start listening! 🎧</p>';
             return;
         }
 
         grid.innerHTML = ''; 
 
         historyData.forEach(progress => {
-            const book = allBooks.find(b => b.bookId == progress.bookId); 
+            const book = allBooks.find(b => String(b.bookId) === String(progress.bookId)); 
             
             if (book) {
-                // Safe Access for Chapter Name
-                const currentChapIndex = progress.chapterIndex || 0;
-                let chapName = `Chapter ${currentChapIndex + 1}`; 
-
-                if (book.chapters && book.chapters[currentChapIndex]) {
-                    chapName = book.chapters[currentChapIndex].name;
-                }
-
-                const cleanChapterName = chapName.replace(/^Chapter\s+\d+[:\s-]*/i, '').replace(/^\d+[\.\s]+/, '').trim();
                 const percent = Math.min(100, Math.floor((progress.currentTime / progress.totalDuration) * 100)) || 0;
 
                 const card = document.createElement('div');
-                card.className = 'book-card';
-                
+                card.className = 'history-card';
                 card.innerHTML = `
                     <div class="history-layout">
-                        <img src="${book.cover}" loading="lazy" style="width:70px; height:70px; border-radius:10px; object-fit:cover;">
-                        
+                        <img src="${book.cover}" loading="lazy" class="history-cover">
                         <div class="history-info">
-                            <h3 style="margin-bottom:2px;">${book.title}</h3>
-                            <div class="chapter-badge">
-                                <i class="fas fa-headphones" style="font-size:0.7rem;"></i> 
-                                <span>${cleanChapterName}</span>
+                            <h3>${book.title}</h3>
+                            <div class="progress-container">
+                                <div class="mini-progress-track">
+                                    <div class="mini-progress-fill" style="width: ${percent}%"></div>
+                                </div>
+                                <span class="progress-text">${percent}% Done</span>
                             </div>
-                            
-                            <div class="mini-progress-track">
-                                <div class="mini-progress-fill" style="width: ${percent}%"></div>
-                            </div>
-                            <p style="font-size:0.7rem; color:#888; margin-top:4px;">${percent}% Completed</p>
                         </div>
-                        
-                        <div class="resume-btn">
-                            <i class="fas fa-play"></i>
-                        </div>
-                    </div>
-                `;
+                        <div class="history-play-btn"><i class="fas fa-play"></i></div>
+                    </div>`;
 
-                // 🔥 MAIN FIX: Click logic updated
                 card.onclick = () => {
-                    // Hum book object ke saath 'savedState' bhi bhej rahe hain
-                    // Taki player samajh jaye ki kahan se resume karna hai
-                    const bookWithResumeData = { 
+                    openPlayerCallback({ 
                         ...book, 
                         savedState: {
                             chapterIndex: progress.chapterIndex,
                             currentTime: progress.currentTime
                         }
-                    };
-                    openPlayerCallback(bookWithResumeData);
+                    });
                 };
 
                 grid.appendChild(card);
-                
-                if (window.matchMedia("(min-width: 768px)").matches && window.VanillaTilt) {
-                    window.VanillaTilt.init(card, {
-                        max: 10, speed: 400, glare: true, "max-glare": 0.1, scale: 1.02
-                    });
-                }
             }
         });
     } catch (error) {
         console.error("History Render Error:", error);
-        grid.innerHTML = '<p class="empty-msg" style="color:#ff4444">Error loading history.</p>';
+        grid.innerHTML = '<p class="empty-msg" style="color:#ff4b1f">History load nahi ho paayi.</p>';
     }
-}
-
-// --- FILTERS ---
-export function renderCategoryFilters(books, filterCallback) {
-    const container = document.getElementById('category-filters');
-    if(!container) return;
-
-    const allMoods = new Set();
-    books.forEach(book => {
-        if(book.moods) book.moods.forEach(mood => allMoods.add(mood));
-    });
-
-    let html = `<button class="filter-btn active" onclick="window.app.filterLibrary('All')" id="filter-all">All Books</button>`;
-    allMoods.forEach(mood => {
-        html += `<button class="filter-btn" onclick="window.app.filterLibrary('${mood}')" id="filter-${mood}">${mood}</button>`;
-    });
-
-    container.innerHTML = html;
 }
