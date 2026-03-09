@@ -7,6 +7,22 @@ let audio = document.getElementById('audio-element') || new Audio();
 // Enable CORS for external links
 audio.crossOrigin = "anonymous"; 
 
+// 🔥 THE FIX: Audio Atakna & Auto-Advance Pe Index Purana Dikhna
+audio.addEventListener('ended', () => {
+    console.log("⏭️ Chapter khatam, next chala raha hu...");
+    nextChapter();
+});
+
+audio.addEventListener('waiting', () => {
+    console.log("⏳ Audio buffer ho raha hai (Network slow)...");
+    // Agar internet slow hone pe audio atkega, toh context ko wapas jagayega
+    if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+        console.log("⚡ Audio Context ko coma se wapas laya!");
+    }
+});
+// ---------------------------------------------------------
+
 let currentBook = null;
 let currentChapterIndex = 0;
 let progressInterval = null;

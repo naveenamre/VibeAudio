@@ -29,7 +29,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <script crossorigin="anonymous" data-clerk-publishable-key="pk_test_cXVhbGl0eS1oYXJlLTk5LmNsZXJrLmFjY291bnRzLmRldiQ"
-        src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js" type="text/javascript"></script>
+        src="https://quality-hare-99.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js" type="text/javascript"></script>
 
     <style>
         :root {
@@ -62,7 +62,6 @@
             left: 50%;
             transform: translate(-50%, -50%);
             width: clamp(300px, 60vw, 600px);
-            /* Smart Sizing */
             height: clamp(300px, 60vw, 600px);
             border-radius: 50%;
             background: var(--accent-glow);
@@ -77,14 +76,13 @@
                 transform: translate(-50%, -50%) scale(1);
                 opacity: 0.25;
             }
-
             100% {
                 transform: translate(-50%, -50%) scale(1.1);
                 opacity: 0.4;
             }
         }
 
-        /* Glass Card */
+        /* Glass Card with 3D Transform Prep */
         .login-card {
             width: 90%;
             max-width: 400px;
@@ -94,7 +92,6 @@
             background: var(--glass-bg);
             border-radius: 24px;
             backdrop-filter: blur(40px);
-            /* Heavy Blur for Premium Feel */
             -webkit-backdrop-filter: blur(40px);
             border: 1px solid var(--glass-border);
 
@@ -105,6 +102,7 @@
             animation: slideUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
             opacity: 0;
             transform: translateY(30px);
+            transform-style: preserve-3d; /* For the tilt effect */
         }
 
         @keyframes slideUp {
@@ -121,10 +119,11 @@
             border-radius: 18px;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
             transition: transform 0.3s ease;
+            transform: translateZ(20px); /* Pops out slightly */
         }
 
         .logo:hover {
-            transform: scale(1.05) rotate(3deg);
+            transform: scale(1.05) rotate(3deg) translateZ(20px);
         }
 
         h1 {
@@ -135,6 +134,7 @@
             background: linear-gradient(to right, #fff, #b4b4b4);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            transform: translateZ(10px);
         }
 
         p {
@@ -142,6 +142,7 @@
             font-size: 0.95rem;
             color: rgba(255, 255, 255, 0.6);
             font-weight: 300;
+            transform: translateZ(10px);
         }
 
         #loader {
@@ -173,20 +174,35 @@
 
     <div class="bg-glow"></div>
 
-    <div class="login-card">
+    <div class="login-card" data-tilt data-tilt-max="5" data-tilt-speed="400" data-tilt-glare="true" data-tilt-max-glare="0.1">
         <img src="src/icons/favicon.png" class="logo" alt="Vibe Logo" onerror="this.style.display='none'" />
 
         <h1>Vibe Audio</h1>
-        <p>Your personal soundscape awaits.</p>
+        <p id="dynamic-greeting">Your personal soundscape awaits.</p>
 
-        <div id="sign-in-container"></div>
+        <div id="sign-in-container" style="transform: translateZ(15px);"></div>
 
         <div id="loader">
             <i class="fas fa-circle-notch fa-spin"></i> &nbsp; Syncing your vibe...
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.0/vanilla-tilt.min.js"></script>
+
     <script>
+        // 🕒 Dynamic Greeting Logic
+        function setGreeting() {
+            const hour = new Date().getHours();
+            const greetingEl = document.getElementById('dynamic-greeting');
+            if (hour < 12) {
+                greetingEl.innerText = "Good morning! Let's get into the vibe.";
+            } else if (hour < 18) {
+                greetingEl.innerText = "Good afternoon! Time for a quick listen?";
+            } else {
+                greetingEl.innerText = "Evening vibes. Your soundscape awaits.";
+            }
+        }
+
         async function startClerk() {
             const loader = document.getElementById('loader');
             const signInDiv = document.getElementById('sign-in-container');
@@ -212,7 +228,7 @@
                     }, 800);
 
                 } else {
-                    // Mount Login - With Native Clerk Styling (No CSS Hacks needed!)
+                    // Mount Login - With Native Clerk Styling
                     window.Clerk.mountSignIn(signInDiv, {
                         appearance: {
                             layout: {
@@ -221,7 +237,7 @@
                             },
                             variables: {
                                 fontFamily: '"Outfit", sans-serif',
-                                colorPrimary: "#7b4dff", // Your brand color
+                                colorPrimary: "#7b4dff", 
                                 colorText: "white",
                                 colorBackground: "transparent",
                                 colorInputBackground: "rgba(255,255,255,0.08)",
@@ -230,15 +246,15 @@
                             },
                             elements: {
                                 card: "shadow-none bg-transparent p-0",
-                                headerTitle: "hidden", // We have our own H1
+                                headerTitle: "hidden", 
                                 headerSubtitle: "hidden",
                                 socialButtonsBlockButton: "bg-white/5 border border-white/10 hover:bg-white/10 text-white",
                                 socialButtonsBlockButtonText: "text-white font-normal",
                                 dividerLine: "bg-white/20",
                                 dividerText: "text-white/40",
                                 formFieldLabel: "text-white/60",
-                                formButtonPrimary: "bg-white text-black hover:bg-gray-200 border-none", // The main button style
-                                footer: "hidden" // Hiding the "Secured by Clerk" footer for cleaner look
+                                formButtonPrimary: "bg-white text-black hover:bg-gray-200 border-none", 
+                                footer: "hidden" 
                             }
                         }
                     });
@@ -249,7 +265,11 @@
             }
         }
 
-        window.addEventListener("load", startClerk);
+        // Initialize everything on load
+        window.addEventListener("load", () => {
+            setGreeting();
+            startClerk();
+        });
     </script>
 
 </body>
