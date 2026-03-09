@@ -3,6 +3,12 @@ import { loadBook, getCurrentState, getAudioElement, togglePlay, skip, setPlayba
 import { renderChapterList, toggleLangUI } from './ui-player-list.js';
 import { applyChameleonTheme, renderComments, showToast, formatTime } from './ui-player-helpers.js';
 
+// 🔥 FIX: Global Listener taaki jab auto next chapter chale, toh UI properly update ho jaye
+window.addEventListener('player-state-change', (e) => {
+    const { isPlaying, book, chapter } = e.detail;
+    updateUI(isPlaying, book, chapter);
+});
+
 // --- GLOBAL STATE ---
 const speeds = [1, 1.25, 1.5, 2, 0.95, 0.9, 0.8]; 
 let currentSpeedIndex = 0;
@@ -36,6 +42,11 @@ export async function openPlayerUI(partialBook, allBooks, switchViewCallback) {
             if (fullBookDetails) {
                 // Merge partial metadata with full chapter details
                 finalBook = { ...partialBook, ...fullBookDetails };
+                
+                // 🔥 THE SAVIOR LINE: Agar Hindi nahi hai, toh English ko default set kar do taaki UI crash na ho!
+                if (!finalBook.chapters && finalBook.chapters_en) {
+                    finalBook.chapters = finalBook.chapters_en;
+                }
                 
                 // Cache update kar lo taaki dubara usi session mein fetch na karna pade
                 const index = allBooks.findIndex(b => b.bookId === partialBook.bookId);
