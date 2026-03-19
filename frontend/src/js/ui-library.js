@@ -1,5 +1,6 @@
 // --- 📚 UI LIBRARY MODULE (Function Name Fix) ---
 import { fetchUserProgress } from './api.js';
+import { applyHistoryTheme, applyLibraryTheme } from './ui-player-helpers.js';
 
 // --- 1. RENDER CATEGORY FILTERS (Naam waapas sahi kar diya!) ---
 export function renderCategoryFilters(allBooks) {
@@ -33,6 +34,8 @@ export function renderLibrary(books, openPlayerCallback) {
         return; 
     }
 
+    applyLibraryTheme(books[0].cover, true);
+
     const placeholder = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 
     books.forEach(book => {
@@ -41,6 +44,7 @@ export function renderLibrary(books, openPlayerCallback) {
 
         const card = document.createElement('div');
         card.className = 'book-card';
+        card.tabIndex = 0;
         card.innerHTML = `
             <div class="img-container">
                 <img class="lazy-img" src="${placeholder}" data-src="${book.cover}" alt="${book.title}">
@@ -53,6 +57,9 @@ export function renderLibrary(books, openPlayerCallback) {
             </div>`;
         
         card.onclick = () => openPlayerCallback(book);
+        card.onmouseenter = () => applyLibraryTheme(book.cover, true);
+        card.onfocus = () => applyLibraryTheme(book.cover, true);
+        card.ontouchstart = () => applyLibraryTheme(book.cover, true);
         grid.appendChild(card);
 
         const img = card.querySelector('img');
@@ -82,11 +89,13 @@ export async function renderHistory(allBooks, openPlayerCallback) {
         }
 
         grid.innerHTML = ''; 
+        let firstHistoryBook = null;
 
         historyData.forEach(progress => {
             const book = allBooks.find(b => String(b.bookId) === String(progress.bookId)); 
             
             if (book) {
+                if (!firstHistoryBook) firstHistoryBook = book;
                 const percent = Math.min(100, Math.floor((progress.currentTime / progress.totalDuration) * 100)) || 0;
 
                 const card = document.createElement('div');
@@ -115,10 +124,17 @@ export async function renderHistory(allBooks, openPlayerCallback) {
                         }
                     });
                 };
+                card.onmouseenter = () => applyHistoryTheme(book.cover, document.body?.dataset.themeSurface === 'history');
+                card.onfocus = () => applyHistoryTheme(book.cover, document.body?.dataset.themeSurface === 'history');
+                card.ontouchstart = () => applyHistoryTheme(book.cover, document.body?.dataset.themeSurface === 'history');
 
                 grid.appendChild(card);
             }
         });
+
+        if (firstHistoryBook) {
+            applyHistoryTheme(firstHistoryBook.cover, document.body?.dataset.themeSurface === 'history');
+        }
     } catch (error) {
         console.error("History Render Error:", error);
         grid.innerHTML = '<p class="empty-msg" style="color:#ff4b1f">History load nahi ho paayi.</p>';

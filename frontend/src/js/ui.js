@@ -2,7 +2,7 @@ import { fetchAllBooks, getLocalUserProfile, syncUserProfile, saveUserProgress }
 import { togglePlay, nextChapter, prevChapter, skip, seekTo, getAudioElement, getCurrentState } from './player.js';
 import * as LibraryUI from './ui-library.js';
 import { openPlayerUI, updateUI } from './ui-player-main.js';
-import { formatTime, renderSingleComment } from './ui-player-helpers.js';
+import { formatTime, renderSingleComment, setActiveThemeSurface } from './ui-player-helpers.js';
 
 let allBooks = [];
 let currentViewId = 'library';
@@ -182,6 +182,7 @@ function switchView(id, pushHistory = true) {
     }
 
     currentViewId = nextView;
+    setActiveThemeSurface(nextView === 'history' || nextView === 'player' ? nextView : 'library');
 
     document.querySelectorAll('.view-section').forEach((el) => el.classList.add('hidden'));
     const view = document.getElementById(`view-${nextView}`);
@@ -203,7 +204,6 @@ function switchView(id, pushHistory = true) {
     }
 
     if (nextView === 'library') {
-        document.documentElement.style.setProperty('--primary', '#ff4b1f');
         document.body.style.background = "";
         const playBtn = document.getElementById('play-btn');
         if (playBtn) playBtn.style.boxShadow = 'none';
