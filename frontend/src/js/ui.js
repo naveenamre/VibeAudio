@@ -1,55 +1,63 @@
-import { fetchAllBooks, getLocalUserProfile, syncUserProfile, saveUserProgress } from './api.js'; 
-
-// ✅ FIX: Use Named Imports form Player Logic
-import { togglePlay, nextChapter, prevChapter, skip, seekTo, getAudioElement, getCurrentState, setPlaybackSpeed, setSleepTimer } from './player.js';
-
-// ✅ NEW IMPORTS from Split Files
+import { fetchAllBooks, getLocalUserProfile, syncUserProfile, saveUserProgress } from './api.js';
+import { togglePlay, nextChapter, prevChapter, skip, seekTo, getAudioElement, getCurrentState } from './player.js';
 import * as LibraryUI from './ui-library.js';
 import { openPlayerUI, updateUI } from './ui-player-main.js';
 import { formatTime, renderSingleComment } from './ui-player-helpers.js';
 
-let allBooks = []; // 📚 Global Master Copy
+let allBooks = [];
+let currentViewId = 'library';
+let closeSidebarIfOpen = () => false;
 
-// --- 🌏 GLOBAL APP OBJECT ---
+const VALID_VIEWS = new Set(['library', 'history', 'about', 'profile', 'player']);
+
 window.app = {
-    // Basic Nav
     switchView: (id) => switchView(id),
-    goBack: () => window.history.back(), 
+    goBack: () => goBackInApp(),
     filterLibrary: (category) => filterLibraryLogic(category),
-    
-    // Player Controls (For Android Bridge) 🔥
+
     togglePlay: () => {
         const isPlaying = togglePlay();
-        updateUI(isPlaying); // ✅ Fixed: Direct call
-    },
-    nextChapter: () => {
-        if(nextChapter()) updateUI(true); // ✅ Fixed
-    },
-    prevChapter: () => {
-        if(prevChapter()) updateUI(true); // ✅ Fixed
-    },
-    
-    // Seek
-    seekToComment: (time) => {
-        const audio = getAudioElement();
-        if(audio.duration) { seekTo((time/audio.duration)*100); togglePlay(); }
+        updateUI(isPlaying);
     },
 
-    // Sync
+    nextChapter: () => {
+        if (nextChapter()) updateUI(false);
+    },
+
+    prevChapter: () => {
+        if (prevChapter()) updateUI(false);
+    },
+
+    seekToComment: (time) => {
+        const audio = getAudioElement();
+        if (!audio.duration) return;
+
+        seekTo((time / audio.duration) * 100);
+        if (audio.paused) {
+            const isPlaying = togglePlay();
+            updateUI(isPlaying);
+        }
+    },
+
     syncData: async () => {
-        const btn = document.querySelector('.btn-secondary'); 
-        if(!btn) return;
+        const btn = document.querySelector('.btn-secondary');
+        if (!btn) return;
+
         const icon = btn.querySelector('i');
         const originalText = btn.innerHTML;
-        if(icon) icon.classList.add('fa-spin');
+
+        if (icon) icon.classList.add('fa-spin');
         btn.innerHTML = `<i class="fas fa-sync fa-spin"></i> Syncing...`;
         btn.disabled = true;
+
         await syncUserProfile();
-        if(icon) icon.classList.remove('fa-spin');
+
+        if (icon) icon.classList.remove('fa-spin');
         btn.innerHTML = `<i class="fas fa-check"></i> Synced!`;
         btn.style.borderColor = "#00ff00";
         btn.style.color = "#00ff00";
-        showToast("☁️ Data synced with Cloud!");
+        showToast("Data synced with cloud.");
+
         setTimeout(() => {
             btn.innerHTML = originalText;
             btn.disabled = false;
@@ -58,120 +66,166 @@ window.app = {
         }, 3000);
     },
 
-    // Logout
     logout: async () => {
-        console.log("👋 Logging out...");
+        console.log("Logging out...");
         if (window.Clerk) {
-            try { await window.Clerk.signOut(); } catch (e) { console.warn("Clerk signout issue:", e); }
+            try {
+                await window.Clerk.signOut();
+            } catch (error) {
+                console.warn("Clerk signout issue:", error);
+            }
         }
+
         localStorage.removeItem("vibe_user_id");
         localStorage.removeItem("vibe_user_name");
         window.location.href = "../../index.html";
     }
 };
 
-// --- 🚀 INIT ---
 async function init() {
-    console.log("🚀 VibeAudio UI Starting...");
-    setupImageObserver(); 
+    console.log("VibeAudio UI starting...");
+    setupImageObserver();
+    setupRouting();
 
-    // Android Back Button Logic
-    window.addEventListener('popstate', (event) => {
-        if (event.state && event.state.view) {
-            switchView(event.state.view, false);
-        } else {
-            switchView('library', false);
-        }
-    });
-    history.replaceState({ view: 'library' }, null, "#library");
-
-    // 🔥 SAVE ON EXIT / MINIMIZE
     document.addEventListener("visibilitychange", () => {
-        if (document.visibilityState === "hidden") {
-            const state = getCurrentState();
-            if (state.book && state.currentTime > 5) {
-                console.log("💤 App Backgrounded - Saving Progress...");
-                saveUserProgress(state.book.bookId, state.currentChapterIndex, state.currentTime, state.duration);
-            }
+        if (document.visibilityState !== "hidden") return;
+
+        const state = getCurrentState();
+        if (state.book && state.currentTime > 5) {
+            console.log("App backgrounded. Saving progress...");
+            saveUserProgress(state.book.bookId, state.currentChapterIndex, state.currentTime, state.duration);
         }
     });
 
-    // Load User
     const user = getLocalUserProfile();
     if (user.name) {
         const nameDisplay = document.getElementById('user-name-display');
         const avatar = document.getElementById('profile-avatar');
-        if(nameDisplay) nameDisplay.innerText = user.name;
-        if(avatar) avatar.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=ff4b1f&color=fff&bold=true`;
+        if (nameDisplay) nameDisplay.innerText = user.name;
+        if (avatar) {
+            avatar.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=ff4b1f&color=fff&bold=true`;
+        }
     }
 
     syncUserProfile();
 
-    // Load Books
-    allBooks = await fetchAllBooks(); 
-    if(allBooks.length > 0) {
+    allBooks = await fetchAllBooks();
+    if (allBooks.length > 0) {
         allBooks.sort((a, b) => {
-            const numA = parseInt(a.bookId.replace(/\D/g, '')) || 0; 
-            const numB = parseInt(b.bookId.replace(/\D/g, '')) || 0;
+            const numA = parseInt(String(a.bookId || '').replace(/\D/g, ''), 10) || 0;
+            const numB = parseInt(String(b.bookId || '').replace(/\D/g, ''), 10) || 0;
             return numA - numB;
         });
     }
 
-    // Render UI
     LibraryUI.renderCategoryFilters(allBooks);
-    LibraryUI.renderLibrary(allBooks, (book) => openPlayerUI(book, allBooks, switchView)); // ✅ Fixed
-    LibraryUI.renderHistory(allBooks, (book) => openPlayerUI(book, allBooks, switchView)); // ✅ Fixed
-    
+    LibraryUI.renderLibrary(allBooks, (book) => openPlayerUI(book, allBooks, switchView));
+    LibraryUI.renderHistory(allBooks, (book) => openPlayerUI(book, allBooks, switchView));
+
     setupListeners();
 }
 
-// --- 🧭 NAVIGATION ---
-function switchView(id, pushHistory = true) {
-    if (pushHistory) history.pushState({ view: id }, null, `#${id}`);
+function normalizeViewId(id) {
+    return VALID_VIEWS.has(id) ? id : 'library';
+}
 
-    document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
-    const view = document.getElementById(`view-${id}`);
+function setupRouting() {
+    const syncViewFromLocation = (event) => {
+        const nextView = normalizeViewId(event?.state?.view || window.location.hash.replace(/^#/, ''));
+        switchView(nextView, false);
+    };
+
+    window.addEventListener('popstate', syncViewFromLocation);
+    window.addEventListener('hashchange', syncViewFromLocation);
+
+    const initialView = normalizeViewId(window.location.hash.replace(/^#/, ''));
+    history.replaceState({ view: initialView }, null, `#${initialView}`);
+    switchView(initialView, false);
+}
+
+function goBackInApp() {
+    if (closeSidebarIfOpen()) return;
+
+    if (currentViewId !== 'library') {
+        const activeHash = window.location.hash || `#${currentViewId}`;
+
+        if (activeHash !== '#library') {
+            const viewBeforeBack = currentViewId;
+            window.history.back();
+
+            window.setTimeout(() => {
+                if (currentViewId === viewBeforeBack) {
+                    switchView('library', false);
+                }
+            }, 150);
+        } else {
+            switchView('library', false);
+        }
+
+        return;
+    }
+
+    window.history.back();
+}
+
+function switchView(id, pushHistory = true) {
+    const nextView = normalizeViewId(id);
+
+    if (pushHistory) {
+        if (currentViewId === nextView && history.state?.view === nextView) {
+            history.replaceState({ view: nextView }, null, `#${nextView}`);
+        } else {
+            history.pushState({ view: nextView }, null, `#${nextView}`);
+        }
+    } else if (window.location.hash !== `#${nextView}` || history.state?.view !== nextView) {
+        history.replaceState({ view: nextView }, null, `#${nextView}`);
+    }
+
+    currentViewId = nextView;
+
+    document.querySelectorAll('.view-section').forEach((el) => el.classList.add('hidden'));
+    const view = document.getElementById(`view-${nextView}`);
     if (view) {
         view.classList.remove('hidden');
-        if(window.gsap) gsap.fromTo(view, {opacity:0, y:10}, {opacity:1, y:0, duration:0.3});
+        if (window.gsap) {
+            gsap.fromTo(view, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.3 });
+        }
     }
 
-    document.querySelectorAll('.sidebar-nav button').forEach(btn => btn.classList.remove('active'));
-    const activeBtn = document.querySelector(`.sidebar-nav button[onclick*="'${id}'"]`);
-    if(activeBtn) activeBtn.classList.add('active');
+    document.querySelectorAll('.sidebar-nav button').forEach((btn) => btn.classList.remove('active'));
+    const activeBtn = document.querySelector(`.sidebar-nav button[onclick*="'${nextView}'"]`);
+    if (activeBtn) activeBtn.classList.add('active');
 
-    if (id === 'player') {
-        document.body.classList.add('player-mode');
-    } else {
-        document.body.classList.remove('player-mode');
+    document.body.classList.toggle('player-mode', nextView === 'player');
+
+    if (nextView === 'history') {
+        LibraryUI.renderHistory(allBooks, (book) => openPlayerUI(book, allBooks, switchView));
     }
 
-    if (id === 'history') LibraryUI.renderHistory(allBooks, (book) => openPlayerUI(book, allBooks, switchView));
-
-    if (id === 'library') {
+    if (nextView === 'library') {
         document.documentElement.style.setProperty('--primary', '#ff4b1f');
-        document.body.style.background = ""; 
+        document.body.style.background = "";
         const playBtn = document.getElementById('play-btn');
-        if(playBtn) playBtn.style.boxShadow = 'none';
+        if (playBtn) playBtn.style.boxShadow = 'none';
     }
 }
 
-// --- 🔍 FILTER ---
 function filterLibraryLogic(category) {
-    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.filter-btn').forEach((btn) => btn.classList.remove('active'));
+
     const btnId = category === 'All' ? 'filter-all' : `filter-${category}`;
     const activeBtn = document.getElementById(btnId);
-    if(activeBtn) activeBtn.classList.add('active');
+    if (activeBtn) activeBtn.classList.add('active');
 
     if (category === 'All') {
         LibraryUI.renderLibrary(allBooks, (book) => openPlayerUI(book, allBooks, switchView));
-    } else {
-        const filtered = allBooks.filter(book => book.moods && book.moods.includes(category));
-        LibraryUI.renderLibrary(filtered, (book) => openPlayerUI(book, allBooks, switchView));
+        return;
     }
+
+    const filtered = allBooks.filter((book) => book.moods && book.moods.includes(category));
+    LibraryUI.renderLibrary(filtered, (book) => openPlayerUI(book, allBooks, switchView));
 }
 
-// --- 🎮 LISTENERS ---
 function setupListeners() {
     const playBtn = document.getElementById('play-btn');
     const prevBtn = document.getElementById('prev-btn');
@@ -182,106 +236,104 @@ function setupListeners() {
     const audio = getAudioElement();
     const postBtn = document.getElementById('post-comment-btn');
     const searchInput = document.getElementById('search-input');
-    
-    // Sidebar logic ...
+
     const menuBtn = document.getElementById('menu-btn');
     const closeBtn = document.getElementById('close-sidebar');
     const overlay = document.getElementById('sidebar-overlay');
     const sidebar = document.getElementById('sidebar');
 
-    function toggleSidebar(show) {
-        if(!sidebar || !overlay) return;
+    const toggleSidebar = (show) => {
+        if (!sidebar || !overlay) return false;
+
         if (show) {
             sidebar.classList.add('active');
             overlay.classList.add('active');
             overlay.classList.remove('hidden');
-        } else {
-            sidebar.classList.remove('active');
-            overlay.classList.remove('active');
-            setTimeout(() => overlay.classList.add('hidden'), 300);
+            return true;
         }
-    }
 
-    if(menuBtn) menuBtn.onclick = () => toggleSidebar(true);
-    if(closeBtn) closeBtn.onclick = () => toggleSidebar(false);
-    if(overlay) overlay.onclick = () => toggleSidebar(false);
-    document.querySelectorAll('.sidebar-nav button').forEach(btn => {
+        const wasOpen = sidebar.classList.contains('active') || overlay.classList.contains('active');
+        sidebar.classList.remove('active');
+        overlay.classList.remove('active');
+        window.setTimeout(() => overlay.classList.add('hidden'), 300);
+        return wasOpen;
+    };
+
+    closeSidebarIfOpen = () => toggleSidebar(false);
+
+    if (menuBtn) menuBtn.onclick = () => toggleSidebar(true);
+    if (closeBtn) closeBtn.onclick = () => toggleSidebar(false);
+    if (overlay) overlay.onclick = () => toggleSidebar(false);
+
+    document.querySelectorAll('.sidebar-nav button').forEach((btn) => {
         btn.addEventListener('click', () => toggleSidebar(false));
     });
 
-    // Search
     if (searchInput) {
-        searchInput.addEventListener('input', (e) => {
-            const query = e.target.value.toLowerCase();
-            const filtered = allBooks.filter(book => 
-                book.title.toLowerCase().includes(query) || 
-                book.author.toLowerCase().includes(query)
-            );
+        searchInput.addEventListener('input', (event) => {
+            const query = String(event.target.value || '').trim().toLowerCase();
+            const filtered = allBooks.filter((book) => {
+                const title = String(book.title || '').toLowerCase();
+                const author = String(book.author || '').toLowerCase();
+                return title.includes(query) || author.includes(query);
+            });
+
             LibraryUI.renderLibrary(filtered, (book) => openPlayerUI(book, allBooks, switchView));
         });
     }
 
-    // Comment
-    if(postBtn) {
+    if (postBtn) {
         postBtn.onclick = () => {
             const input = document.getElementById('comment-input');
-            const text = input.value;
-            if(!text) return;
+            const text = String(input?.value || '').trim();
+            if (!text) return;
+
             const state = getCurrentState();
             const currentTime = Math.floor(state.currentTime || 0);
-            const newComment = { time: currentTime, user: "You", text: text };
-            renderSingleComment(newComment); // ✅ Fixed Import Call
-            input.value = ''; 
+            renderSingleComment({ time: currentTime, user: "You", text });
+
+            input.value = '';
         };
     }
 
-    // Player Buttons
-    if(playBtn) playBtn.onclick = window.app.togglePlay;
+    if (playBtn) playBtn.onclick = window.app.togglePlay;
     if (prevBtn) prevBtn.onclick = window.app.prevChapter;
     if (nextBtn) nextBtn.onclick = window.app.nextChapter;
-    if(seekBack) seekBack.onclick = () => skip(-10);
-    if(seekFwd) seekFwd.onclick = () => skip(10);
-    
-    // Progress
-    if(progress) {
-        progress.addEventListener('input', (e) => {
-            const pct = e.target.value;
+    if (seekBack) seekBack.onclick = () => skip(-10);
+    if (seekFwd) seekFwd.onclick = () => skip(10);
+
+    if (progress) {
+        progress.addEventListener('input', (event) => {
+            const pct = Number(event.target.value || 0);
             seekTo(pct);
-            progress.style.backgroundSize = `${pct}% 100%`; 
+            progress.style.backgroundSize = `${pct}% 100%`;
         });
     }
 
     audio.ontimeupdate = () => {
         const state = getCurrentState();
-        if (state.duration && progress) {
-            const pct = (state.currentTime / state.duration) * 100;
-            progress.value = pct;
-            progress.style.backgroundSize = `${pct}% 100%`;
-            // ✅ Fixed: Using imported formatTime
-            document.getElementById('current-time').innerText = formatTime(state.currentTime);
-            document.getElementById('total-duration').innerText = formatTime(state.duration);
-        }
-    };
-    audio.onended = () => {
-        if(nextChapter()) updateUI(true); // ✅ Fixed
-        else updateUI(false); // ✅ Fixed
-    };
+        if (!state.duration || !progress) return;
 
-    // Speed & Sleep buttons logic retained...
-    // (User code snippet was correct here, keeping brevity for response)
-    // Setup Speed and Sleep listeners same as provided...
-    // ...
+        const pct = (state.currentTime / state.duration) * 100;
+        progress.value = pct;
+        progress.style.backgroundSize = `${pct}% 100%`;
+
+        const currentTimeEl = document.getElementById('current-time');
+        const durationEl = document.getElementById('total-duration');
+        if (currentTimeEl) currentTimeEl.innerText = formatTime(state.currentTime);
+        if (durationEl) durationEl.innerText = formatTime(state.duration);
+    };
 }
 
 function setupImageObserver() {
     window.imageObserver = new IntersectionObserver((entries, observer) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const img = entry.target;
-                img.src = img.dataset.src;
-                img.onload = () => img.classList.add('visible');
-                observer.unobserve(img);
-            }
+        entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+
+            const img = entry.target;
+            img.src = img.dataset.src;
+            img.onload = () => img.classList.add('visible');
+            observer.unobserve(img);
         });
     }, { rootMargin: "100px 0px", threshold: 0.01 });
 }
@@ -298,14 +350,14 @@ const style = document.createElement('style');
 style.textContent = `
     .lazy-img { opacity: 0; transition: opacity 0.6s ease-in-out; }
     .lazy-img.visible { opacity: 1; }
-    .skeleton-loader { 
+    .skeleton-loader {
         height: 45px; margin: 10px 0; border-radius: 8px;
         background: rgba(255,255,255,0.05);
         background-image: linear-gradient(90deg, rgba(255,255,255,0) 0, rgba(255,255,255,0.1) 20%, rgba(255,255,255,0.2) 60%, rgba(255,255,255,0) 100%);
         background-size: 200% 100%;
         animation: skeleton 2s infinite linear;
     }
-    @keyframes skeleton { 0% {background-position: -200% 0;} 100% {background-position: 200% 0;} }
+    @keyframes skeleton { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
 `;
 document.head.appendChild(style);
 
