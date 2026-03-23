@@ -1,14 +1,153 @@
-import { fetchAllBooks, getLocalUserProfile, syncUserProfile, saveUserProgress } from './api.js';
+import { fetchAllBooks, fetchUserProgress, getLocalUserProfile, syncUserProfile, saveUserProgress } from './api.js';
 import { togglePlay, nextChapter, prevChapter, skip, seekTo, getCurrentState } from './player.js';
 import * as LibraryUI from './ui-library.js';
 import { openPlayerUI, updateUI } from './ui-player-main.js';
 import { formatTime, renderSingleComment, setActiveThemeSurface } from './ui-player-helpers.js';
 
 let allBooks = [];
+let userHistory = [];
 let currentViewId = 'library';
+let currentCategory = 'All';
+let currentSearchQuery = '';
 let closeSidebarIfOpen = () => false;
 
 const VALID_VIEWS = new Set(['library', 'history', 'about', 'profile', 'player']);
+
+function getTimeStamp(value) {
+    const stamp = Date.parse(value || 0);
+    return Number.isFinite(stamp) ? stamp : 0;
+}
+
+function getProgressPercent(progress) {
+    if (!progress) return 0;
+
+    const currentTime = Number(progress.currentTime || 0);
+    const totalDuration = Number(progress.totalDuration || 0);
+    if (totalDuration <= 0) return currentTime > 0 ? 1 : 0;
+
+    return Math.max(0, Math.min(100, Math.round((currentTime / totalDuration) * 100)));
+}
+
+function getBookSignals(book) {
+    const signals = [];
+
+    if (book.genre) {
+        signals.push({ key: String(book.genre).toLowerCase(), label: String(book.genre), weight: 1.8 });
+    }
+
+    (book.moods || []).forEach((mood) => {
+        signals.push({ key: String(mood).toLowerCase(), label: String(mood), weight: 1.1 });
+    });
+
+    return signals;
+}
+
+function enrichBooksWithHistory(books, history) {
+    const sortedHistory = [...history].sort((a, b) => getTimeStamp(b.updatedAt) - getTimeStamp(a.updatedAt));
+    const historyByBook = new Map();
+
+    sortedHistory.forEach((entry, index) => {
+        const key = String(entry.bookId);
+        if (!historyByBook.has(key)) {
+            historyByBook.set(key, { ...entry, historyRank: index });
+        }
+    });
+
+    const tasteProfile = new Map();
+    books.forEach((book) => {
+        const progress = historyByBook.get(String(book.bookId));
+        if (!progress) return;
+
+        const progressPercent = getProgressPercent(progress);
+        const recencyWeight = Math.max(0.6, 1.7 - (progress.historyRank * 0.14));
+        const depthWeight = 1 + (progressPercent / 100);
+        const baseWeight = recencyWeight + depthWeight;
+
+        getBookSignals(book).forEach((signal) => {
+            tasteProfile.set(signal.key, (tasteProfile.get(signal.key) || 0) + (baseWeight * signal.weight));
+        });
+    });
+
+    return books
+        .map((book) => {
+            const progress = historyByBook.get(String(book.bookId));
+            const progressPercent = getProgressPercent(progress);
+            const savedState = progress ? {
+                chapterIndex: Number(progress.chapterIndex || 0),
+                currentTime: Number(progress.currentTime || 0)
+            } : null;
+            const matchingSignals = getBookSignals(book)
+                .filter((signal) => tasteProfile.has(signal.key))
+                .sort((a, b) => (tasteProfile.get(b.key) || 0) - (tasteProfile.get(a.key) || 0));
+            const preferenceScore = matchingSignals.reduce((sum, signal) => sum + (tasteProfile.get(signal.key) || 0), 0);
+            const isFinished = Boolean(progress?.isFinished || progressPercent >= 92);
+            const progressBoost = savedState ? 1400 + progressPercent : 0;
+
+            return {
+                ...book,
+                savedState,
+                progressPercent,
+                lastUpdatedAt: progress?.updatedAt || null,
+                historyRank: progress?.historyRank ?? Number.MAX_SAFE_INTEGER,
+                isFinished,
+                personalizedScore: progressBoost + preferenceScore + (isFinished ? 40 : 0),
+                recommendationReason: matchingSignals[0]?.label || '',
+                topReasons: matchingSignals.slice(0, 3).map((signal) => signal.label)
+            };
+        })
+        .sort((a, b) => {
+            const scoreDiff = (b.personalizedScore || 0) - (a.personalizedScore || 0);
+            if (scoreDiff) return scoreDiff;
+
+            const recencyDiff = getTimeStamp(b.lastUpdatedAt) - getTimeStamp(a.lastUpdatedAt);
+            if (recencyDiff) return recencyDiff;
+
+            return (a.catalogOrder || 0) - (b.catalogOrder || 0);
+        });
+}
+
+function matchesBookFilters(book) {
+    const query = currentSearchQuery.trim().toLowerCase();
+    if (query) {
+        const title = String(book.title || '').toLowerCase();
+        const author = String(book.author || '').toLowerCase();
+        if (!title.includes(query) && !author.includes(query)) {
+            return false;
+        }
+    }
+
+    if (currentCategory === 'All') return true;
+    return book.genre === currentCategory || Boolean(book.moods?.includes(currentCategory));
+}
+
+function getVisibleBooks() {
+    return allBooks.filter(matchesBookFilters);
+}
+
+function openBookFromCollection(book) {
+    openPlayerUI(book, allBooks, switchView);
+}
+
+function renderLibrarySurfaces() {
+    LibraryUI.renderLibrarySpotlight(allBooks, openBookFromCollection, {
+        activeCategory: currentCategory,
+        searchQuery: currentSearchQuery
+    });
+    LibraryUI.renderLibrary(getVisibleBooks(), openBookFromCollection);
+}
+
+async function refreshPersonalizedCatalog() {
+    try {
+        userHistory = await fetchUserProgress();
+    } catch (error) {
+        console.warn("Unable to refresh user history.", error);
+        userHistory = [];
+    }
+
+    allBooks = enrichBooksWithHistory(allBooks, userHistory);
+    renderLibrarySurfaces();
+    LibraryUI.renderHistory(allBooks, openBookFromCollection, userHistory);
+}
 
 window.app = {
     switchView: (id) => switchView(id),
@@ -111,17 +250,15 @@ async function init() {
 
     allBooks = await fetchAllBooks();
     if (allBooks.length > 0) {
-        allBooks.sort((a, b) => {
+        allBooks = allBooks.sort((a, b) => {
             const numA = parseInt(String(a.bookId || '').replace(/\D/g, ''), 10) || 0;
             const numB = parseInt(String(b.bookId || '').replace(/\D/g, ''), 10) || 0;
             return numA - numB;
-        });
+        }).map((book, index) => ({ ...book, catalogOrder: index }));
     }
 
     LibraryUI.renderCategoryFilters(allBooks);
-    LibraryUI.renderLibrary(allBooks, (book) => openPlayerUI(book, allBooks, switchView));
-    LibraryUI.renderHistory(allBooks, (book) => openPlayerUI(book, allBooks, switchView));
-
+    await refreshPersonalizedCatalog();
     setupListeners();
 }
 
@@ -200,30 +337,26 @@ function switchView(id, pushHistory = true) {
     document.body.classList.toggle('player-mode', nextView === 'player');
 
     if (nextView === 'history') {
-        LibraryUI.renderHistory(allBooks, (book) => openPlayerUI(book, allBooks, switchView));
+        refreshPersonalizedCatalog();
     }
 
     if (nextView === 'library') {
         document.body.style.background = "";
         const playBtn = document.getElementById('play-btn');
         if (playBtn) playBtn.style.boxShadow = 'none';
+        refreshPersonalizedCatalog();
     }
 }
 
 function filterLibraryLogic(category) {
+    currentCategory = category;
     document.querySelectorAll('.filter-btn').forEach((btn) => btn.classList.remove('active'));
 
     const btnId = category === 'All' ? 'filter-all' : `filter-${category}`;
     const activeBtn = document.getElementById(btnId);
     if (activeBtn) activeBtn.classList.add('active');
 
-    if (category === 'All') {
-        LibraryUI.renderLibrary(allBooks, (book) => openPlayerUI(book, allBooks, switchView));
-        return;
-    }
-
-    const filtered = allBooks.filter((book) => book.moods && book.moods.includes(category));
-    LibraryUI.renderLibrary(filtered, (book) => openPlayerUI(book, allBooks, switchView));
+    renderLibrarySurfaces();
 }
 
 function setupListeners() {
@@ -270,14 +403,8 @@ function setupListeners() {
 
     if (searchInput) {
         searchInput.addEventListener('input', (event) => {
-            const query = String(event.target.value || '').trim().toLowerCase();
-            const filtered = allBooks.filter((book) => {
-                const title = String(book.title || '').toLowerCase();
-                const author = String(book.author || '').toLowerCase();
-                return title.includes(query) || author.includes(query);
-            });
-
-            LibraryUI.renderLibrary(filtered, (book) => openPlayerUI(book, allBooks, switchView));
+            currentSearchQuery = String(event.target.value || '');
+            renderLibrarySurfaces();
         });
     }
 

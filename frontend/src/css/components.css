@@ -51,6 +51,14 @@
     box-shadow: 0 24px 48px var(--theme-shadow-strong);
 }
 
+.book-card.has-progress {
+    border-color: rgba(31, 221, 255, 0.32);
+}
+
+.book-card.is-finished {
+    border-color: rgba(255, 211, 123, 0.26);
+}
+
 .book-card img {
     width: 100%;
     border-radius: 16px;
@@ -89,6 +97,29 @@
     z-index: 2;
 }
 
+.card-activity-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    border: 1px solid rgba(255,255,255,0.12);
+    backdrop-filter: blur(10px);
+    z-index: 2;
+}
+
+.card-activity-badge.continue {
+    background: rgba(31, 221, 255, 0.16);
+    color: var(--secondary);
+}
+
+.card-activity-badge.finished {
+    background: rgba(255, 211, 123, 0.14);
+    color: #ffd37b;
+}
+
 .mood-tags {
     display: flex;
     gap: 5px;
@@ -104,6 +135,166 @@
     border-radius: 10px;
     color: var(--theme-text-soft);
     border: 1px solid var(--theme-border);
+}
+
+.card-progress-block {
+    margin-top: 12px;
+    text-align: left;
+}
+
+.card-progress-track {
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.08);
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.06);
+}
+
+.card-progress-fill {
+    height: 100%;
+    border-radius: inherit;
+    background: var(--theme-progress-fill);
+}
+
+.card-progress-text {
+    margin-top: 8px;
+    font-size: 0.76rem;
+    color: var(--theme-text-dim);
+}
+
+.library-personalized {
+    display: grid;
+    gap: 18px;
+    margin-bottom: 22px;
+}
+
+.continue-spotlight,
+.library-discovery-panel {
+    background: linear-gradient(145deg, var(--theme-surface-1), rgba(255,255,255,0.03));
+    border: 1px solid var(--theme-border);
+    border-radius: 26px;
+    padding: 20px;
+    box-shadow: 0 18px 40px var(--theme-shadow);
+}
+
+.continue-spotlight {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) 140px;
+    gap: 20px;
+    align-items: center;
+}
+
+.continue-copy h3,
+.library-discovery-panel h3 {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    color: var(--theme-title);
+    margin: 6px 0;
+}
+
+.continue-copy p {
+    color: var(--theme-text-dim);
+    margin-bottom: 14px;
+}
+
+.personalized-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--secondary);
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.continue-cover {
+    width: 100%;
+    aspect-ratio: 2 / 3;
+    object-fit: cover;
+    border-radius: 18px;
+    box-shadow: 0 16px 34px rgba(0,0,0,0.32);
+}
+
+.spotlight-progress-track {
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.08);
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+
+.spotlight-progress-fill {
+    height: 100%;
+    border-radius: inherit;
+    background: var(--theme-progress-fill);
+}
+
+.spotlight-progress-text {
+    display: block;
+    margin-top: 10px;
+    color: var(--theme-text-dim);
+    font-size: 0.84rem;
+}
+
+.personalized-action {
+    margin-top: 16px;
+}
+
+.discovery-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.discovery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+}
+
+.discovery-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--theme-border);
+    border-radius: 18px;
+    padding: 12px;
+    text-align: left;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    cursor: pointer;
+    color: inherit;
+    transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.discovery-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--theme-border-strong);
+    background: rgba(255,255,255,0.07);
+}
+
+.discovery-card img {
+    width: 54px;
+    height: 72px;
+    object-fit: cover;
+    border-radius: 10px;
+    box-shadow: 0 8px 18px rgba(0,0,0,0.25);
+}
+
+.discovery-info {
+    display: grid;
+    gap: 4px;
+}
+
+.discovery-info strong {
+    font-size: 0.9rem;
+    color: var(--theme-title);
+}
+
+.discovery-info span {
+    font-size: 0.76rem;
+    color: var(--theme-text-dim);
 }
 
 .chapter-list-container {
@@ -152,6 +343,12 @@
     flex-grow: 1;
 }
 
+.chapter-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
 .chapter-num {
     font-size: 0.9rem;
     color: var(--theme-text-dim);
@@ -173,6 +370,31 @@
 
 .chapter-item.active .chapter-title {
     font-weight: 700;
+}
+
+.chapter-item.completed .chapter-title,
+.chapter-item.completed .chapter-num,
+.chapter-item.completed .chapter-status {
+    color: #77d28c;
+}
+
+.chapter-item.resume-point:not(.active) {
+    background: rgba(31, 221, 255, 0.05);
+}
+
+.chapter-progress-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.chapter-progress-label.done {
+    color: #77d28c;
+}
+
+.chapter-progress-label.resume {
+    color: var(--secondary);
 }
 
 .chapter-status {
@@ -678,6 +900,18 @@
     .mood-tag {
         font-size: 0.6rem;
         padding: 2px 6px;
+    }
+
+    .continue-spotlight {
+        grid-template-columns: 1fr;
+    }
+
+    .continue-cover {
+        max-width: 180px;
+    }
+
+    .discovery-grid {
+        grid-template-columns: 1fr;
     }
 
     .nav-tabs button {
