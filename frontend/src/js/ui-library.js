@@ -163,7 +163,7 @@ export function renderLibrarySpotlight(books, openPlayerCallback, options = {}) 
     const activeCategory = options.activeCategory || 'All';
     const searchQuery = String(options.searchQuery || '').trim();
     const historyBooks = books
-        .filter((book) => book.savedState)
+        .filter((book) => book.savedState && !book.isFinished)
         .sort((a, b) => getTimeStamp(b.lastUpdatedAt) - getTimeStamp(a.lastUpdatedAt));
 
     const continueBook = historyBooks[0];

@@ -81,7 +81,8 @@ function enrichBooksWithHistory(books, history) {
                 .sort((a, b) => (tasteProfile.get(b.key) || 0) - (tasteProfile.get(a.key) || 0));
             const preferenceScore = matchingSignals.reduce((sum, signal) => sum + (tasteProfile.get(signal.key) || 0), 0);
             const isFinished = Boolean(progress?.isFinished || progressPercent >= 92);
-            const progressBoost = savedState ? 1400 + progressPercent : 0;
+            const progressBoost = savedState && !isFinished ? 1600 + progressPercent : 0;
+            const hasRecommendationMatch = preferenceScore > 0;
 
             return {
                 ...book,
@@ -91,11 +92,26 @@ function enrichBooksWithHistory(books, history) {
                 historyRank: progress?.historyRank ?? Number.MAX_SAFE_INTEGER,
                 isFinished,
                 personalizedScore: progressBoost + preferenceScore + (isFinished ? 40 : 0),
+                rankingBucket: savedState && !isFinished
+                    ? 0
+                    : hasRecommendationMatch && !savedState
+                        ? 1
+                        : !savedState
+                            ? 2
+                            : 3,
                 recommendationReason: matchingSignals[0]?.label || '',
                 topReasons: matchingSignals.slice(0, 3).map((signal) => signal.label)
             };
         })
         .sort((a, b) => {
+            const bucketDiff = (a.rankingBucket || 0) - (b.rankingBucket || 0);
+            if (bucketDiff) return bucketDiff;
+
+            if (a.rankingBucket === 0 && b.rankingBucket === 0) {
+                const recencyDiff = getTimeStamp(b.lastUpdatedAt) - getTimeStamp(a.lastUpdatedAt);
+                if (recencyDiff) return recencyDiff;
+            }
+
             const scoreDiff = (b.personalizedScore || 0) - (a.personalizedScore || 0);
             if (scoreDiff) return scoreDiff;
 
