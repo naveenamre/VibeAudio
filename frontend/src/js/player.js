@@ -11,6 +11,8 @@ let progressInterval = null;
 let stallPauseTimeout = null;
 
 const STALL_AUTO_PAUSE_MS = 4000;
+const PROGRESS_TICK_MS = 1000;
+const PROGRESS_SAVE_EVERY_TICKS = 5;
 
 let currentLang = localStorage.getItem('vibe_pref_lang') || 'hi';
 
@@ -21,15 +23,25 @@ let bassCutFilter;
 let trebleBoostFilter;
 let compressor;
 
+let currentSourceType = 'audio';
+let ytPlayer = null;
+let ytPlayerPromise = null;
+let ytApiPromise = null;
+
 audio.addEventListener('ended', () => {
+    if (currentSourceType === 'youtube') return;
+
     console.log("Chapter ended. Moving to the next one...");
     clearStallPauseTimeout();
+    stopProgressTracker();
     if (!nextChapter()) {
         handlePausedState(true);
     }
 });
 
 audio.addEventListener('waiting', () => {
+    if (currentSourceType === 'youtube') return;
+
     console.log("Audio buffering...");
     scheduleAutoPauseForStall();
     if (audioCtx && audioCtx.state === 'suspended') {
@@ -37,10 +49,31 @@ audio.addEventListener('waiting', () => {
     }
 });
 
-audio.addEventListener('stalled', scheduleAutoPauseForStall);
+audio.addEventListener('stalled', () => {
+    if (currentSourceType !== 'youtube') scheduleAutoPauseForStall();
+});
 audio.addEventListener('canplay', clearStallPauseTimeout);
-audio.addEventListener('playing', clearStallPauseTimeout);
-audio.addEventListener('seeking', clearStallPauseTimeout);
+audio.addEventListener('playing', () => {
+    if (currentSourceType !== 'youtube') {
+        clearStallPauseTimeout();
+        startProgressTracker();
+        updateUIState(true);
+        sendToAndroid(true);
+        if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "playing";
+    }
+});
+audio.addEventListener('pause', () => {
+    if (currentSourceType !== 'youtube' && currentBook) {
+        handlePausedState(true);
+    }
+});
+audio.addEventListener('seeking', () => {
+    clearStallPauseTimeout();
+    dispatchPlayerTimeUpdate();
+});
+audio.addEventListener('seeked', dispatchPlayerTimeUpdate);
+audio.addEventListener('loadedmetadata', dispatchPlayerTimeUpdate);
+audio.addEventListener('timeupdate', dispatchPlayerTimeUpdate);
 
 function clearStallPauseTimeout() {
     if (stallPauseTimeout) {
@@ -49,34 +82,223 @@ function clearStallPauseTimeout() {
     }
 }
 
+function getCurrentPlaybackValues() {
+    if (currentSourceType === 'youtube' && ytPlayer && window.YT?.PlayerState) {
+        let currentTime = 0;
+        let duration = 0;
+
+        try {
+            currentTime = Number(ytPlayer.getCurrentTime?.() || 0);
+            duration = Number(ytPlayer.getDuration?.() || 0);
+        } catch (error) {
+            console.warn("Unable to read YouTube playback state.", error);
+        }
+
+        return { currentTime, duration };
+    }
+
+    return {
+        currentTime: Number(audio.currentTime || 0),
+        duration: Number(audio.duration || 0)
+    };
+}
+
+function getCurrentChapter() {
+    if (!currentBook?.activeChapters) return null;
+    return currentBook.activeChapters[currentChapterIndex] || null;
+}
+
+function getCurrentSourceUrl() {
+    return getCurrentChapter()?.url || "";
+}
+
+function isYouTubeUrl(url) {
+    if (!url) return false;
+
+    try {
+        const parsed = new URL(url, window.location.href);
+        const host = parsed.hostname.replace(/^www\./, '');
+        return host === 'youtube.com' || host === 'm.youtube.com' || host === 'youtu.be' || host === 'youtube-nocookie.com';
+    } catch (error) {
+        return /(?:youtube\.com|youtu\.be)/i.test(String(url));
+    }
+}
+
+function extractYouTubeVideoId(url) {
+    if (!url) return null;
+
+    try {
+        const parsed = new URL(url, window.location.href);
+        const host = parsed.hostname.replace(/^www\./, '');
+
+        if (host === 'youtu.be') {
+            const id = parsed.pathname.replace(/^\//, '').split('/')[0];
+            return id || null;
+        }
+
+        if (host === 'youtube.com' || host === 'm.youtube.com' || host === 'youtube-nocookie.com') {
+            if (parsed.pathname === '/watch') {
+                return parsed.searchParams.get('v');
+            }
+
+            const segments = parsed.pathname.split('/').filter(Boolean);
+            if (segments[0] === 'embed' || segments[0] === 'shorts' || segments[0] === 'live') {
+                return segments[1] || null;
+            }
+        }
+    } catch (error) {
+        const match = String(url).match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/))([A-Za-z0-9_-]{11})/);
+        return match ? match[1] : null;
+    }
+
+    return null;
+}
+
+function loadYouTubeApi() {
+    if (window.YT?.Player) return Promise.resolve(window.YT);
+    if (ytApiPromise) return ytApiPromise;
+
+    ytApiPromise = new Promise((resolve, reject) => {
+        const existing = document.querySelector('script[data-vibe-youtube-api]');
+        const previousReady = window.onYouTubeIframeAPIReady;
+
+        window.onYouTubeIframeAPIReady = () => {
+            if (typeof previousReady === 'function') previousReady();
+            resolve(window.YT);
+        };
+
+        if (!existing) {
+            const script = document.createElement('script');
+            script.src = "https://www.youtube.com/iframe_api";
+            script.async = true;
+            script.dataset.vibeYoutubeApi = "true";
+            script.onerror = () => reject(new Error("YouTube API failed to load."));
+            document.head.appendChild(script);
+        }
+    });
+
+    return ytApiPromise;
+}
+
+function ensureYouTubeContainer() {
+    let container = document.getElementById('yt-ninja-container');
+    if (container) return container;
+
+    container = document.createElement('div');
+    container.id = 'yt-ninja-container';
+    container.style.position = 'absolute';
+    container.style.width = '1px';
+    container.style.height = '1px';
+    container.style.opacity = '0';
+    container.style.pointerEvents = 'none';
+    container.style.left = '-9999px';
+    document.body.appendChild(container);
+
+    return container;
+}
+
+async function ensureYouTubePlayer() {
+    if (ytPlayer) return ytPlayer;
+    if (ytPlayerPromise) return ytPlayerPromise;
+
+    ytPlayerPromise = (async () => {
+        await loadYouTubeApi();
+        const container = ensureYouTubeContainer();
+
+        return await new Promise((resolve) => {
+            ytPlayer = new window.YT.Player(container, {
+                height: '1',
+                width: '1',
+                playerVars: {
+                    playsinline: 1,
+                    controls: 0,
+                    disablekb: 1,
+                    rel: 0,
+                    modestbranding: 1
+                },
+                events: {
+                    onReady: () => resolve(ytPlayer),
+                    onStateChange: handleYouTubeStateChange,
+                    onError: (event) => {
+                        console.warn("YouTube playback error.", event?.data);
+                        handlePausedState(true);
+                    }
+                }
+            });
+        });
+    })();
+
+    return ytPlayerPromise;
+}
+
+function handleYouTubeStateChange(event) {
+    if (currentSourceType !== 'youtube' || !window.YT?.PlayerState) return;
+
+    clearStallPauseTimeout();
+    dispatchPlayerTimeUpdate();
+
+    switch (event.data) {
+        case window.YT.PlayerState.PLAYING:
+            startProgressTracker();
+            updateUIState(true);
+            sendToAndroid(true);
+            if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "playing";
+            break;
+        case window.YT.PlayerState.PAUSED:
+            handlePausedState(true);
+            break;
+        case window.YT.PlayerState.BUFFERING:
+            scheduleAutoPauseForStall();
+            break;
+        case window.YT.PlayerState.ENDED:
+            stopProgressTracker();
+            if (!nextChapter()) {
+                handlePausedState(true);
+            }
+            break;
+        default:
+            break;
+    }
+}
+
 function handlePausedState(saveProgress = true) {
     clearStallPauseTimeout();
+    stopProgressTracker();
+
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "paused";
     updateUIState(false);
     sendToAndroid(false);
-    stopProgressTracker();
 
     if (saveProgress && currentBook) {
-        saveUserProgress(currentBook.bookId, currentChapterIndex, audio.currentTime, audio.duration);
+        const { currentTime, duration } = getCurrentPlaybackValues();
+        saveUserProgress(currentBook.bookId, currentChapterIndex, currentTime, duration);
     }
 }
 
 function scheduleAutoPauseForStall() {
     clearStallPauseTimeout();
-    if (audio.paused) return;
+    if (!isPlaybackActive()) return;
 
     stallPauseTimeout = setTimeout(() => {
         stallPauseTimeout = null;
 
-        if (audio.paused || audio.readyState >= 3) return;
+        if (!isPlaybackActive()) return;
 
-        console.warn("Audio stalled. Waiting for manual play.");
-        audio.pause();
+        console.warn("Playback stalled. Waiting for manual play.");
+
+        if (currentSourceType === 'youtube' && ytPlayer?.pauseVideo) {
+            ytPlayer.pauseVideo();
+        } else {
+            if (audio.readyState >= 3) return;
+            audio.pause();
+        }
+
         handlePausedState(true);
     }, STALL_AUTO_PAUSE_MS);
 }
 
 function initAudioContext() {
+    if (currentSourceType === 'youtube') return;
     if (audioCtx) return;
 
     const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
@@ -119,6 +341,8 @@ function initAudioContext() {
 }
 
 export function toggleVocalBoost(enable) {
+    if (currentSourceType === 'youtube') return false;
+
     initAudioContext();
     if (!audioCtx) return false;
 
@@ -156,13 +380,27 @@ export function getCurrentLang() {
     return currentLang;
 }
 
+export function isPlaybackActive() {
+    if (currentSourceType === 'youtube' && ytPlayer && window.YT?.PlayerState) {
+        const state = ytPlayer.getPlayerState();
+        return state === window.YT.PlayerState.PLAYING || state === window.YT.PlayerState.BUFFERING;
+    }
+
+    return Boolean(audio.src) && !audio.paused;
+}
+
 export function getCurrentState() {
+    const { currentTime, duration } = getCurrentPlaybackValues();
+
     return {
         book: currentBook,
         currentChapterIndex,
-        currentTime: audio.currentTime,
-        duration: audio.duration,
-        lang: currentLang
+        currentTime,
+        duration,
+        lang: currentLang,
+        sourceType: currentSourceType,
+        sourceUrl: getCurrentSourceUrl(),
+        isPlaying: isPlaybackActive()
     };
 }
 
@@ -178,6 +416,45 @@ export function setLanguage(lang) {
     loadBook(currentBook, currentChapterIndex, 0);
 }
 
+function stopCurrentPlayback() {
+    audio.pause();
+    audio.onloadedmetadata = null;
+
+    if (ytPlayer?.pauseVideo) {
+        try {
+            ytPlayer.pauseVideo();
+        } catch (error) {
+            console.warn("Unable to pause YouTube player.", error);
+        }
+    }
+}
+
+async function loadYouTubeChapter(videoId, startTime = 0) {
+    currentSourceType = 'youtube';
+    audio.removeAttribute('src');
+    audio.load();
+
+    const player = await ensureYouTubePlayer();
+
+    player.loadVideoById({
+        videoId,
+        startSeconds: Math.max(0, Number(startTime) || 0)
+    });
+}
+
+function loadAudioChapter(url, startTime = 0) {
+    currentSourceType = 'audio';
+    audio.crossOrigin = "anonymous";
+    audio.src = url;
+    audio.onloadedmetadata = () => {
+        if (startTime > 0) {
+            audio.currentTime = startTime;
+        }
+        playAudioSafe();
+    };
+    audio.load();
+}
+
 export async function loadBook(book, chapterIndex = 0, startTime = 0) {
     if (!book) return;
 
@@ -187,50 +464,29 @@ export async function loadBook(book, chapterIndex = 0, startTime = 0) {
 
     if (!book.activeChapters || !book.activeChapters[chapterIndex]) return;
 
-    if (currentBook && currentBook.bookId === book.bookId && currentChapterIndex === chapterIndex && audio.src) {
+    if (currentBook && currentBook.bookId === book.bookId && currentChapterIndex === chapterIndex) {
         const isSameLang = (currentLang === 'en' && book.activeChapters === book.chapters_en) ||
             (currentLang === 'hi' && book.activeChapters === book.chapters);
 
-        if (isSameLang) {
+        if (isSameLang && getCurrentSourceUrl()) {
             console.log("Chapter already loaded. Resuming...");
-            if (audio.paused) playAudioSafe();
+            if (!isPlaybackActive()) togglePlay();
             return;
         }
     }
 
+    stopProgressTracker();
+    clearStallPauseTimeout();
+    stopCurrentPlayback();
+
     currentBook = book;
     currentChapterIndex = chapterIndex;
 
-    stopProgressTracker();
-    clearStallPauseTimeout();
-    audio.pause();
-
     const chapter = currentBook.activeChapters[chapterIndex];
     const fileName = `${book.bookId}_${chapterIndex}_${currentLang}.mp3`;
+    currentSourceType = isYouTubeUrl(chapter.url) ? 'youtube' : 'audio';
 
     console.log(`Loading ${chapter.name} (${currentLang.toUpperCase()})`);
-
-    let offlinePath = "";
-    if (window.AndroidInterface) {
-        offlinePath = window.AndroidInterface.checkFile(fileName);
-    }
-
-    if (offlinePath) {
-        audio.src = offlinePath;
-        audio.removeAttribute('crossorigin');
-    } else {
-        audio.crossOrigin = "anonymous";
-        audio.src = chapter.url;
-    }
-
-    audio.onloadedmetadata = () => {
-        if (startTime > 0) {
-            audio.currentTime = startTime;
-        }
-        playAudioSafe();
-    };
-
-    audio.load();
 
     if ('mediaSession' in navigator) {
         updateMediaSession(book, chapter);
@@ -239,17 +495,58 @@ export async function loadBook(book, chapterIndex = 0, startTime = 0) {
 
     sendToAndroid(false);
     updateUIState(false);
+    dispatchPlayerTimeUpdate();
+
+    try {
+        if (isYouTubeUrl(chapter.url)) {
+            const videoId = extractYouTubeVideoId(chapter.url);
+            if (!videoId) {
+                throw new Error("Unsupported YouTube URL.");
+            }
+
+            await loadYouTubeChapter(videoId, startTime);
+            return;
+        }
+
+        let offlinePath = "";
+        if (window.AndroidInterface) {
+            offlinePath = window.AndroidInterface.checkFile(fileName);
+        }
+
+        if (offlinePath) {
+            audio.src = offlinePath;
+            audio.removeAttribute('crossorigin');
+            audio.onloadedmetadata = () => {
+                if (startTime > 0) {
+                    audio.currentTime = startTime;
+                }
+                playAudioSafe();
+            };
+            audio.load();
+            currentSourceType = 'audio';
+            return;
+        }
+
+        loadAudioChapter(chapter.url, startTime);
+    } catch (error) {
+        console.error("Failed to load chapter source.", error);
+        currentSourceType = 'audio';
+        updateUIState(false);
+    }
 }
 
 export function downloadCurrentChapter(onProgress) {
-    if (!currentBook || !window.AndroidInterface) return;
+    if (!currentBook || !window.AndroidInterface || currentSourceType === 'youtube') {
+        if (onProgress) onProgress(false);
+        return;
+    }
 
     const chapter = currentBook.activeChapters[currentChapterIndex];
     const fileName = `${currentBook.bookId}_${currentChapterIndex}_${currentLang}.mp3`;
 
     window.onDownloadComplete = (success) => {
         if (onProgress) onProgress(Boolean(success));
-        updateUIState(!audio.paused);
+        updateUIState(isPlaybackActive());
         delete window.onDownloadComplete;
     };
 
@@ -257,16 +554,16 @@ export function downloadCurrentChapter(onProgress) {
 }
 
 export async function isChapterDownloaded() {
-    if (!currentBook || !window.AndroidInterface) return false;
+    if (!currentBook || !window.AndroidInterface || currentSourceType === 'youtube') return false;
     const fileName = `${currentBook.bookId}_${currentChapterIndex}_${currentLang}.mp3`;
     return window.AndroidInterface.checkFile(fileName) !== "";
 }
 
 export async function deleteChapter() {
-    if (!currentBook || !window.AndroidInterface) return;
+    if (!currentBook || !window.AndroidInterface || currentSourceType === 'youtube') return;
     const fileName = `${currentBook.bookId}_${currentChapterIndex}_${currentLang}.mp3`;
     window.AndroidInterface.deleteFile(fileName);
-    updateUIState(!audio.paused);
+    updateUIState(isPlaybackActive());
 }
 
 function updateMediaSession(book, chapter) {
@@ -292,13 +589,12 @@ function setupMediaHandlers() {
 
     const actionHandlers = [
         ['play', () => {
-            if (audio.paused) playAudioSafe();
+            if (!isPlaybackActive()) togglePlay();
             else updateUIState(true);
         }],
         ['pause', () => {
-            if (!audio.paused) {
-                audio.pause();
-                handlePausedState(true);
+            if (isPlaybackActive()) {
+                togglePlay();
             } else {
                 updateUIState(false);
             }
@@ -326,36 +622,83 @@ async function playAudioSafe() {
         if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "playing";
         updateUIState(true);
         sendToAndroid(true);
+        return true;
     } catch (error) {
         if (error.name !== 'AbortError') {
             updateUIState(false);
         }
+        return false;
     }
 }
 
 export function togglePlay() {
+    if (currentSourceType === 'youtube') {
+        if (!ytPlayer || !window.YT?.PlayerState) return false;
+
+        const playerState = ytPlayer.getPlayerState();
+        if (playerState === window.YT.PlayerState.PLAYING || playerState === window.YT.PlayerState.BUFFERING) {
+            ytPlayer.pauseVideo();
+            return false;
+        }
+
+        ytPlayer.playVideo();
+        return true;
+    }
+
     if (audio.paused) {
         playAudioSafe();
         return true;
     }
 
     audio.pause();
-    handlePausedState(true);
     return false;
 }
 
 export function skip(seconds) {
+    if (currentSourceType === 'youtube') {
+        if (!ytPlayer) return;
+        const nextTime = Math.max(0, (ytPlayer.getCurrentTime?.() || 0) + seconds);
+        ytPlayer.seekTo(nextTime, true);
+        dispatchPlayerTimeUpdate();
+        return;
+    }
+
     audio.currentTime += seconds;
+    dispatchPlayerTimeUpdate();
 }
 
 export function seekTo(percent) {
+    if (currentSourceType === 'youtube') {
+        if (!ytPlayer) return;
+        const duration = Number(ytPlayer.getDuration?.() || 0);
+        if (duration) {
+            ytPlayer.seekTo((percent / 100) * duration, true);
+            dispatchPlayerTimeUpdate();
+        }
+        return;
+    }
+
     if (audio.duration) {
         audio.currentTime = (percent / 100) * audio.duration;
+        dispatchPlayerTimeUpdate();
     }
 }
 
 export function setPlaybackSpeed(speed) {
+    if (currentSourceType === 'youtube') {
+        if (!ytPlayer) return 1;
+        const availableRates = ytPlayer.getAvailablePlaybackRates?.() || [];
+        const targetRate = availableRates.includes(speed) ? speed : (availableRates.includes(1) ? 1 : availableRates[0]);
+
+        if (targetRate) {
+            ytPlayer.setPlaybackRate(targetRate);
+        }
+
+        return ytPlayer.getPlaybackRate?.() || targetRate || 1;
+    }
+
     audio.playbackRate = speed;
+    return audio.playbackRate;
 }
 
 export function setSleepTimer(minutes, callback) {
@@ -363,9 +706,8 @@ export function setSleepTimer(minutes, callback) {
 
     if (minutes > 0) {
         window.sleepTimer = setTimeout(() => {
-            if (!audio.paused) {
-                audio.pause();
-                handlePausedState(true);
+            if (isPlaybackActive()) {
+                togglePlay();
             }
             if (callback) callback();
         }, minutes * 60 * 1000);
@@ -407,13 +749,28 @@ function sendToAndroid(isPlaying) {
     }
 }
 
+function dispatchPlayerTimeUpdate() {
+    window.dispatchEvent(new CustomEvent('player-time-update', {
+        detail: getCurrentState()
+    }));
+}
+
 function startProgressTracker() {
     stopProgressTracker();
+
+    let tickCount = 0;
     progressInterval = setInterval(() => {
-        if (!audio.paused && currentBook) {
-            saveUserProgress(currentBook.bookId, currentChapterIndex, audio.currentTime, audio.duration);
+        const state = getCurrentState();
+
+        dispatchPlayerTimeUpdate();
+
+        if (!state.book || !state.isPlaying || state.currentTime <= 0) return;
+
+        tickCount += 1;
+        if (tickCount % PROGRESS_SAVE_EVERY_TICKS === 0) {
+            saveUserProgress(state.book.bookId, state.currentChapterIndex, state.currentTime, state.duration);
         }
-    }, 5000);
+    }, PROGRESS_TICK_MS);
 }
 
 function stopProgressTracker() {
@@ -425,12 +782,14 @@ function stopProgressTracker() {
 
 async function updateUIState(isPlaying) {
     const isDownloaded = await isChapterDownloaded();
+    const state = getCurrentState();
     const event = new CustomEvent('player-state-change', {
         detail: {
             isPlaying,
             book: currentBook,
             chapter: currentBook ? currentBook.activeChapters[currentChapterIndex] : null,
-            isDownloaded
+            isDownloaded,
+            sourceType: state.sourceType
         }
     });
 

@@ -1,5 +1,5 @@
 import { fetchAllBooks, getLocalUserProfile, syncUserProfile, saveUserProgress } from './api.js';
-import { togglePlay, nextChapter, prevChapter, skip, seekTo, getAudioElement, getCurrentState } from './player.js';
+import { togglePlay, nextChapter, prevChapter, skip, seekTo, getCurrentState } from './player.js';
 import * as LibraryUI from './ui-library.js';
 import { openPlayerUI, updateUI } from './ui-player-main.js';
 import { formatTime, renderSingleComment, setActiveThemeSurface } from './ui-player-helpers.js';
@@ -29,11 +29,11 @@ window.app = {
     },
 
     seekToComment: (time) => {
-        const audio = getAudioElement();
-        if (!audio.duration) return;
+        const state = getCurrentState();
+        if (!state.duration) return;
 
-        seekTo((time / audio.duration) * 100);
-        if (audio.paused) {
+        seekTo((time / state.duration) * 100);
+        if (!state.isPlaying) {
             const isPlaying = togglePlay();
             updateUI(isPlaying);
         }
@@ -233,7 +233,6 @@ function setupListeners() {
     const seekBack = document.getElementById('seek-back-btn');
     const seekFwd = document.getElementById('seek-fwd-btn');
     const progress = document.getElementById('progress-bar');
-    const audio = getAudioElement();
     const postBtn = document.getElementById('post-comment-btn');
     const searchInput = document.getElementById('search-input');
 
@@ -310,9 +309,8 @@ function setupListeners() {
         });
     }
 
-    audio.ontimeupdate = () => {
-        const state = getCurrentState();
-        if (!state.duration || !progress) return;
+    const syncProgressUI = (state = getCurrentState()) => {
+        if (!progress || !state.duration) return;
 
         const pct = (state.currentTime / state.duration) * 100;
         progress.value = pct;
@@ -323,6 +321,25 @@ function setupListeners() {
         if (currentTimeEl) currentTimeEl.innerText = formatTime(state.currentTime);
         if (durationEl) durationEl.innerText = formatTime(state.duration);
     };
+
+    window.addEventListener('player-time-update', (event) => syncProgressUI(event.detail));
+    window.addEventListener('player-state-change', () => {
+        const state = getCurrentState();
+        if (!state.duration) {
+            if (progress) {
+                progress.value = 0;
+                progress.style.backgroundSize = `0% 100%`;
+            }
+
+            const currentTimeEl = document.getElementById('current-time');
+            const durationEl = document.getElementById('total-duration');
+            if (currentTimeEl) currentTimeEl.innerText = "00:00";
+            if (durationEl) durationEl.innerText = "00:00";
+            return;
+        }
+
+        syncProgressUI(state);
+    });
 }
 
 function setupImageObserver() {

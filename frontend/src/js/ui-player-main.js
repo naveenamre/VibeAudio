@@ -2,7 +2,7 @@ import { fetchBookDetails, fetchUserProgress } from './api.js';
 import {
     loadBook,
     getCurrentState,
-    getAudioElement,
+    isPlaybackActive,
     skip,
     setPlaybackSpeed,
     setSleepTimer,
@@ -89,13 +89,13 @@ export async function openPlayerUI(partialBook, allBooks, switchViewCallback) {
 
     if (finalBook.savedState) {
         loadBook(finalBook, finalBook.savedState.chapterIndex, finalBook.savedState.currentTime);
-        updateUI(!getAudioElement().paused, finalBook);
+        updateUI(isPlaybackActive(), finalBook);
         return;
     }
 
     const state = getCurrentState();
     if (state.book && state.book.bookId === finalBook.bookId) {
-        updateUI(!getAudioElement().paused, finalBook);
+        updateUI(isPlaybackActive(), finalBook);
         return;
     }
 
@@ -105,12 +105,12 @@ export async function openPlayerUI(partialBook, allBooks, switchViewCallback) {
             if (saved) loadBook(finalBook, saved.chapterIndex, saved.currentTime);
             else loadBook(finalBook, 0);
 
-            updateUI(!getAudioElement().paused, finalBook);
+            updateUI(isPlaybackActive(), finalBook);
         })
         .catch((error) => {
             console.warn("Falling back to default chapter load.", error);
             loadBook(finalBook, 0);
-            updateUI(!getAudioElement().paused, finalBook);
+            updateUI(isPlaybackActive(), finalBook);
         });
 }
 
@@ -141,6 +141,24 @@ export function updateUI(isPlaying, book = null, chapter = null) {
 
     if (!state.book) return;
 
+    const isYouTubeSource = state.sourceType === 'youtube';
+    const boostBtn = document.getElementById('vocal-boost-btn');
+    if (boostBtn) {
+        boostBtn.disabled = isYouTubeSource;
+        boostBtn.title = isYouTubeSource ? "Vocal boost is only available for direct audio sources." : "Vocal Clarity Booster";
+
+        if (isYouTubeSource) {
+            boostBtn.classList.remove('active');
+            boostBtn.style.color = "";
+            boostBtn.style.boxShadow = "";
+            boostBtn.style.opacity = "0.55";
+            boostBtn.style.cursor = "not-allowed";
+        } else {
+            boostBtn.style.opacity = "";
+            boostBtn.style.cursor = "";
+        }
+    }
+
     document.querySelectorAll('#chapter-list .chapter-item').forEach((li, idx) => {
         const status = li.querySelector('.chapter-status');
         if (idx === state.currentChapterIndex) {
@@ -156,6 +174,20 @@ export function updateUI(isPlaying, book = null, chapter = null) {
     if (document.body.classList.contains('is-android')) {
         const dlBtn = document.getElementById('download-btn');
         if (dlBtn) {
+            if (isYouTubeSource) {
+                dlBtn.innerHTML = `<i class="fas fa-ban"></i>`;
+                dlBtn.style.color = "";
+                dlBtn.disabled = true;
+                dlBtn.title = "YouTube embeds cannot be downloaded for offline use.";
+                dlBtn.style.opacity = "0.55";
+                dlBtn.style.cursor = "not-allowed";
+                return;
+            }
+
+            dlBtn.disabled = false;
+            dlBtn.title = "Download Offline";
+            dlBtn.style.opacity = "";
+            dlBtn.style.cursor = "";
             isChapterDownloaded().then((downloaded) => {
                 dlBtn.innerHTML = downloaded ? `<i class="fas fa-check"></i>` : `<i class="fas fa-download"></i>`;
                 dlBtn.style.color = downloaded ? "#00ff00" : "";
@@ -177,11 +209,11 @@ function setupPlayButton(book) {
             const history = await fetchUserProgress();
             const saved = history.find((item) => item.bookId == book.bookId);
             loadBook(book, saved ? saved.chapterIndex : 0, saved ? saved.currentTime : 0);
-            updateUI(!getAudioElement().paused, book);
+            updateUI(isPlaybackActive(), book);
         } catch (error) {
             console.warn("Falling back to chapter 1 play start.", error);
             loadBook(book, 0);
-            updateUI(!getAudioElement().paused, book);
+            updateUI(isPlaybackActive(), book);
         }
     };
 }
@@ -194,9 +226,9 @@ export function setupPlayerListeners() {
         newSpeedBtn.onclick = () => {
             currentSpeedIndex = (currentSpeedIndex + 1) % speeds.length;
             const newSpeed = speeds[currentSpeedIndex];
-            setPlaybackSpeed(newSpeed);
-            newSpeedBtn.innerText = `${newSpeed}x`;
-            showToast(`Speed: ${newSpeed}x`);
+            const appliedSpeed = setPlaybackSpeed(newSpeed);
+            newSpeedBtn.innerText = `${appliedSpeed}x`;
+            showToast(`Speed: ${appliedSpeed}x`);
         };
     }
 
@@ -216,8 +248,19 @@ export function setupPlayerListeners() {
         const newBoostBtn = boostBtn.cloneNode(true);
         boostBtn.parentNode.replaceChild(newBoostBtn, boostBtn);
         newBoostBtn.onclick = () => {
+            if (getCurrentState().sourceType === 'youtube') {
+                showToast("Vocal boost is not available for YouTube links");
+                return;
+            }
+
             const isBoosting = newBoostBtn.classList.toggle('active');
-            toggleVocalBoost(isBoosting);
+            const applied = toggleVocalBoost(isBoosting);
+
+            if (!applied) {
+                newBoostBtn.classList.remove('active');
+                showToast("Vocal boost is not available for this source");
+                return;
+            }
 
             if (isBoosting) {
                 newBoostBtn.style.color = "#ff4b1f";
@@ -266,6 +309,11 @@ export function setupPlayerListeners() {
             dlBtn.parentNode.replaceChild(newDlBtn, dlBtn);
 
             newDlBtn.onclick = async () => {
+                if (getCurrentState().sourceType === 'youtube') {
+                    showToast("YouTube sources cannot be downloaded offline");
+                    return;
+                }
+
                 const downloaded = await isChapterDownloaded();
                 if (downloaded) {
                     await deleteChapter();
