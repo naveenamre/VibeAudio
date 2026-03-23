@@ -60,6 +60,10 @@ body {
         color 0.6s ease;
 }
 
+body.player-mode {
+    padding-bottom: 260px;
+}
+
 body::before,
 body::after {
     content: "";
@@ -384,6 +388,14 @@ body.player-mode #back-btn {
 }
 
 @media (max-width: 768px) {
+    body {
+        padding-bottom: 180px;
+    }
+
+    body.player-mode {
+        padding-bottom: 330px;
+    }
+
     .glass-container {
         padding: 0;
         width: 100%;

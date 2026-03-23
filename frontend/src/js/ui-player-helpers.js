@@ -6,6 +6,31 @@ const DEFAULT_PALETTE = [
 ];
 
 const SURFACES = ['library', 'history', 'player'];
+const SURFACE_BASE_PALETTES = {
+    library: [
+        [62, 138, 186],
+        [136, 204, 231],
+        [39, 87, 128],
+        [7, 15, 29]
+    ],
+    history: [
+        [70, 132, 182],
+        [148, 194, 227],
+        [46, 77, 114],
+        [8, 14, 28]
+    ],
+    player: [
+        [126, 158, 218],
+        [244, 176, 157],
+        [84, 98, 150],
+        [8, 12, 24]
+    ]
+};
+const SURFACE_DYNAMIC_THEME = {
+    library: false,
+    history: false,
+    player: true
+};
 const paletteCache = new Map();
 const surfaceThemes = {
     library: null,
@@ -58,58 +83,68 @@ function rgba(color, alpha) {
     return `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${alpha})`;
 }
 
-function luminance(color) {
-    return (0.2126 * color[0]) + (0.7152 * color[1]) + (0.0722 * color[2]);
-}
-
 function normalizeSurface(surface) {
     return SURFACES.includes(surface) ? surface : 'library';
 }
 
-function buildTheme(palette) {
-    const [primaryBase, secondaryBase, tertiaryBase, depthBase] = [...palette, ...DEFAULT_PALETTE].slice(0, 4);
-    const primary = mixColor(primaryBase, [255, 255, 255], 0.06);
-    const secondary = mixColor(secondaryBase, [255, 255, 255], 0.1);
-    const tertiary = mixColor(tertiaryBase, [255, 255, 255], 0.04);
-    const depth = mixColor(depthBase, [0, 0, 0], 0.18);
+function getSurfaceBasePalette(surface) {
+    return SURFACE_BASE_PALETTES[normalizeSurface(surface)] || DEFAULT_PALETTE;
+}
 
-    const titleAnchor = luminance(primary) > 145 ? mixColor(primary, [15, 16, 20], 0.72) : mixColor(primary, [255, 255, 255], 0.72);
-    const titleAccent = luminance(secondary) > 150 ? mixColor(secondary, [25, 28, 35], 0.68) : mixColor(secondary, [255, 255, 255], 0.55);
-    const text = luminance(depth) > 118 ? 'rgb(20, 24, 32)' : 'rgba(245, 247, 255, 0.96)';
-    const textSoft = luminance(depth) > 118 ? 'rgba(36, 42, 54, 0.74)' : 'rgba(236, 241, 255, 0.78)';
-    const textDim = luminance(depth) > 118 ? 'rgba(40, 46, 58, 0.56)' : 'rgba(220, 229, 255, 0.56)';
+function buildSurfacePalette(palette, surface) {
+    const basePalette = getSurfaceBasePalette(surface);
+
+    if (!SURFACE_DYNAMIC_THEME[normalizeSurface(surface)] || !Array.isArray(palette) || !palette.length) {
+        return basePalette;
+    }
+
+    const blendWeights = [0.34, 0.3, 0.22, 0.12];
+    return basePalette.map((baseColor, index) => {
+        const sourceColor = palette[index] || baseColor;
+        return mixColor(baseColor, sourceColor, blendWeights[index]);
+    });
+}
+
+function buildTheme(palette, surface = 'library') {
+    const [primaryBase, secondaryBase, tertiaryBase, depthBase] = buildSurfacePalette(palette, surface);
+    const primary = mixColor(primaryBase, [255, 255, 255], 0.16);
+    const secondary = mixColor(secondaryBase, [255, 255, 255], 0.18);
+    const tertiary = mixColor(tertiaryBase, [255, 255, 255], 0.08);
+    const depth = mixColor(depthBase, [0, 0, 0], 0.42);
+    const shell = mixColor(depth, [8, 12, 22], 0.56);
+    const titleAccent = mixColor(secondary, [255, 255, 255], 0.34);
 
     return {
         '--primary': rgb(primary),
         '--secondary': rgb(secondary),
-        '--accent-soft': rgba(primary, 0.16),
-        '--theme-bg-1': rgba(mixColor(primary, depth, 0.24), 0.9),
-        '--theme-bg-2': rgba(mixColor(secondary, [255, 255, 255], 0.14), 0.72),
-        '--theme-bg-3': rgba(mixColor(tertiary, [255, 255, 255], 0.08), 0.68),
-        '--theme-bg-4': rgba(mixColor(depth, [0, 0, 0], 0.4), 0.98),
-        '--theme-surface-1': rgba(mixColor(depth, primary, 0.22), 0.74),
-        '--theme-surface-2': rgba(mixColor(depth, secondary, 0.14), 0.42),
-        '--theme-surface-3': rgba(mixColor(depth, [255, 255, 255], 0.08), 0.22),
-        '--theme-border': rgba(mixColor(primary, [255, 255, 255], 0.38), 0.2),
-        '--theme-border-strong': rgba(mixColor(secondary, [255, 255, 255], 0.28), 0.36),
-        '--theme-glow': rgba(primary, 0.34),
-        '--theme-glow-soft': rgba(secondary, 0.22),
-        '--theme-shadow': rgba(mixColor(depth, [0, 0, 0], 0.25), 0.56),
-        '--theme-shadow-strong': rgba(mixColor(depth, [0, 0, 0], 0.4), 0.74),
-        '--theme-title': text,
-        '--theme-text': text,
-        '--theme-text-soft': textSoft,
-        '--theme-text-dim': textDim,
-        '--theme-title-gradient-start': rgb(titleAnchor),
+        '--accent-soft': rgba(primary, 0.18),
+        '--theme-bg-1': rgba(mixColor(primary, shell, 0.76), 0.86),
+        '--theme-bg-2': rgba(mixColor(secondary, shell, 0.72), 0.62),
+        '--theme-bg-3': rgba(mixColor(tertiary, shell, 0.66), 0.58),
+        '--theme-bg-4': rgba(mixColor(shell, [0, 0, 0], 0.34), 0.99),
+        '--theme-surface-1': rgba(mixColor(shell, primary, 0.14), 0.84),
+        '--theme-surface-2': rgba(mixColor(shell, secondary, 0.12), 0.5),
+        '--theme-surface-3': rgba(mixColor(shell, [255, 255, 255], 0.08), 0.18),
+        '--theme-border': rgba(mixColor(primary, [255, 255, 255], 0.34), 0.18),
+        '--theme-border-strong': rgba(mixColor(secondary, [255, 255, 255], 0.24), 0.34),
+        '--theme-glow': rgba(primary, 0.24),
+        '--theme-glow-soft': rgba(secondary, 0.18),
+        '--theme-shadow': rgba(mixColor(shell, [0, 0, 0], 0.22), 0.56),
+        '--theme-shadow-strong': rgba(mixColor(shell, [0, 0, 0], 0.38), 0.78),
+        '--theme-title': 'rgba(247, 250, 255, 0.98)',
+        '--theme-text': 'rgba(240, 245, 255, 0.96)',
+        '--theme-text-soft': 'rgba(220, 230, 252, 0.84)',
+        '--theme-text-dim': 'rgba(184, 198, 228, 0.66)',
+        '--theme-title-gradient-start': 'rgb(246, 250, 255)',
         '--theme-title-gradient-end': rgb(titleAccent),
-        '--theme-progress-track': rgba(mixColor(depth, [255, 255, 255], 0.16), 0.36),
+        '--theme-progress-track': rgba(mixColor(shell, [255, 255, 255], 0.16), 0.28),
         '--theme-progress-fill': `linear-gradient(90deg, ${rgb(primary)}, ${rgb(secondary)})`,
-        '--theme-player-overlay': `linear-gradient(135deg, ${rgba(primary, 0.18)}, ${rgba(secondary, 0.08)} 45%, ${rgba(depth, 0.24)})`
+        '--theme-player-overlay': `linear-gradient(135deg, ${rgba(primary, 0.2)}, ${rgba(secondary, 0.1)} 42%, ${rgba(shell, 0.78)})`
     };
 }
 
 function getDefaultTheme() {
-    return buildTheme(DEFAULT_PALETTE);
+    return buildTheme(DEFAULT_PALETTE, 'library');
 }
 
 function resolveImageUrl(imageUrl) {
@@ -190,12 +225,23 @@ async function queueSurfaceTheme(imageUrl, surface, activate = false) {
         applyThemeForSurface(safeSurface);
     }
 
+    if (!SURFACE_DYNAMIC_THEME[safeSurface] || !imageUrl) {
+        const theme = buildTheme(null, safeSurface);
+        surfaceThemes[safeSurface] = theme;
+
+        if (activeSurface === safeSurface) {
+            setCssVariables(theme);
+        }
+
+        return theme;
+    }
+
     const palette = await extractPaletteFromImage(imageUrl);
     if (pendingThemeTokens[safeSurface] !== token) {
         return surfaceThemes[safeSurface] || getDefaultTheme();
     }
 
-    const theme = buildTheme(palette);
+    const theme = buildTheme(palette, safeSurface);
     surfaceThemes[safeSurface] = theme;
 
     if (activeSurface === safeSurface) {
@@ -246,5 +292,5 @@ export function renderSingleComment(comment) {
 }
 
 surfaceThemes.library = getDefaultTheme();
-surfaceThemes.history = getDefaultTheme();
-surfaceThemes.player = getDefaultTheme();
+surfaceThemes.history = buildTheme(null, 'history');
+surfaceThemes.player = buildTheme(null, 'player');

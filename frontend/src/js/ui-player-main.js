@@ -31,7 +31,10 @@ export async function openPlayerUI(partialBook, allBooks, switchViewCallback) {
     document.getElementById('detail-cover').src = partialBook.cover;
     document.getElementById('detail-title').innerText = partialBook.title;
     document.getElementById('detail-author').innerText = partialBook.author;
-    document.getElementById('blur-bg').style.backgroundImage = `url('${partialBook.cover}')`;
+    const blurBg = document.getElementById('blur-bg');
+    if (blurBg) {
+        blurBg.style.setProperty('--player-cover-image', `url("${partialBook.cover}")`);
+    }
     applyChameleonTheme(partialBook.cover);
 
     const chapterListEl = document.getElementById('chapter-list');
