@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vibeaudio-shell-v1';
+const CACHE_NAME = 'vibeaudio-shell-v2-youtube-audio';
 const PRECACHE_URLS = [
     './',
     './index.html',

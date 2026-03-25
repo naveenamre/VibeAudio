@@ -512,55 +512,20 @@ input[type=range]::-moz-range-thumb {
     box-shadow: 0 0 15px var(--theme-glow-soft);
 }
 
-.youtube-player-stage {
+.youtube-audio-host {
     position: fixed;
-    right: 24px;
-    bottom: 138px;
-    width: min(360px, calc(100vw - 36px));
-    margin-bottom: 26px;
-    padding: 18px;
-    border-radius: 24px;
-    border: 1px solid var(--theme-border);
-    background: linear-gradient(180deg, rgba(8, 11, 21, 0.82), rgba(22, 30, 46, 0.58));
-    box-shadow: 0 18px 38px var(--theme-shadow);
-    z-index: 1100;
-}
-
-.youtube-player-stage-copy {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 14px;
-}
-
-.youtube-player-stage-copy h3 {
-    font-family: var(--font-display);
-    font-size: 1.2rem;
-    color: var(--theme-title);
-}
-
-.youtube-player-stage-copy p {
-    margin: 0;
-    color: var(--theme-text-soft);
-    line-height: 1.55;
-}
-
-.youtube-player-shell {
-    position: relative;
-    width: 100%;
-    min-height: 220px;
-    aspect-ratio: 16 / 9;
-    border-radius: 20px;
+    left: -9999px;
+    bottom: 0;
+    width: 1px;
+    height: 1px;
     overflow: hidden;
-    background:
-        radial-gradient(circle at top, rgba(255, 75, 31, 0.16), transparent 40%),
-        linear-gradient(180deg, rgba(7, 10, 18, 0.92), rgba(2, 4, 10, 0.96));
-    border: 1px solid rgba(255,255,255,0.08);
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
+    opacity: 0;
+    pointer-events: none;
+    contain: strict;
 }
 
-.youtube-player-shell > div,
-.youtube-player-shell iframe {
+.youtube-audio-host > div,
+.youtube-audio-host iframe {
     width: 100% !important;
     height: 100% !important;
     display: block;
@@ -619,16 +584,6 @@ input[type=range]::-moz-range-thumb {
         width: 100%;
     }
 
-    .youtube-player-shell {
-        min-height: 200px;
-    }
-
-    .youtube-player-stage {
-        right: 12px;
-        left: 12px;
-        bottom: 170px;
-        width: auto;
-    }
 }
 
 #lang-toggle-container {

@@ -243,7 +243,19 @@ function loadYouTubeApi() {
 }
 
 function getYouTubeHost() {
-    return document.getElementById('yt-player-shell') || document.body;
+    let host = document.getElementById('yt-player-shell');
+    if (!host) {
+        host = document.createElement('div');
+        host.id = 'yt-player-shell';
+        host.className = 'youtube-audio-host';
+        host.setAttribute('aria-hidden', 'true');
+        document.body.appendChild(host);
+    } else {
+        host.classList.add('youtube-audio-host');
+        host.setAttribute('aria-hidden', 'true');
+    }
+
+    return host;
 }
 
 function syncYouTubePlayerViewport() {
@@ -297,6 +309,8 @@ function ensureYouTubeContainer() {
         if (container.parentElement !== host) {
             host.appendChild(container);
         }
+        container.setAttribute('aria-hidden', 'true');
+        container.style.pointerEvents = 'none';
         bindYouTubeViewportLifecycle();
         requestAnimationFrame(syncYouTubePlayerViewport);
         return container;
@@ -304,11 +318,13 @@ function ensureYouTubeContainer() {
 
     container = document.createElement('div');
     container.id = 'yt-ninja-container';
+    container.setAttribute('aria-hidden', 'true');
     container.style.position = 'relative';
     container.style.width = '100%';
     container.style.height = '100%';
     container.style.minWidth = '200px';
     container.style.minHeight = '200px';
+    container.style.pointerEvents = 'none';
     host.appendChild(container);
     bindYouTubeViewportLifecycle();
     requestAnimationFrame(syncYouTubePlayerViewport);
@@ -325,9 +341,11 @@ function applyYouTubeIframePreferences(player) {
     iframe.setAttribute('referrerpolicy', 'origin');
     iframe.setAttribute('allowfullscreen', '');
     iframe.setAttribute('title', 'VibeAudio YouTube player');
+    iframe.setAttribute('aria-hidden', 'true');
     iframe.style.width = '100%';
     iframe.style.height = '100%';
     iframe.style.border = '0';
+    iframe.style.pointerEvents = 'none';
 }
 
 async function ensureYouTubePlayer() {

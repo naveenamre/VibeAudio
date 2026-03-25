@@ -52,7 +52,6 @@ function syncSourceSupportUI(state) {
     const noteText = document.getElementById('source-support-text');
     const noteButton = document.getElementById('source-support-open-btn');
     const miniButton = document.getElementById('open-source-btn');
-    const youtubeStage = document.getElementById('youtube-player-stage');
 
     const hasSourceUrl = Boolean(state.book && state.sourceUrl);
     const isYouTubeSource = state.sourceType === 'youtube' && hasSourceUrl;
@@ -61,15 +60,13 @@ function syncSourceSupportUI(state) {
         note.classList.toggle('hidden', !isYouTubeSource);
     }
 
-    if (youtubeStage) {
-        youtubeStage.classList.toggle('hidden', !isYouTubeSource);
-    }
-
     if (noteText && isYouTubeSource) {
         const wakeLockHint = canKeepScreenAwake()
-            ? " Screen wake lock bhi request hoga jab browser support kare."
+            ? " Active tab me playback ko steady rakhne ke liye wake lock bhi request ho sakta hai."
             : "";
-        noteText.innerText = `YouTube source ab hidden frame nahi, real dock me render hoga. Best results ke liye player view open rakho, app install karo, aur battery saver se bacho.${wakeLockHint}`;
+        noteText.innerText = `YouTube link audio-only mode me chalega, video hidden rahega.${wakeLockHint} Agar kisi browser me playback ruk jaye to source ko browser me khol lo.`;
+    } else if (noteText) {
+        noteText.innerText = "";
     }
 
     if (noteButton) {
@@ -79,18 +76,12 @@ function syncSourceSupportUI(state) {
     if (miniButton) {
         miniButton.style.display = isYouTubeSource ? 'inline-flex' : 'none';
         miniButton.onclick = isYouTubeSource ? openCurrentSourceInBrowser : null;
-        miniButton.title = isYouTubeSource ? "Open in browser for background playback" : "Open source in browser";
+        miniButton.title = isYouTubeSource ? "Open source in browser if playback stops" : "Open source in browser";
     }
 
     const nextHintSource = isYouTubeSource ? String(state.sourceUrl) : "";
     if (nextHintSource && nextHintSource !== lastYouTubeHintSource) {
-        showToast("YouTube dock active. Is player ko visible rakhna compatibility improve karta hai.");
-    }
-
-    if (isYouTubeSource) {
-        window.requestAnimationFrame(() => {
-            window.dispatchEvent(new Event('resize'));
-        });
+        showToast("YouTube audio mode active.");
     }
 
     lastYouTubeHintSource = nextHintSource;
