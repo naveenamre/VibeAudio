@@ -35,9 +35,14 @@
     <link rel="stylesheet" href="../css/base.css">
     <link rel="stylesheet" href="../css/components.css">
     <link rel="stylesheet" href="../css/player.css">
+    <link rel="manifest" href="../../app.webmanifest">
     <link rel="icon" type="image/png" href="../icons/favicon.png">
     <meta name="theme-color" content="#0f0c29">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3208/3208726.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="VibeAudio">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="../../public/icons/logo.png">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 
@@ -184,6 +189,16 @@
                 </div>
             </div>
 
+            <div id="source-support-note" class="source-support-note hidden" aria-live="polite">
+                <div class="source-support-copy">
+                    <span class="source-support-badge">YOUTUBE LINK</span>
+                    <p id="source-support-text"></p>
+                </div>
+                <button id="source-support-open-btn" type="button">
+                    <i class="fas fa-up-right-from-square"></i> Open in Browser
+                </button>
+            </div>
+
             <div class="chapter-list-container">
                 <h3>Chapters</h3>
                 <ul id="chapter-list"></ul>
@@ -201,6 +216,15 @@
 
     </div>
 
+    <section id="youtube-player-stage" class="youtube-player-stage hidden" aria-live="polite">
+        <div class="youtube-player-stage-copy">
+            <span class="source-support-badge">KEEP PLAYER ACTIVE</span>
+            <h3>YouTube Dock</h3>
+            <p>Hidden 1x1 iframe ki jagah ab actual embedded player use hoga. Is dock ko visible rakhne se compatibility better rehti hai.</p>
+        </div>
+        <div id="yt-player-shell" class="youtube-player-shell" aria-label="YouTube embedded player"></div>
+    </section>
+
     <div id="sidebar-overlay" class="hidden"></div>
     <aside id="sidebar">
         <div class="sidebar-header">
@@ -211,6 +235,7 @@
             <button onclick="window.app.switchView('library')"><i class="fas fa-book"></i> Library</button>
             <button onclick="window.app.switchView('history')"><i class="fas fa-history"></i> History</button>
             <button onclick="window.app.switchView('about')"><i class="fas fa-info-circle"></i> About</button>
+            <button id="install-app-btn" class="hidden"><i class="fas fa-mobile-screen-button"></i> Install App</button>
             <div class="divider"></div>
             <button onclick="window.app.switchView('profile')"><i class="fas fa-user"></i> My Profile</button>
         </nav>
@@ -255,11 +280,15 @@
             </button>
 
             <button id="speed-btn" title="Playback Speed">1x</button>
+            <button id="open-source-btn" title="Open source in browser" style="display: none;">
+                <i class="fas fa-up-right-from-square"></i>
+            </button>
         </div>
     </div>
 
     <audio id="audio-element" crossorigin="anonymous"></audio>
 
+    <script type="module" src="../js/pwa.js"></script>
     <script type="module" src="../js/ui.js"></script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.7.0/vanilla-tilt.min.js"></script>

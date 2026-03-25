@@ -27,6 +27,10 @@ let currentSourceType = 'audio';
 let ytPlayer = null;
 let ytPlayerPromise = null;
 let ytApiPromise = null;
+let wakeLockSentinel = null;
+let wakeLockLifecycleBound = false;
+let youtubeViewportBound = false;
+let youtubeResizeObserver = null;
 
 audio.addEventListener('ended', () => {
     if (currentSourceType === 'youtube') return;
@@ -59,6 +63,7 @@ audio.addEventListener('playing', () => {
         startProgressTracker();
         updateUIState(true);
         sendToAndroid(true);
+        releasePlaybackWakeLock();
         if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "playing";
     }
 });
@@ -75,11 +80,68 @@ audio.addEventListener('seeked', dispatchPlayerTimeUpdate);
 audio.addEventListener('loadedmetadata', dispatchPlayerTimeUpdate);
 audio.addEventListener('timeupdate', dispatchPlayerTimeUpdate);
 
+bindWakeLockLifecycle();
+
 function clearStallPauseTimeout() {
     if (stallPauseTimeout) {
         clearTimeout(stallPauseTimeout);
         stallPauseTimeout = null;
     }
+}
+
+function canUseScreenWakeLock() {
+    return Boolean(navigator.wakeLock?.request);
+}
+
+async function requestPlaybackWakeLock() {
+    if (!canUseScreenWakeLock() || document.visibilityState !== 'visible') return false;
+    if (wakeLockSentinel) return true;
+
+    try {
+        wakeLockSentinel = await navigator.wakeLock.request('screen');
+        wakeLockSentinel.addEventListener('release', () => {
+            wakeLockSentinel = null;
+        });
+        return true;
+    } catch (error) {
+        console.warn("Screen wake lock request failed.", error);
+        wakeLockSentinel = null;
+        return false;
+    }
+}
+
+async function releasePlaybackWakeLock() {
+    if (!wakeLockSentinel) return false;
+
+    try {
+        await wakeLockSentinel.release();
+    } catch (error) {
+        console.warn("Screen wake lock release failed.", error);
+    } finally {
+        wakeLockSentinel = null;
+    }
+
+    return true;
+}
+
+function bindWakeLockLifecycle() {
+    if (wakeLockLifecycleBound) return;
+    wakeLockLifecycleBound = true;
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            if (currentSourceType === 'youtube' && isPlaybackActive()) {
+                requestPlaybackWakeLock();
+            }
+            return;
+        }
+
+        releasePlaybackWakeLock();
+    });
+
+    window.addEventListener('pagehide', () => {
+        releasePlaybackWakeLock();
+    });
 }
 
 function getCurrentPlaybackValues() {
@@ -180,21 +242,92 @@ function loadYouTubeApi() {
     return ytApiPromise;
 }
 
+function getYouTubeHost() {
+    return document.getElementById('yt-player-shell') || document.body;
+}
+
+function syncYouTubePlayerViewport() {
+    const host = getYouTubeHost();
+    const container = document.getElementById('yt-ninja-container');
+    if (!host || !container) return;
+
+    const hostRect = host.getBoundingClientRect();
+    const width = Math.max(200, Math.round(hostRect.width || host.clientWidth || 356));
+    const height = Math.max(200, Math.round(hostRect.height || host.clientHeight || 200));
+
+    container.style.width = `${width}px`;
+    container.style.height = `${height}px`;
+    container.style.maxWidth = '100%';
+    container.style.maxHeight = '100%';
+
+    if (ytPlayer?.setSize) {
+        try {
+            ytPlayer.setSize(width, height);
+        } catch (error) {
+            console.warn("Unable to sync YouTube viewport.", error);
+        }
+    }
+}
+
+function bindYouTubeViewportLifecycle() {
+    if (youtubeViewportBound) return;
+    youtubeViewportBound = true;
+
+    window.addEventListener('resize', () => {
+        if (currentSourceType === 'youtube') {
+            syncYouTubePlayerViewport();
+        }
+    });
+
+    const host = getYouTubeHost();
+    if ('ResizeObserver' in window && host) {
+        youtubeResizeObserver = new ResizeObserver(() => {
+            if (currentSourceType === 'youtube') {
+                syncYouTubePlayerViewport();
+            }
+        });
+        youtubeResizeObserver.observe(host);
+    }
+}
+
 function ensureYouTubeContainer() {
     let container = document.getElementById('yt-ninja-container');
-    if (container) return container;
+    const host = getYouTubeHost();
+    if (container) {
+        if (container.parentElement !== host) {
+            host.appendChild(container);
+        }
+        bindYouTubeViewportLifecycle();
+        requestAnimationFrame(syncYouTubePlayerViewport);
+        return container;
+    }
 
     container = document.createElement('div');
     container.id = 'yt-ninja-container';
-    container.style.position = 'absolute';
-    container.style.width = '1px';
-    container.style.height = '1px';
-    container.style.opacity = '0';
-    container.style.pointerEvents = 'none';
-    container.style.left = '-9999px';
-    document.body.appendChild(container);
+    container.style.position = 'relative';
+    container.style.width = '100%';
+    container.style.height = '100%';
+    container.style.minWidth = '200px';
+    container.style.minHeight = '200px';
+    host.appendChild(container);
+    bindYouTubeViewportLifecycle();
+    requestAnimationFrame(syncYouTubePlayerViewport);
 
     return container;
+}
+
+function applyYouTubeIframePreferences(player) {
+    const iframe = player?.getIframe?.();
+    if (!iframe) return;
+
+    iframe.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
+    iframe.setAttribute('tabindex', '-1');
+    iframe.setAttribute('referrerpolicy', 'origin');
+    iframe.setAttribute('allowfullscreen', '');
+    iframe.setAttribute('title', 'VibeAudio YouTube player');
+    iframe.style.width = '100%';
+    iframe.style.height = '100%';
+    iframe.style.border = '0';
 }
 
 async function ensureYouTubePlayer() {
@@ -207,17 +340,26 @@ async function ensureYouTubePlayer() {
 
         return await new Promise((resolve) => {
             ytPlayer = new window.YT.Player(container, {
-                height: '1',
-                width: '1',
+                height: '200',
+                width: '356',
                 playerVars: {
+                    autoplay: 1,
                     playsinline: 1,
                     controls: 0,
                     disablekb: 1,
+                    fs: 1,
                     rel: 0,
-                    modestbranding: 1
+                    modestbranding: 1,
+                    origin: window.location.origin,
+                    widget_referrer: window.location.href
                 },
                 events: {
-                    onReady: () => resolve(ytPlayer),
+                    onReady: () => {
+                        applyYouTubeIframePreferences(ytPlayer);
+                        bindYouTubeViewportLifecycle();
+                        requestAnimationFrame(syncYouTubePlayerViewport);
+                        resolve(ytPlayer);
+                    },
                     onStateChange: handleYouTubeStateChange,
                     onError: (event) => {
                         console.warn("YouTube playback error.", event?.data);
@@ -242,6 +384,8 @@ function handleYouTubeStateChange(event) {
             startProgressTracker();
             updateUIState(true);
             sendToAndroid(true);
+            requestPlaybackWakeLock();
+            requestAnimationFrame(syncYouTubePlayerViewport);
             if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "playing";
             break;
         case window.YT.PlayerState.PAUSED:
@@ -264,6 +408,7 @@ function handleYouTubeStateChange(event) {
 function handlePausedState(saveProgress = true) {
     clearStallPauseTimeout();
     stopProgressTracker();
+    releasePlaybackWakeLock();
 
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "paused";
     updateUIState(false);
@@ -417,6 +562,7 @@ export function setLanguage(lang) {
 }
 
 function stopCurrentPlayback() {
+    releasePlaybackWakeLock();
     audio.pause();
     audio.onloadedmetadata = null;
 
@@ -435,6 +581,7 @@ async function loadYouTubeChapter(videoId, startTime = 0) {
     audio.load();
 
     const player = await ensureYouTubePlayer();
+    requestAnimationFrame(syncYouTubePlayerViewport);
 
     player.loadVideoById({
         videoId,

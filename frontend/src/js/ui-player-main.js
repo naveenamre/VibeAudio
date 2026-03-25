@@ -24,6 +24,77 @@ const speeds = [1, 1.25, 1.5, 2, 0.95, 0.9, 0.8];
 let currentSpeedIndex = 0;
 const sleepTimes = [0, 15, 30, 60];
 let currentSleepIndex = 0;
+let lastYouTubeHintSource = "";
+
+function canKeepScreenAwake() {
+    return Boolean(navigator.wakeLock?.request);
+}
+
+function openCurrentSourceInBrowser() {
+    const sourceUrl = String(getCurrentState().sourceUrl || '').trim();
+    if (!sourceUrl) {
+        showToast("Source link is unavailable right now");
+        return;
+    }
+
+    showToast("Opening in browser for steadier background playback");
+
+    const openedWindow = window.open(sourceUrl, '_blank');
+    if (openedWindow) {
+        openedWindow.opener = null;
+    } else {
+        window.location.href = sourceUrl;
+    }
+}
+
+function syncSourceSupportUI(state) {
+    const note = document.getElementById('source-support-note');
+    const noteText = document.getElementById('source-support-text');
+    const noteButton = document.getElementById('source-support-open-btn');
+    const miniButton = document.getElementById('open-source-btn');
+    const youtubeStage = document.getElementById('youtube-player-stage');
+
+    const hasSourceUrl = Boolean(state.book && state.sourceUrl);
+    const isYouTubeSource = state.sourceType === 'youtube' && hasSourceUrl;
+
+    if (note) {
+        note.classList.toggle('hidden', !isYouTubeSource);
+    }
+
+    if (youtubeStage) {
+        youtubeStage.classList.toggle('hidden', !isYouTubeSource);
+    }
+
+    if (noteText && isYouTubeSource) {
+        const wakeLockHint = canKeepScreenAwake()
+            ? " Screen wake lock bhi request hoga jab browser support kare."
+            : "";
+        noteText.innerText = `YouTube source ab hidden frame nahi, real dock me render hoga. Best results ke liye player view open rakho, app install karo, aur battery saver se bacho.${wakeLockHint}`;
+    }
+
+    if (noteButton) {
+        noteButton.onclick = isYouTubeSource ? openCurrentSourceInBrowser : null;
+    }
+
+    if (miniButton) {
+        miniButton.style.display = isYouTubeSource ? 'inline-flex' : 'none';
+        miniButton.onclick = isYouTubeSource ? openCurrentSourceInBrowser : null;
+        miniButton.title = isYouTubeSource ? "Open in browser for background playback" : "Open source in browser";
+    }
+
+    const nextHintSource = isYouTubeSource ? String(state.sourceUrl) : "";
+    if (nextHintSource && nextHintSource !== lastYouTubeHintSource) {
+        showToast("YouTube dock active. Is player ko visible rakhna compatibility improve karta hai.");
+    }
+
+    if (isYouTubeSource) {
+        window.requestAnimationFrame(() => {
+            window.dispatchEvent(new Event('resize'));
+        });
+    }
+
+    lastYouTubeHintSource = nextHintSource;
+}
 
 export async function openPlayerUI(partialBook, allBooks, switchViewCallback) {
     switchViewCallback('player');
@@ -138,6 +209,8 @@ export function updateUI(isPlaying, book = null, chapter = null) {
             .replace(/^\d+[\.\s]+/, '')
             .trim();
     }
+
+    syncSourceSupportUI(state);
 
     if (!state.book) return;
 
