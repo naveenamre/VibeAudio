@@ -6,9 +6,36 @@ function getClerkScript() {
     return document.querySelector('script[data-vibe-clerk="true"]');
 }
 
+function getExpectedClerkScriptUrl() {
+    return String(APP_CONFIG.clerkScriptUrl || '').trim();
+}
+
+function resetClerkBootstrapState() {
+    clerkBootPromise = null;
+}
+
 function loadClerkScript() {
+    const expectedScriptUrl = getExpectedClerkScriptUrl();
+    if (!expectedScriptUrl) {
+        return Promise.reject(new Error('Clerk frontend API URL is unavailable.'));
+    }
+
     const existing = getClerkScript();
     if (existing) {
+        const existingSrc = String(existing.src || '').trim();
+        if (existingSrc && existingSrc !== expectedScriptUrl) {
+            existing.remove();
+            resetClerkBootstrapState();
+            if (window.Clerk) {
+                try {
+                    delete window.Clerk;
+                } catch (error) {
+                    window.Clerk = undefined;
+                }
+            }
+            return loadClerkScript();
+        }
+
         return new Promise((resolve, reject) => {
             if (window.Clerk) {
                 resolve(window.Clerk);
@@ -24,9 +51,10 @@ function loadClerkScript() {
         const script = document.createElement('script');
         script.async = true;
         script.crossOrigin = 'anonymous';
+        script.type = 'text/javascript';
         script.dataset.vibeClerk = 'true';
         script.dataset.clerkPublishableKey = APP_CONFIG.clerkPublishableKey;
-        script.src = APP_CONFIG.clerkScriptUrl;
+        script.src = expectedScriptUrl;
         script.onload = () => resolve(window.Clerk);
         script.onerror = () => reject(new Error('Clerk script failed to load.'));
         document.head.appendChild(script);
@@ -44,7 +72,10 @@ export async function initClerk() {
 
         await window.Clerk.load();
         return window.Clerk;
-    })();
+    })().catch((error) => {
+        resetClerkBootstrapState();
+        throw error;
+    });
 
     return clerkBootPromise;
 }
@@ -67,7 +98,28 @@ export async function ensureSignedInOrRedirect(redirectUrl) {
 
 export async function mountSignIn(container, options = {}) {
     const clerk = await initClerk();
-    clerk.mountSignIn(container, options);
+    try {
+        clerk.mountSignIn(container, options);
+    } catch (error) {
+        if (/Ui components/i.test(String(error?.message || ''))) {
+            resetClerkBootstrapState();
+            const staleScript = getClerkScript();
+            if (staleScript) staleScript.remove();
+            if (window.Clerk) {
+                try {
+                    delete window.Clerk;
+                } catch (deleteError) {
+                    window.Clerk = undefined;
+                }
+            }
+
+            const freshClerk = await initClerk();
+            freshClerk.mountSignIn(container, options);
+            return freshClerk;
+        }
+
+        throw error;
+    }
     return clerk;
 }
 
