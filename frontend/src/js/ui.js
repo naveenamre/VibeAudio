@@ -246,6 +246,48 @@ function buildOfflineRenderableBooks() {
     });
 }
 
+function toAbsoluteUrl(value) {
+    try {
+        return new URL(String(value || ''), window.location.href).href;
+    } catch (error) {
+        return '';
+    }
+}
+
+function warmOfflineCatalog(books = allBooks) {
+    const bridge = window.VibePWA;
+    if (!bridge?.primeOfflineResources) return;
+
+    const prioritizedBooks = [];
+    const seenBookIds = new Set();
+    const pushBook = (book) => {
+        if (!book?.bookId) return;
+        const key = String(book.bookId);
+        if (seenBookIds.has(key)) return;
+        seenBookIds.add(key);
+        prioritizedBooks.push(book);
+    };
+
+    const lastSession = getLastPlayerSession() || getLastOpenedBook();
+    if (lastSession?.bookId) {
+        pushBook((books || []).find((book) => String(book.bookId) === String(lastSession.bookId)));
+    }
+
+    buildOfflineRenderableBooks().slice(0, 6).forEach(pushBook);
+    (Array.isArray(books) ? books : []).slice(0, 10).forEach(pushBook);
+
+    const urls = [
+        '../../index.html',
+        '../../app.webmanifest',
+        '../pages/app.html',
+        ...prioritizedBooks.flatMap((book) => [book?.dataPath, book?.cover])
+    ]
+        .map(toAbsoluteUrl)
+        .filter(Boolean);
+
+    void bridge.primeOfflineResources(urls);
+}
+
 function matchesBookFilters(book) {
     const query = currentSearchQuery.trim().toLowerCase();
     if (query) {
@@ -300,6 +342,7 @@ async function refreshOfflineShelfState() {
         offlineShelfSummaries = Array.isArray(summaries) ? summaries : [];
         offlineStorageStats = stats;
         allBooks = applyOfflineSummariesToBooks(allBooks, offlineShelfSummaries);
+        warmOfflineCatalog(allBooks);
     } catch (error) {
         console.warn("Unable to refresh offline shelf state.", error);
         offlineShelfSummaries = [];
@@ -625,6 +668,7 @@ async function init() {
     if (cachedCatalog.books.length > 0) {
         allBooks = sortCatalogBooks(cachedCatalog.books);
         allBooks = applyOfflineSummariesToBooks(allBooks, offlineShelfSummaries);
+        warmOfflineCatalog(allBooks);
         LibraryUI.renderCategoryFilters(allBooks);
         await refreshPersonalizedCatalog();
         restorePlayerSessionIfNeeded();
@@ -633,6 +677,7 @@ async function init() {
     const freshBooks = await fetchAllBooks({ forceRefresh: true });
     allBooks = sortCatalogBooks(freshBooks);
     allBooks = applyOfflineSummariesToBooks(allBooks, offlineShelfSummaries);
+    warmOfflineCatalog(allBooks);
 
     LibraryUI.renderCategoryFilters(allBooks);
     await refreshPersonalizedCatalog();

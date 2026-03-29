@@ -1,5 +1,12 @@
 const SERVICE_WORKER_URL = new URL('../../service-worker.js', import.meta.url);
 const SERVICE_WORKER_SCOPE = new URL('../../', import.meta.url);
+const OFFLINE_READY_KEY = 'vibe_offline_shell_ready';
+const SHELL_WARMUP_URLS = [
+    './',
+    './index.html',
+    './app.webmanifest',
+    './src/pages/app.html'
+];
 
 let deferredInstallPrompt = null;
 
@@ -33,6 +40,118 @@ function showPwaToast(message) {
     window.setTimeout(() => {
         toast.remove();
     }, 2800);
+}
+
+function readOfflineReadyState() {
+    try {
+        const raw = localStorage.getItem(OFFLINE_READY_KEY);
+        if (!raw) return null;
+        return JSON.parse(raw);
+    } catch (error) {
+        console.warn('Unable to read offline readiness state.', error);
+        return null;
+    }
+}
+
+function markOfflineReady(source = 'service-worker') {
+    const payload = {
+        ready: true,
+        source,
+        updatedAt: new Date().toISOString()
+    };
+
+    try {
+        localStorage.setItem(OFFLINE_READY_KEY, JSON.stringify(payload));
+    } catch (error) {
+        console.warn('Unable to persist offline readiness state.', error);
+    }
+
+    window.dispatchEvent(new CustomEvent('vibe-pwa-ready', { detail: payload }));
+    return payload;
+}
+
+function uniqueAbsoluteUrls(urls = []) {
+    return Array.from(new Set(
+        urls
+            .map((value) => {
+                try {
+                    return new URL(String(value || ''), window.location.href).href;
+                } catch (error) {
+                    return '';
+                }
+            })
+            .filter(Boolean)
+    ));
+}
+
+async function getServiceWorkerTarget() {
+    if (!('serviceWorker' in navigator)) return null;
+
+    try {
+        const registration = await navigator.serviceWorker.ready;
+        return registration?.active || registration?.waiting || navigator.serviceWorker.controller || null;
+    } catch (error) {
+        console.warn('Service worker is not ready yet.', error);
+        return navigator.serviceWorker.controller || null;
+    }
+}
+
+async function sendServiceWorkerMessage(message) {
+    const target = await getServiceWorkerTarget();
+    if (!target) return false;
+
+    target.postMessage(message);
+    return true;
+}
+
+async function primeOfflineResources(urls = []) {
+    const normalizedUrls = uniqueAbsoluteUrls([...SHELL_WARMUP_URLS, ...urls]);
+    if (!normalizedUrls.length) return false;
+
+    const sent = await sendServiceWorkerMessage({
+        type: 'CACHE_URLS',
+        urls: normalizedUrls
+    });
+
+    if (sent) {
+        markOfflineReady('cache-message');
+    }
+
+    return sent;
+}
+
+function isOfflineShellLikelyReady() {
+    if (navigator.serviceWorker?.controller) return true;
+    return Boolean(readOfflineReadyState()?.ready);
+}
+
+async function requestPersistentStorage() {
+    if (!navigator.storage?.persisted || !navigator.storage?.persist) return false;
+
+    try {
+        const alreadyPersisted = await navigator.storage.persisted();
+        if (alreadyPersisted) {
+            markOfflineReady('persistent-storage');
+            return true;
+        }
+
+        const granted = await navigator.storage.persist();
+        if (granted) {
+            showPwaToast('Offline shelf storage is now less likely to get cleared by the browser.');
+        }
+        return granted;
+    } catch (error) {
+        console.warn('Persistent storage request failed.', error);
+        return false;
+    }
+}
+
+function exposePwaBridge() {
+    window.VibePWA = {
+        primeOfflineResources,
+        isOfflineShellLikelyReady,
+        requestPersistentStorage
+    };
 }
 
 function syncInstallButton() {
@@ -87,7 +206,21 @@ async function registerServiceWorker() {
     if (!/^https?:$/i.test(window.location.protocol)) return;
 
     try {
-        await navigator.serviceWorker.register(SERVICE_WORKER_URL.href, { scope: SERVICE_WORKER_SCOPE.href });
+        const registration = await navigator.serviceWorker.register(SERVICE_WORKER_URL.href, { scope: SERVICE_WORKER_SCOPE.href });
+
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            markOfflineReady('controller');
+        });
+
+        await navigator.serviceWorker.ready;
+        markOfflineReady('registration');
+        await primeOfflineResources();
+
+        if (registration.waiting) {
+            registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+        }
+
+        await requestPersistentStorage();
     } catch (error) {
         console.warn('Service worker registration failed.', error);
     }
@@ -107,6 +240,7 @@ window.addEventListener('appinstalled', () => {
 });
 
 window.addEventListener('DOMContentLoaded', () => {
+    exposePwaBridge();
     bindInstallButton();
     syncInstallButton();
     registerServiceWorker();

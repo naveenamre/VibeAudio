@@ -4,7 +4,37 @@ import { getSignedInUser, mountSignIn, persistUserProfile } from './auth.js';
 const APP_URL = './src/pages/app.html';
 const OFFLINE_APP_URL = `${APP_URL}#offline`;
 
+function toAbsoluteUrl(value) {
+    try {
+        return new URL(String(value || ''), window.location.href).href;
+    } catch (error) {
+        return '';
+    }
+}
+
+function warmOfflinePreview(books = []) {
+    const bridge = window.VibePWA;
+    if (!bridge?.primeOfflineResources) return;
+
+    const previewBooks = Array.isArray(books) ? books.slice(0, 8) : [];
+    const urls = [
+        './',
+        './index.html',
+        './app.webmanifest',
+        APP_URL,
+        ...previewBooks.flatMap((book) => [book?.dataPath, book?.cover])
+    ]
+        .map(toAbsoluteUrl)
+        .filter(Boolean);
+
+    void bridge.primeOfflineResources(urls);
+}
+
 async function hasCachedOfflineAppShell() {
+    if (window.VibePWA?.isOfflineShellLikelyReady?.()) {
+        return true;
+    }
+
     if (!('caches' in window)) return false;
 
     try {
@@ -248,6 +278,7 @@ async function initLanding() {
     renderSpotlight(books);
     renderPreviewGrid(books);
     renderCategoryTags(books);
+    warmOfflinePreview(books);
     bindScrollActions();
     await bootAuthPanel();
 }

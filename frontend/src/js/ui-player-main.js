@@ -44,6 +44,24 @@ const sleepTimes = [0, 15, 30, 60];
 let currentSleepIndex = 0;
 let lastYouTubeHintSource = "";
 
+function warmActiveBookOffline(book) {
+    const bridge = window.VibePWA;
+    if (!bridge?.primeOfflineResources || !book) return;
+
+    const urls = [book.dataPath, book.cover]
+        .map((value) => {
+            try {
+                return new URL(String(value || ''), window.location.href).href;
+            } catch (error) {
+                return '';
+            }
+        })
+        .filter(Boolean);
+
+    if (!urls.length) return;
+    void bridge.primeOfflineResources(urls);
+}
+
 function formatStorageSize(bytes) {
     const safeBytes = Math.max(0, Number(bytes || 0));
     if (!safeBytes) return '0 MB';
@@ -400,6 +418,7 @@ export async function openPlayerUI(partialBook, allBooks, switchViewCallback) {
 
     if (summaryEl) summaryEl.textContent = buildBookSummary(finalBook);
     renderDetailMeta(finalBook);
+    warmActiveBookOffline(finalBook);
 
     const langContainer = document.getElementById('lang-toggle-container');
     if (finalBook.chapters_en && finalBook.chapters_en.length > 0) {
