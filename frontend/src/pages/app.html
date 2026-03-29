@@ -94,6 +94,19 @@
             </div>
         </section>
 
+        <section id="view-offline" class="view-section hidden fade-in">
+            <div class="section-header-row">
+                <div>
+                    <h2 class="section-title">Offline Shelf</h2>
+                    <p class="section-subtitle" id="offline-subtitle">Your saved browser shelf will appear here.</p>
+                </div>
+            </div>
+            <div id="offline-insights" class="library-insights"></div>
+            <div id="offline-grid" class="grid">
+                <p class="empty-msg">Offline shelf is empty right now.</p>
+            </div>
+        </section>
+
         <section id="view-about" class="view-section hidden fade-in">
             <div class="profile-card about-card">
                 <h2>About VibeAudio</h2>
@@ -140,6 +153,39 @@
                         <h3 id="profile-stat-bookmarks">0</h3>
                         <p>Saved Moments</p>
                     </div>
+                </div>
+
+                <div class="offline-storage-panel">
+                    <div class="stack-header">
+                        <div>
+                            <h3>Browser Storage</h3>
+                            <p>Private offline audio stays inside VibeAudio on this device.</p>
+                        </div>
+                        <button class="btn-secondary compact-btn" id="clear-offline-downloads-btn" type="button">
+                            <i class="fas fa-trash"></i> Clear offline shelf
+                        </button>
+                    </div>
+
+                    <div class="offline-storage-grid">
+                        <div class="stat-box">
+                            <h3 id="offline-storage-used">0 MB</h3>
+                            <p>Offline audio used</p>
+                        </div>
+                        <div class="stat-box">
+                            <h3 id="offline-storage-quota">Browser managed</h3>
+                            <p>Estimated quota</p>
+                        </div>
+                        <div class="stat-box">
+                            <h3 id="offline-storage-books">0</h3>
+                            <p>Saved books</p>
+                        </div>
+                        <div class="stat-box">
+                            <h3 id="offline-storage-chapters">0</h3>
+                            <p>Saved chapters</p>
+                        </div>
+                    </div>
+
+                    <p class="offline-storage-mode" id="offline-storage-mode">Storage mode will appear here.</p>
                 </div>
 
                 <div class="profile-actions">
@@ -203,6 +249,26 @@
                 </div>
 
                 <div class="player-side-stack">
+                    <div class="offline-player-card">
+                        <div class="stack-header">
+                            <div>
+                                <h3>Offline Shelf</h3>
+                                <p>Save direct-audio chapters privately inside this browser.</p>
+                            </div>
+                            <span id="player-offline-status-chip" class="player-offline-status-chip" data-state="not_downloaded">Ready for Offline</span>
+                        </div>
+                        <p id="player-offline-summary" class="player-offline-summary">This story can be saved locally for low-friction listening later.</p>
+                        <p id="player-offline-meta" class="player-offline-meta">No offline copies saved yet.</p>
+                        <div class="player-offline-actions">
+                            <button id="download-book-btn" class="mini-action-btn" type="button">
+                                <i class="fas fa-cloud-arrow-down"></i> Download Book
+                            </button>
+                            <button id="remove-offline-book-btn" class="bookmark-remove subtle-danger" type="button">
+                                Remove Offline
+                            </button>
+                        </div>
+                    </div>
+
                     <div class="bookmark-section">
                         <div class="stack-header">
                             <div>
@@ -246,6 +312,7 @@
         <nav class="sidebar-nav">
             <button onclick="window.app.switchView('library')"><i class="fas fa-book"></i> Library</button>
             <button onclick="window.app.switchView('history')"><i class="fas fa-history"></i> History</button>
+            <button onclick="window.app.switchView('offline')"><i class="fas fa-cloud-arrow-down"></i> Offline</button>
             <button onclick="window.app.switchView('about')"><i class="fas fa-circle-info"></i> About</button>
             <button id="install-app-btn" class="hidden"><i class="fas fa-mobile-screen-button"></i> Install App</button>
             <div class="divider"></div>

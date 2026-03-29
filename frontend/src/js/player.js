@@ -1,5 +1,14 @@
 import { saveUserProgress } from './api.js';
 import { STORAGE_KEYS } from './config.js';
+import {
+    getOfflineChapterStatus,
+    OFFLINE_STATES,
+    queueBookDownload,
+    queueChapterDownload,
+    removeOfflineBook,
+    removeOfflineChapter,
+    resolveOfflinePlaybackSource
+} from './offline-shelf.js';
 import { setLastPlayerSession } from './user-data.js';
 
 console.log("Player Module Loading...");
@@ -26,6 +35,8 @@ let trebleBoostFilter;
 let compressor;
 
 let currentSourceType = 'audio';
+let currentPlaybackOrigin = 'stream';
+let currentOfflinePlaybackSource = null;
 let ytPlayer = null;
 let ytPlayerPromise = null;
 let ytApiPromise = null;
@@ -191,6 +202,13 @@ function getCurrentChapter() {
 
 function getCurrentSourceUrl() {
     return getCurrentChapter()?.url || "";
+}
+
+function releaseOfflinePlaybackSource() {
+    if (currentOfflinePlaybackSource?.revoke) {
+        currentOfflinePlaybackSource.revoke();
+    }
+    currentOfflinePlaybackSource = null;
 }
 
 function isYouTubeUrl(url) {
@@ -589,6 +607,7 @@ export function getCurrentState() {
         duration,
         lang: currentLang,
         sourceType: currentSourceType,
+        playbackOrigin: currentPlaybackOrigin,
         sourceUrl: getCurrentSourceUrl(),
         isPlaying: isPlaybackActive()
     };
@@ -611,6 +630,7 @@ function stopCurrentPlayback() {
     releasePlaybackWakeLock();
     audio.pause();
     audio.onloadedmetadata = null;
+    releaseOfflinePlaybackSource();
 
     if (ytPlayer?.pauseVideo) {
         try {
@@ -623,6 +643,7 @@ function stopCurrentPlayback() {
 
 async function loadYouTubeChapter(videoId, startTime = 0) {
     currentSourceType = 'youtube';
+    currentPlaybackOrigin = 'youtube';
     audio.removeAttribute('src');
     audio.load();
 
@@ -642,9 +663,16 @@ async function loadYouTubeChapter(videoId, startTime = 0) {
     }, 450);
 }
 
-function loadAudioChapter(url, startTime = 0) {
+function loadAudioChapter(url, startTime = 0, options = {}) {
     currentSourceType = 'audio';
-    audio.crossOrigin = "anonymous";
+    currentPlaybackOrigin = options.playbackOrigin || 'stream';
+
+    if (options.removeCrossOrigin) {
+        audio.removeAttribute('crossorigin');
+    } else {
+        audio.crossOrigin = "anonymous";
+    }
+
     audio.src = url;
     audio.playbackRate = getStoredPlaybackSpeed();
     audio.onloadedmetadata = () => {
@@ -654,6 +682,81 @@ function loadAudioChapter(url, startTime = 0) {
         playAudioSafe();
     };
     audio.load();
+}
+
+async function getBrowserOfflineStateForChapter(book, chapterIndex, lang, chapter = null) {
+    if (!book) {
+        return {
+            status: OFFLINE_STATES.notDownloaded,
+            downloadable: false,
+            reason: 'No active book',
+            record: null
+        };
+    }
+
+    const resolvedChapter = chapter || book.activeChapters?.[chapterIndex] || null;
+    if (!resolvedChapter) {
+        return {
+            status: OFFLINE_STATES.notDownloaded,
+            downloadable: false,
+            reason: 'Chapter unavailable',
+            record: null
+        };
+    }
+
+    return getOfflineChapterStatus(book.bookId, lang, chapterIndex, resolvedChapter);
+}
+
+export async function getCurrentChapterOfflineState() {
+    if (!currentBook) {
+        return {
+            status: OFFLINE_STATES.notDownloaded,
+            downloadable: false,
+            isDownloaded: false,
+            reason: 'No active book',
+            record: null,
+            storage: 'none'
+        };
+    }
+
+    const chapter = currentBook.activeChapters?.[currentChapterIndex] || null;
+    const browserState = await getBrowserOfflineStateForChapter(currentBook, currentChapterIndex, currentLang, chapter);
+    const fileName = `${currentBook.bookId}_${currentChapterIndex}_${currentLang}.mp3`;
+    const androidDownloaded = Boolean(window.AndroidInterface && chapter?.url && !isYouTubeUrl(chapter.url) && window.AndroidInterface.checkFile(fileName) !== "");
+
+    if (androidDownloaded) {
+        return {
+            status: OFFLINE_STATES.downloaded,
+            downloadable: true,
+            isDownloaded: true,
+            reason: '',
+            record: browserState.record,
+            storage: 'android'
+        };
+    }
+
+    return {
+        ...browserState,
+        isDownloaded: [OFFLINE_STATES.downloaded, OFFLINE_STATES.updateAvailable].includes(browserState.status),
+        storage: browserState.record ? 'browser' : 'none'
+    };
+}
+
+export async function queueCurrentBookForOffline() {
+    if (!currentBook) {
+        return {
+            queued: false,
+            queuedCount: 0,
+            reason: 'No active book'
+        };
+    }
+
+    return queueBookDownload(currentBook, currentLang, currentChapterIndex);
+}
+
+export async function removeCurrentBookOffline() {
+    if (!currentBook) return false;
+    return removeOfflineBook(currentBook.bookId, currentLang);
 }
 
 export async function loadBook(book, chapterIndex = 0, startTime = 0) {
@@ -729,62 +832,88 @@ export async function loadBook(book, chapterIndex = 0, startTime = 0) {
             return;
         }
 
+        const browserOfflineSource = await resolveOfflinePlaybackSource(currentBook, chapterIndex, currentLang);
+        if (browserOfflineSource?.url) {
+            currentOfflinePlaybackSource = browserOfflineSource;
+            loadAudioChapter(browserOfflineSource.url, startTime, {
+                playbackOrigin: 'offline',
+                removeCrossOrigin: true
+            });
+            return;
+        }
+
         let offlinePath = "";
         if (window.AndroidInterface) {
             offlinePath = window.AndroidInterface.checkFile(fileName);
         }
 
         if (offlinePath) {
-            audio.src = offlinePath;
-            audio.removeAttribute('crossorigin');
-            audio.playbackRate = getStoredPlaybackSpeed();
-            audio.onloadedmetadata = () => {
-                if (startTime > 0) {
-                    audio.currentTime = startTime;
-                }
-                playAudioSafe();
-            };
-            audio.load();
-            currentSourceType = 'audio';
+            loadAudioChapter(offlinePath, startTime, {
+                playbackOrigin: 'android',
+                removeCrossOrigin: true
+            });
             return;
         }
 
-        loadAudioChapter(chapter.url, startTime);
+        loadAudioChapter(chapter.url, startTime, {
+            playbackOrigin: 'stream'
+        });
     } catch (error) {
         console.error("Failed to load chapter source.", error);
         currentSourceType = 'audio';
+        currentPlaybackOrigin = 'stream';
         updateUIState(false);
     }
 }
 
-export function downloadCurrentChapter(onProgress) {
-    if (!currentBook || !window.AndroidInterface || currentSourceType === 'youtube') {
+export async function downloadCurrentChapter(onProgress) {
+    if (!currentBook || currentSourceType === 'youtube') {
         if (onProgress) onProgress(false);
-        return;
+        return {
+            queued: false,
+            reason: 'This source cannot be downloaded'
+        };
     }
 
     const chapter = currentBook.activeChapters[currentChapterIndex];
-    const fileName = `${currentBook.bookId}_${currentChapterIndex}_${currentLang}.mp3`;
 
-    window.onDownloadComplete = (success) => {
-        if (onProgress) onProgress(Boolean(success));
-        updateUIState(isPlaybackActive());
-        delete window.onDownloadComplete;
-    };
+    if (window.AndroidInterface) {
+        const fileName = `${currentBook.bookId}_${currentChapterIndex}_${currentLang}.mp3`;
 
-    window.AndroidInterface.downloadFile(chapter.url, fileName, "onDownloadComplete");
+        window.onDownloadComplete = (success) => {
+            if (onProgress) onProgress(Boolean(success));
+            updateUIState(isPlaybackActive());
+            delete window.onDownloadComplete;
+        };
+
+        window.AndroidInterface.downloadFile(chapter.url, fileName, "onDownloadComplete");
+        return { queued: true, storage: 'android' };
+    }
+
+    const result = await queueChapterDownload(currentBook, chapter, currentLang, {
+        chapterIndex: currentChapterIndex
+    });
+
+    if (onProgress) onProgress(Boolean(result.queued));
+    updateUIState(isPlaybackActive());
+    return result;
 }
 
 export async function isChapterDownloaded() {
-    if (!currentBook || !window.AndroidInterface || currentSourceType === 'youtube') return false;
-    const fileName = `${currentBook.bookId}_${currentChapterIndex}_${currentLang}.mp3`;
-    return window.AndroidInterface.checkFile(fileName) !== "";
+    const offlineState = await getCurrentChapterOfflineState();
+    return offlineState.isDownloaded;
 }
 
 export async function deleteChapter() {
-    if (!currentBook || !window.AndroidInterface || currentSourceType === 'youtube') return;
-    const fileName = `${currentBook.bookId}_${currentChapterIndex}_${currentLang}.mp3`;
-    window.AndroidInterface.deleteFile(fileName);
+    if (!currentBook || currentSourceType === 'youtube') return;
+
+    if (window.AndroidInterface) {
+        const fileName = `${currentBook.bookId}_${currentChapterIndex}_${currentLang}.mp3`;
+        window.AndroidInterface.deleteFile(fileName);
+    } else {
+        await removeOfflineChapter(currentBook.bookId, currentLang, currentChapterIndex);
+    }
+
     updateUIState(isPlaybackActive());
 }
 
@@ -1012,15 +1141,17 @@ function stopProgressTracker() {
 }
 
 async function updateUIState(isPlaying) {
-    const isDownloaded = await isChapterDownloaded();
+    const offlineState = await getCurrentChapterOfflineState();
     const state = getCurrentState();
     const event = new CustomEvent('player-state-change', {
         detail: {
             isPlaying,
             book: currentBook,
             chapter: currentBook ? currentBook.activeChapters[currentChapterIndex] : null,
-            isDownloaded,
-            sourceType: state.sourceType
+            isDownloaded: offlineState.isDownloaded,
+            offlineState,
+            sourceType: state.sourceType,
+            playbackOrigin: state.playbackOrigin
         }
     });
 

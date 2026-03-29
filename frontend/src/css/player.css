@@ -162,7 +162,8 @@
 }
 
 .bookmark-section,
-.comments-section {
+.comments-section,
+.offline-player-card {
     margin-top: 0;
     padding-bottom: 0;
     padding: 22px;
@@ -175,6 +176,78 @@
 .bookmark-list {
     display: grid;
     gap: 12px;
+}
+
+.player-offline-status-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 7px 11px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.06);
+    color: var(--theme-title);
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.player-offline-status-chip[data-state="downloaded"] {
+    color: #77d28c;
+    border-color: rgba(119, 210, 140, 0.28);
+    background: rgba(119, 210, 140, 0.1);
+}
+
+.player-offline-status-chip[data-state="update_available"] {
+    color: #ffd37b;
+    border-color: rgba(255, 211, 123, 0.28);
+    background: rgba(255, 211, 123, 0.1);
+}
+
+.player-offline-status-chip[data-state="queued"],
+.player-offline-status-chip[data-state="downloading"] {
+    color: var(--secondary);
+    border-color: rgba(31, 221, 255, 0.28);
+    background: rgba(31, 221, 255, 0.1);
+}
+
+.player-offline-status-chip[data-state="failed"] {
+    color: #ff9b7a;
+    border-color: rgba(255, 75, 31, 0.28);
+    background: rgba(255, 75, 31, 0.1);
+}
+
+.player-offline-summary,
+.player-offline-meta {
+    margin: 0;
+    line-height: 1.6;
+}
+
+.player-offline-summary {
+    color: var(--theme-text-soft);
+}
+
+.player-offline-meta {
+    color: var(--theme-text-dim);
+    font-size: 0.9rem;
+    margin-top: 10px;
+}
+
+.player-offline-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.subtle-danger {
+    border-color: rgba(255, 75, 31, 0.32);
+    color: #ff9b7a;
+}
+
+.subtle-danger:hover {
+    color: #08111b;
 }
 
 .bookmark-item {

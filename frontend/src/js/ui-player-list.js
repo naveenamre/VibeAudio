@@ -1,4 +1,5 @@
 import { loadBook, getCurrentState, getCurrentLang, setLanguage } from './player.js';
+import { getOfflineChapterStatus, OFFLINE_STATES } from './offline-shelf.js';
 import { updateUI } from './ui-player-main.js';
 
 function escapeHTML(value) {
@@ -77,6 +78,7 @@ export function renderChapterList(book) {
                 : '';
 
         item.setAttribute('data-section-group', safeSectionId);
+        item.setAttribute('data-chapter-index', String(idx));
         item.className = `chapter-item ${isCurrent ? 'active' : ''} ${isCompleted ? 'completed' : ''} ${isResumePoint ? 'resume-point' : ''}`.trim();
 
         if (chapter.section && chapter.section !== activeSectionName) item.classList.add('collapsed');
@@ -91,7 +93,10 @@ export function renderChapterList(book) {
                 <span class="chapter-num">${idx + 1}</span>
                 <div class="chapter-copy">
                     <span class="chapter-title">${escapeHTML(cleanTitle)}</span>
-                    ${progressLabel}
+                    <div class="chapter-meta-line">
+                        ${progressLabel}
+                        <span class="chapter-offline-badge hidden" data-offline-badge></span>
+                    </div>
                 </div>
             </div>
             <div class="chapter-status"><i class="${statusClass}" style="font-size: 0.8rem;"></i></div>
@@ -102,6 +107,58 @@ export function renderChapterList(book) {
         };
         list.appendChild(item);
     });
+
+    void hydrateChapterOfflineBadges(book, chaptersToShow);
+}
+
+async function hydrateChapterOfflineBadges(book, chapters) {
+    const list = document.getElementById('chapter-list');
+    if (!list || !book) return;
+
+    const lang = getCurrentLang();
+
+    await Promise.all(chapters.map(async (chapter, idx) => {
+        const item = list.querySelector(`.chapter-item[data-chapter-index="${idx}"]`);
+        if (!item) return;
+
+        const badge = item.querySelector('[data-offline-badge]');
+        if (!badge) return;
+
+        const status = await getOfflineChapterStatus(book.bookId, lang, idx, chapter);
+        badge.className = 'chapter-offline-badge';
+
+        if (status.status === OFFLINE_STATES.downloaded) {
+            badge.textContent = 'Offline';
+            badge.classList.add('is-downloaded');
+            return;
+        }
+
+        if (status.status === OFFLINE_STATES.updateAvailable) {
+            badge.textContent = 'Update';
+            badge.classList.add('is-update');
+            return;
+        }
+
+        if (status.status === OFFLINE_STATES.downloading) {
+            badge.textContent = `${Math.max(0, Math.round(Number(status.record?.progressPercent || 0)))}%`;
+            badge.classList.add('is-downloading');
+            return;
+        }
+
+        if (status.status === OFFLINE_STATES.queued) {
+            badge.textContent = 'Queued';
+            badge.classList.add('is-queued');
+            return;
+        }
+
+        if (status.status === OFFLINE_STATES.failed) {
+            badge.textContent = 'Retry';
+            badge.classList.add('is-failed');
+            return;
+        }
+
+        badge.classList.add('hidden');
+    }));
 }
 
 function toggleSectionGroup(sectionId, headerElement) {

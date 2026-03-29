@@ -60,6 +60,18 @@ function getOpenPayload(book) {
     return savedState ? { ...book, savedState } : { ...book };
 }
 
+function getOfflineBadgeCopy(book) {
+    const summary = book?.offlineSummary;
+    if (!summary) return '';
+
+    if (summary.overallStatus === 'downloading') return 'Saving offline';
+    if (summary.overallStatus === 'queued') return 'Queued offline';
+    if (summary.overallStatus === 'update_available') return 'Needs update';
+    if (summary.overallStatus === 'failed') return 'Retry offline';
+    if (summary.totalDownloadedChapters > 0) return `${summary.totalDownloadedChapters} offline`;
+    return '';
+}
+
 function createLibraryCard(book, openPlayerCallback, placeholder) {
     const moodHTML = (book.moods || []).map((mood) => `<span class="mood-tag">${escapeHTML(mood)}</span>`).join('');
     const genreHTML = book.genre ? `<span class="mood-tag genre-accent">${escapeHTML(book.genre)}</span>` : '';
@@ -71,6 +83,11 @@ function createLibraryCard(book, openPlayerCallback, placeholder) {
                 <div class="card-progress-fill" style="width: ${progressPercent}%"></div>
             </div>
             <p class="card-progress-text">${escapeHTML(getResumeText(book))} - ${progressPercent}% done</p>
+        </div>` : '';
+    const offlineBadgeCopy = getOfflineBadgeCopy(book);
+    const offlineBadge = offlineBadgeCopy ? `
+        <div class="card-offline-badge" data-status="${escapeHTML(book.offlineSummary?.overallStatus || '')}">
+            ${escapeHTML(offlineBadgeCopy)}
         </div>` : '';
     const activityBadge = savedState ? `
         <div class="card-activity-badge ${book.isFinished ? 'finished' : 'continue'}">
@@ -85,6 +102,7 @@ function createLibraryCard(book, openPlayerCallback, placeholder) {
             <img class="lazy-img" src="${placeholder}" data-src="${escapeHTML(book.cover)}" alt="${escapeHTML(book.title)}">
             <div class="book-badge">${book.totalChapters || 0} Parts</div>
             ${activityBadge}
+            ${offlineBadge}
         </div>
         <div class="card-content">
             <h3>${escapeHTML(book.title)}</h3>
@@ -308,6 +326,27 @@ export function renderLibrary(books, openPlayerCallback) {
             max: 12, speed: 400, glare: true, "max-glare": 0.2, scale: 1.05
         });
     }
+}
+
+export function renderOfflineShelf(books, openPlayerCallback) {
+    const grid = document.getElementById('offline-grid');
+    if (!grid) return;
+
+    grid.innerHTML = '';
+    if (!books.length) {
+        grid.innerHTML = '<div class="empty-state"><p>No offline books yet. Save a direct-audio title from the player to build your browser shelf.</p></div>';
+        return;
+    }
+
+    const placeholder = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+
+    books.forEach((book) => {
+        const card = createLibraryCard(book, openPlayerCallback, placeholder);
+        grid.appendChild(card);
+
+        const img = card.querySelector('img');
+        if (window.imageObserver) window.imageObserver.observe(img);
+    });
 }
 
 export async function renderHistory(allBooks, openPlayerCallback, historyData = null) {

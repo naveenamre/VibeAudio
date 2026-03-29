@@ -7,6 +7,13 @@ import {
     syncUserProfile,
     saveUserProgress
 } from './api.js';
+import {
+    buildOfflineBookFromSummary,
+    clearAllOfflineDownloads,
+    getOfflineStorageStats,
+    listOfflineBooks,
+    resumePendingDownloads
+} from './offline-shelf.js';
 import { togglePlay, nextChapter, prevChapter, skip, seekTo, getCurrentState } from './player.js';
 import * as LibraryUI from './ui-library.js';
 import { openPlayerUI, updateUI } from './ui-player-main.js';
@@ -32,13 +39,16 @@ import {
 
 let allBooks = [];
 let userHistory = [];
+let offlineShelfSummaries = [];
+let offlineStorageStats = null;
 let currentViewId = 'library';
 let currentCategory = 'All';
 let currentSearchQuery = '';
 let closeSidebarIfOpen = () => false;
 let hasInitialized = false;
+let offlineRefreshQueued = false;
 
-const VALID_VIEWS = new Set(['library', 'history', 'about', 'profile', 'player']);
+const VALID_VIEWS = new Set(['library', 'history', 'offline', 'about', 'profile', 'player']);
 
 function getTimeStamp(value) {
     const stamp = Date.parse(value || 0);
@@ -202,6 +212,40 @@ function enrichBooksWithHistory(books, history) {
         });
 }
 
+function applyOfflineSummariesToBooks(books, summaries = offlineShelfSummaries) {
+    const summaryMap = new Map((Array.isArray(summaries) ? summaries : []).map((summary) => [String(summary.bookId), summary]));
+
+    return (Array.isArray(books) ? books : []).map((book) => {
+        const offlineSummary = summaryMap.get(String(book.bookId)) || null;
+        return {
+            ...book,
+            offlineSummary,
+            isOfflineAvailable: Boolean(offlineSummary?.totalDownloadedChapters)
+        };
+    });
+}
+
+function buildOfflineRenderableBooks() {
+    const catalogMap = new Map(allBooks.map((book) => [String(book.bookId), book]));
+
+    return offlineShelfSummaries.map((summary) => {
+        const catalogBook = catalogMap.get(String(summary.bookId));
+        const offlineBook = buildOfflineBookFromSummary(summary);
+        return applyOfflineSummariesToBooks([
+            catalogBook
+                ? { ...catalogBook, ...offlineBook }
+                : {
+                    ...(offlineBook || {}),
+                    bookId: summary.bookId,
+                    title: summary.title,
+                    author: summary.author,
+                    cover: summary.cover,
+                    totalChapters: summary.totalChapters
+                }
+        ], [summary])[0];
+    });
+}
+
 function matchesBookFilters(book) {
     const query = currentSearchQuery.trim().toLowerCase();
     if (query) {
@@ -235,6 +279,37 @@ function renderLibrarySurfaces() {
     renderLibraryInsights();
 }
 
+function queueOfflineShelfRefresh() {
+    if (offlineRefreshQueued) return;
+    offlineRefreshQueued = true;
+
+    window.setTimeout(async () => {
+        offlineRefreshQueued = false;
+        await refreshOfflineShelfState();
+        renderLibrarySurfaces();
+    }, 180);
+}
+
+async function refreshOfflineShelfState() {
+    try {
+        const [summaries, stats] = await Promise.all([
+            listOfflineBooks(),
+            getOfflineStorageStats()
+        ]);
+
+        offlineShelfSummaries = Array.isArray(summaries) ? summaries : [];
+        offlineStorageStats = stats;
+        allBooks = applyOfflineSummariesToBooks(allBooks, offlineShelfSummaries);
+    } catch (error) {
+        console.warn("Unable to refresh offline shelf state.", error);
+        offlineShelfSummaries = [];
+        offlineStorageStats = null;
+    }
+
+    renderOfflineView();
+    renderProfileStoragePanel();
+}
+
 async function refreshPersonalizedCatalog() {
     try {
         userHistory = await fetchUserProgress();
@@ -243,7 +318,7 @@ async function refreshPersonalizedCatalog() {
         userHistory = [];
     }
 
-    allBooks = enrichBooksWithHistory(allBooks, userHistory);
+    allBooks = applyOfflineSummariesToBooks(enrichBooksWithHistory(allBooks, userHistory), offlineShelfSummaries);
     renderLibrarySurfaces();
     LibraryUI.renderHistory(allBooks, openBookFromCollection, userHistory);
     renderProfileSnapshot();
@@ -304,6 +379,70 @@ function renderProfileSnapshot() {
     if (bookmarksEl) bookmarksEl.innerText = String(snapshot.bookmarkCount);
     if (summaryEl) summaryEl.innerText = snapshot.summary;
     if (genreEl) genreEl.innerText = `Top lane: ${snapshot.topGenre}`;
+
+    renderProfileStoragePanel();
+}
+
+function renderProfileStoragePanel() {
+    const usedEl = document.getElementById('offline-storage-used');
+    const quotaEl = document.getElementById('offline-storage-quota');
+    const booksEl = document.getElementById('offline-storage-books');
+    const chaptersEl = document.getElementById('offline-storage-chapters');
+    const modeEl = document.getElementById('offline-storage-mode');
+    const clearBtn = document.getElementById('clear-offline-downloads-btn');
+
+    if (!usedEl || !quotaEl || !booksEl || !chaptersEl || !modeEl) return;
+
+    const usedBytes = Number(offlineStorageStats?.downloadedBytes || 0);
+    const quotaBytes = Number(offlineStorageStats?.browserQuotaBytes || 0);
+    const formatSize = (value) => {
+        if (!value) return '0 MB';
+        if (value >= 1024 ** 3) return `${(value / (1024 ** 3)).toFixed(1)} GB`;
+        return `${Math.max(0.1, value / (1024 ** 2)).toFixed(value >= 1024 ** 2 ? 1 : 0)} MB`;
+    };
+
+    usedEl.innerText = formatSize(usedBytes);
+    quotaEl.innerText = quotaBytes ? formatSize(quotaBytes) : 'Browser managed';
+    booksEl.innerText = String(offlineStorageStats?.downloadedBooks || 0);
+    chaptersEl.innerText = String(offlineStorageStats?.downloadedChapters || 0);
+    modeEl.innerText = offlineStorageStats?.storageMode === 'opfs' ? 'OPFS preferred' : 'IndexedDB fallback';
+
+    if (clearBtn) {
+        clearBtn.disabled = !(offlineStorageStats?.downloadedBooks || offlineStorageStats?.pendingJobs);
+    }
+}
+
+function renderOfflineView() {
+    const subtitle = document.getElementById('offline-subtitle');
+    const stats = document.getElementById('offline-insights');
+    const offlineBooks = buildOfflineRenderableBooks();
+
+    if (subtitle) {
+        if (!offlineBooks.length) {
+            subtitle.textContent = 'Save direct-audio books from the player and they will appear here for offline browser listening.';
+        } else {
+            subtitle.textContent = `${offlineBooks.length} saved ${offlineBooks.length === 1 ? 'book' : 'books'} ready from this browser shelf.`;
+        }
+    }
+
+    if (stats) {
+        stats.innerHTML = `
+            <article class="insight-card">
+                <strong>${offlineStorageStats?.downloadedBooks || 0}</strong>
+                <span>Books saved locally</span>
+            </article>
+            <article class="insight-card">
+                <strong>${offlineStorageStats?.downloadedChapters || 0}</strong>
+                <span>Chapters available offline</span>
+            </article>
+            <article class="insight-card">
+                <strong>${offlineStorageStats?.pendingJobs || 0}</strong>
+                <span>Queued right now</span>
+            </article>
+        `;
+    }
+
+    LibraryUI.renderOfflineShelf(offlineBooks, openBookFromCollection);
 }
 
 function restorePlayerSessionIfNeeded() {
@@ -316,13 +455,16 @@ function restorePlayerSessionIfNeeded() {
     }
 
     const book = allBooks.find((item) => String(item.bookId) === String(session.bookId));
-    if (!book) {
+    const fallbackOfflineBook = buildOfflineRenderableBooks().find((item) => String(item.bookId) === String(session.bookId));
+    const resolvedBook = book || fallbackOfflineBook;
+
+    if (!resolvedBook) {
         switchView('library', false);
         return;
     }
 
     openPlayerUI({
-        ...book,
+        ...resolvedBook,
         savedState: {
             chapterIndex: Number(session.chapterIndex || 0),
             currentTime: Number(session.currentTime || 0)
@@ -395,6 +537,13 @@ window.app = {
         }, 3000);
     },
 
+    clearOfflineDownloads: async () => {
+        await clearAllOfflineDownloads();
+        await refreshOfflineShelfState();
+        renderLibrarySurfaces();
+        showToast("Offline shelf cleared from this browser");
+    },
+
     logout: async () => {
         console.log("Logging out...");
         try {
@@ -419,6 +568,7 @@ async function init() {
     setupImageObserver();
     setupRouting();
     renderSyncState();
+    await refreshOfflineShelfState();
 
     document.addEventListener("visibilitychange", () => {
         if (document.visibilityState !== "hidden") return;
@@ -441,7 +591,11 @@ async function init() {
     window.addEventListener('sync-status-change', (event) => {
         renderSyncState(event.detail);
     });
+    window.addEventListener('offline-shelf-change', () => {
+        queueOfflineShelfRefresh();
+    });
     window.addEventListener('online', async () => {
+        await resumePendingDownloads();
         await flushPendingProgressQueue();
         invalidateProgressCache();
         const freshBooks = await fetchAllBooks({ forceRefresh: true });
@@ -470,6 +624,7 @@ async function init() {
     const cachedCatalog = getCatalogSnapshot();
     if (cachedCatalog.books.length > 0) {
         allBooks = sortCatalogBooks(cachedCatalog.books);
+        allBooks = applyOfflineSummariesToBooks(allBooks, offlineShelfSummaries);
         LibraryUI.renderCategoryFilters(allBooks);
         await refreshPersonalizedCatalog();
         restorePlayerSessionIfNeeded();
@@ -477,6 +632,7 @@ async function init() {
 
     const freshBooks = await fetchAllBooks({ forceRefresh: true });
     allBooks = sortCatalogBooks(freshBooks);
+    allBooks = applyOfflineSummariesToBooks(allBooks, offlineShelfSummaries);
 
     LibraryUI.renderCategoryFilters(allBooks);
     await refreshPersonalizedCatalog();
@@ -562,6 +718,10 @@ function switchView(id, pushHistory = true) {
         refreshPersonalizedCatalog();
     }
 
+    if (nextView === 'offline') {
+        renderOfflineView();
+    }
+
     if (nextView === 'profile') {
         renderProfileSnapshot();
     }
@@ -600,6 +760,7 @@ function setupListeners() {
     const overlay = document.getElementById('sidebar-overlay');
     const sidebar = document.getElementById('sidebar');
     const syncBtn = document.getElementById('sync-profile-btn');
+    const clearOfflineBtn = document.getElementById('clear-offline-downloads-btn');
     const filterContainer = document.getElementById('category-filters');
 
     const toggleSidebar = (show) => {
@@ -679,6 +840,7 @@ function setupListeners() {
     if (seekBack) seekBack.onclick = () => skip(-10);
     if (seekFwd) seekFwd.onclick = () => skip(10);
     if (syncBtn) syncBtn.onclick = window.app.syncData;
+    if (clearOfflineBtn) clearOfflineBtn.onclick = window.app.clearOfflineDownloads;
 
     if (progress) {
         progress.addEventListener('input', (event) => {

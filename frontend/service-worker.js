@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vibeaudio-shell-v4-local-first';
+const CACHE_NAME = 'vibeaudio-shell-v5-offline-shelf';
 const PRECACHE_URLS = [
     './',
     './index.html',
@@ -13,6 +13,7 @@ const PRECACHE_URLS = [
     './src/js/auth.js',
     './src/js/config.js',
     './src/js/landing.js',
+    './src/js/offline-shelf.js',
     './src/js/player.js',
     './src/js/progress-model.js',
     './src/js/pwa.js',
