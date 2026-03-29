@@ -4,6 +4,30 @@ import { getSignedInUser, mountSignIn, persistUserProfile } from './auth.js';
 const APP_URL = './src/pages/app.html';
 const OFFLINE_APP_URL = `${APP_URL}#offline`;
 
+async function hasCachedOfflineAppShell() {
+    if (!('caches' in window)) return false;
+
+    try {
+        const absoluteAppUrl = new URL(APP_URL, window.location.href).href;
+        const cachedAppShell = await caches.match(absoluteAppUrl) || await caches.match(APP_URL);
+        return Boolean(cachedAppShell);
+    } catch (error) {
+        console.warn('Unable to inspect cached app shell.', error);
+        return false;
+    }
+}
+
+async function openOfflineShelfIfReady() {
+    if (navigator.onLine) return false;
+    if (window.location.pathname.includes('/src/pages/app')) return false;
+
+    const ready = await hasCachedOfflineAppShell();
+    if (!ready) return false;
+
+    window.location.replace(OFFLINE_APP_URL);
+    return true;
+}
+
 function escapeHTML(value) {
     return String(value || '')
         .replaceAll('&', '&amp;')
@@ -130,9 +154,15 @@ function bindScrollActions() {
     document.querySelectorAll('[data-open-auth="true"]').forEach((button) => {
         if (button.dataset.boundScroll === 'true') return;
         button.dataset.boundScroll = 'true';
-        button.addEventListener('click', () => {
+        button.addEventListener('click', async () => {
             if (!navigator.onLine) {
-                window.location.replace(OFFLINE_APP_URL);
+                const redirected = await openOfflineShelfIfReady();
+                if (!redirected) {
+                    document.getElementById('auth-status')?.classList.add('is-ready');
+                    if (document.getElementById('auth-status')) {
+                        document.getElementById('auth-status').textContent = 'Offline shelf is not cached strongly enough yet. Open the app once online, then it will launch here offline too.';
+                    }
+                }
                 return;
             }
             document.getElementById('auth-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -155,9 +185,11 @@ async function bootAuthPanel() {
     if (!signInContainer || !statusEl) return;
 
     if (!navigator.onLine) {
-        statusEl.textContent = 'Offline mode active. Opening your saved browser shelf instead of the sign-in panel.';
+        const redirected = await openOfflineShelfIfReady();
+        statusEl.textContent = redirected
+            ? 'Offline mode active. Opening your saved browser shelf instead of the sign-in panel.'
+            : 'Offline mode active. Your saved shelf will open here once the app shell has been cached from an online session.';
         statusEl.classList.add('is-ready');
-        window.location.replace(OFFLINE_APP_URL);
         return;
     }
 
@@ -204,8 +236,7 @@ async function bootAuthPanel() {
 }
 
 async function initLanding() {
-    if (!navigator.onLine) {
-        window.location.replace(OFFLINE_APP_URL);
+    if (!navigator.onLine && await openOfflineShelfIfReady()) {
         return;
     }
 

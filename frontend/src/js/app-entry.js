@@ -3,7 +3,7 @@ import { ensureSignedInOrRedirect } from './auth.js';
 async function bootApp() {
     try {
         if (!navigator.onLine) {
-            if (!window.location.hash) {
+            if (window.location.hash !== '#offline') {
                 window.location.replace(`${window.location.pathname}#offline`);
                 return;
             }

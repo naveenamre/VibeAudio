@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vibeaudio-shell-v7-offline-entry';
+const CACHE_NAME = 'vibeaudio-shell-v8-offline-route-guard';
 const PRECACHE_URLS = [
     './',
     './index.html',
@@ -27,12 +27,37 @@ const PRECACHE_URLS = [
     './public/icons/logo.png'
 ];
 
+function normalizePathname(value) {
+    const pathname = String(value || '/').replace(/\/+$/, '');
+    return pathname || '/';
+}
+
+function isAppShellPath(pathname) {
+    const normalized = normalizePathname(pathname);
+    return normalized.endsWith('/src/pages/app') || normalized.endsWith('/src/pages/app.html');
+}
+
+function isLandingPath(pathname) {
+    const normalized = normalizePathname(pathname);
+    return normalized === '/' || normalized.endsWith('/index.html');
+}
+
+async function getCanonicalAppShell(cache) {
+    return (await cache.match('./src/pages/app.html'))
+        || (await cache.match(new Request(new URL('./src/pages/app', self.location.href).href)));
+}
+
 self.addEventListener('install', (event) => {
     self.skipWaiting();
 
     event.waitUntil((async () => {
         const cache = await caches.open(CACHE_NAME);
         await Promise.allSettled(PRECACHE_URLS.map((url) => cache.add(url)));
+
+        const appShell = await cache.match('./src/pages/app.html');
+        if (appShell) {
+            await cache.put(new Request(new URL('./src/pages/app', self.location.href).href), appShell.clone());
+        }
     })());
 });
 
@@ -53,15 +78,41 @@ self.addEventListener('fetch', (event) => {
 
     if (request.mode === 'navigate') {
         event.respondWith((async () => {
+            const cache = await caches.open(CACHE_NAME);
+            const isAppNavigation = isAppShellPath(url.pathname);
+            const cachedAppShell = isAppNavigation ? await getCanonicalAppShell(cache) : null;
+
+            if (cachedAppShell) {
+                return cachedAppShell;
+            }
+
             try {
                 const fresh = await fetch(request);
-                const cache = await caches.open(CACHE_NAME);
-                cache.put(request, fresh.clone());
+
+                const responsePath = normalizePathname(new URL(fresh.url || request.url).pathname);
+                if (isAppNavigation) {
+                    if (isAppShellPath(responsePath)) {
+                        await cache.put('./src/pages/app.html', fresh.clone());
+                        await cache.put(new Request(new URL('./src/pages/app', self.location.href).href), fresh.clone());
+                    }
+                } else if (isLandingPath(url.pathname)) {
+                    await cache.put('./index.html', fresh.clone());
+                } else {
+                    await cache.put(request, fresh.clone());
+                }
+
                 return fresh;
             } catch (error) {
-                return (await caches.match(request))
-                    || (await caches.match('./src/pages/app.html'))
-                    || (await caches.match('./index.html'));
+                if (isAppNavigation) {
+                    return (await getCanonicalAppShell(cache))
+                        || (await cache.match('./index.html'))
+                        || Response.error();
+                }
+
+                return (await cache.match(request))
+                    || (await cache.match('./index.html'))
+                    || (await getCanonicalAppShell(cache))
+                    || Response.error();
             }
         })());
         return;
