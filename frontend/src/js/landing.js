@@ -2,6 +2,7 @@ import { fetchAllBooks } from './api.js';
 import { getSignedInUser, mountSignIn, persistUserProfile } from './auth.js';
 
 const APP_URL = './src/pages/app.html';
+const OFFLINE_APP_URL = `${APP_URL}#offline`;
 
 function escapeHTML(value) {
     return String(value || '')
@@ -130,6 +131,10 @@ function bindScrollActions() {
         if (button.dataset.boundScroll === 'true') return;
         button.dataset.boundScroll = 'true';
         button.addEventListener('click', () => {
+            if (!navigator.onLine) {
+                window.location.replace(OFFLINE_APP_URL);
+                return;
+            }
             document.getElementById('auth-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         });
     });
@@ -148,6 +153,13 @@ async function bootAuthPanel() {
     const signInContainer = document.getElementById('sign-in-container');
     const statusEl = document.getElementById('auth-status');
     if (!signInContainer || !statusEl) return;
+
+    if (!navigator.onLine) {
+        statusEl.textContent = 'Offline mode active. Opening your saved browser shelf instead of the sign-in panel.';
+        statusEl.classList.add('is-ready');
+        window.location.replace(OFFLINE_APP_URL);
+        return;
+    }
 
     try {
         const currentUser = await getSignedInUser();
@@ -192,6 +204,11 @@ async function bootAuthPanel() {
 }
 
 async function initLanding() {
+    if (!navigator.onLine) {
+        window.location.replace(OFFLINE_APP_URL);
+        return;
+    }
+
     setGreeting();
     bindScrollActions();
 

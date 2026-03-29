@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vibeaudio-shell-v6-auth-fix';
+const CACHE_NAME = 'vibeaudio-shell-v7-offline-entry';
 const PRECACHE_URLS = [
     './',
     './index.html',
