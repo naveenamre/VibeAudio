@@ -85,6 +85,32 @@
     color: var(--theme-text-soft);
 }
 
+.detail-summary {
+    max-width: 64ch;
+    color: var(--theme-text-soft);
+    line-height: 1.72;
+    margin: 12px 0 16px;
+}
+
+.detail-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 18px;
+}
+
+.detail-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.06);
+    color: var(--theme-text-soft);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
 .meta-info {
     display: flex;
     flex-wrap: wrap;
@@ -102,6 +128,114 @@
 .chapter-list-container ul {
     list-style: none;
     padding: 0;
+}
+
+.player-two-column {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+    gap: 22px;
+    align-items: start;
+}
+
+.player-side-stack {
+    display: grid;
+    gap: 22px;
+}
+
+.stack-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 16px;
+}
+
+.stack-header h3 {
+    margin: 0 0 6px;
+    font-family: var(--font-display);
+}
+
+.stack-header p {
+    margin: 0;
+    color: var(--theme-text-dim);
+    line-height: 1.55;
+}
+
+.bookmark-section,
+.comments-section {
+    margin-top: 0;
+    padding-bottom: 0;
+    padding: 22px;
+    border-radius: 24px;
+    border: 1px solid var(--theme-border);
+    background: linear-gradient(180deg, var(--theme-surface-1), rgba(255,255,255,0.03));
+    box-shadow: 0 18px 38px var(--theme-shadow);
+}
+
+.bookmark-list {
+    display: grid;
+    gap: 12px;
+}
+
+.bookmark-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    padding: 12px;
+    border-radius: 18px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.04);
+}
+
+.bookmark-jump,
+.bookmark-remove,
+.mini-action-btn {
+    border: none;
+    cursor: pointer;
+}
+
+.bookmark-jump {
+    display: grid;
+    justify-items: start;
+    gap: 4px;
+    background: transparent;
+    color: var(--theme-text);
+    text-align: left;
+}
+
+.bookmark-jump strong {
+    font-size: 0.92rem;
+}
+
+.bookmark-jump span {
+    color: var(--theme-text-dim);
+    font-size: 0.8rem;
+}
+
+.bookmark-remove,
+.mini-action-btn {
+    padding: 10px 14px;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.07);
+    color: var(--theme-title);
+    font-weight: 700;
+    border: 1px solid rgba(255,255,255,0.08);
+    transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.bookmark-remove:hover,
+.mini-action-btn:hover {
+    transform: translateY(-1px);
+    background: var(--theme-progress-fill);
+    color: #08111b;
+    box-shadow: 0 0 15px var(--theme-glow-soft);
+}
+
+.bookmark-empty {
+    margin: 0;
+    color: var(--theme-text-dim);
+    line-height: 1.62;
 }
 
 .chapter-list-container li.chapter-item {
@@ -544,6 +678,15 @@ input[type=range]::-moz-range-thumb {
         padding: 30px 20px;
     }
 
+    .detail-summary,
+    .detail-pills {
+        justify-content: center;
+    }
+
+    .player-two-column {
+        grid-template-columns: 1fr;
+    }
+
     .player-header-card img {
         width: 150px;
         margin-bottom: 20px;
@@ -582,6 +725,10 @@ input[type=range]::-moz-range-thumb {
 
     .source-support-note button {
         width: 100%;
+    }
+
+    .stack-header {
+        flex-direction: column;
     }
 
 }

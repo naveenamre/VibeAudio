@@ -1,18 +1,41 @@
 import { fetchUserProgress } from './api.js';
 import { applyHistoryTheme, applyLibraryTheme } from './ui-player-helpers.js';
+import {
+    compareProgressByRecency,
+    getProgressPercent,
+    getProgressTimestampValue,
+    isBookFinishedProgress
+} from './progress-model.js';
 
-function getProgressPercent(progressOrBook) {
+function escapeHTML(value) {
+    return String(value || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+}
+
+function normalizeCategoryKey(value) {
+    return String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'all';
+}
+
+export function getCategoryButtonId(category) {
+    return `filter-${normalizeCategoryKey(category)}`;
+}
+
+function getDisplayProgressPercent(progressOrBook) {
     if (!progressOrBook) return 0;
 
     if (typeof progressOrBook.progressPercent === 'number') {
         return Math.max(0, Math.min(100, Math.round(progressOrBook.progressPercent)));
     }
 
-    const currentTime = Number(progressOrBook.currentTime || 0);
-    const totalDuration = Number(progressOrBook.totalDuration || 0);
-    if (totalDuration <= 0) return currentTime > 0 ? 1 : 0;
-
-    return Math.max(0, Math.min(100, Math.round((currentTime / totalDuration) * 100)));
+    return getProgressPercent(progressOrBook);
 }
 
 function getSavedState(book) {
@@ -38,16 +61,16 @@ function getOpenPayload(book) {
 }
 
 function createLibraryCard(book, openPlayerCallback, placeholder) {
-    const moodHTML = (book.moods || []).map((m) => `<span class="mood-tag">${m}</span>`).join('');
-    const genreHTML = book.genre ? `<span class="mood-tag genre-accent">${book.genre}</span>` : '';
-    const progressPercent = getProgressPercent(book);
+    const moodHTML = (book.moods || []).map((mood) => `<span class="mood-tag">${escapeHTML(mood)}</span>`).join('');
+    const genreHTML = book.genre ? `<span class="mood-tag genre-accent">${escapeHTML(book.genre)}</span>` : '';
+    const progressPercent = getDisplayProgressPercent(book);
     const savedState = getSavedState(book);
     const progressHTML = savedState ? `
         <div class="card-progress-block">
             <div class="card-progress-track">
                 <div class="card-progress-fill" style="width: ${progressPercent}%"></div>
             </div>
-            <p class="card-progress-text">${getResumeText(book)} - ${progressPercent}% done</p>
+            <p class="card-progress-text">${escapeHTML(getResumeText(book))} - ${progressPercent}% done</p>
         </div>` : '';
     const activityBadge = savedState ? `
         <div class="card-activity-badge ${book.isFinished ? 'finished' : 'continue'}">
@@ -59,13 +82,13 @@ function createLibraryCard(book, openPlayerCallback, placeholder) {
     card.tabIndex = 0;
     card.innerHTML = `
         <div class="img-container">
-            <img class="lazy-img" src="${placeholder}" data-src="${book.cover}" alt="${book.title}">
+            <img class="lazy-img" src="${placeholder}" data-src="${escapeHTML(book.cover)}" alt="${escapeHTML(book.title)}">
             <div class="book-badge">${book.totalChapters || 0} Parts</div>
             ${activityBadge}
         </div>
         <div class="card-content">
-            <h3>${book.title}</h3>
-            <p>${book.author}</p>
+            <h3>${escapeHTML(book.title)}</h3>
+            <p>${escapeHTML(book.author)}</p>
             <div class="mood-tags">${genreHTML}${moodHTML}</div>
             ${progressHTML}
         </div>`;
@@ -81,13 +104,8 @@ function createLibraryCard(book, openPlayerCallback, placeholder) {
     return card;
 }
 
-function getTimeStamp(value) {
-    const stamp = Date.parse(value || 0);
-    return Number.isFinite(stamp) ? stamp : 0;
-}
-
 function formatUpdatedText(updatedAt) {
-    const deltaMs = Date.now() - getTimeStamp(updatedAt);
+    const deltaMs = Date.now() - getProgressTimestampValue({ lastInteractionAt: updatedAt });
     if (!deltaMs || deltaMs < 0) return "Recently";
 
     const hours = Math.floor(deltaMs / (1000 * 60 * 60));
@@ -100,25 +118,27 @@ function formatUpdatedText(updatedAt) {
 }
 
 function createHistoryCard(book, progress, openPlayerCallback) {
-    const percent = getProgressPercent(progress);
+    const percent = getDisplayProgressPercent(progress);
     const chapterNumber = Number(progress.chapterIndex || 0) + 1;
+    const finished = isBookFinishedProgress(progress);
 
     const card = document.createElement('div');
     card.className = 'history-card';
+    card.tabIndex = 0;
     card.innerHTML = `
         <div class="history-layout">
-            <img src="${book.cover}" loading="lazy" class="history-cover">
+            <img src="${escapeHTML(book.cover)}" loading="lazy" class="history-cover">
             <div class="history-info">
-                <h3>${book.title}</h3>
+                <h3>${escapeHTML(book.title)}</h3>
                 <div class="chapter-badge">
                     <i class="fas fa-bookmark"></i>
-                    <span>${percent >= 92 ? 'Finished recently' : `Resume from Part ${chapterNumber}`}</span>
+                    <span>${finished ? 'Finished recently' : `Resume from Part ${chapterNumber}`}</span>
                 </div>
                 <div class="progress-container">
                     <div class="mini-progress-track">
                         <div class="mini-progress-fill" style="width: ${percent}%"></div>
                     </div>
-                    <span class="progress-text">${percent}% done - ${formatUpdatedText(progress.updatedAt)}</span>
+                    <span class="progress-text">${percent}% done - ${formatUpdatedText(progress.lastInteractionAt)}</span>
                 </div>
             </div>
             <div class="history-play-btn"><i class="fas fa-play"></i></div>
@@ -132,6 +152,11 @@ function createHistoryCard(book, progress, openPlayerCallback) {
                 currentTime: Number(progress.currentTime || 0)
             }
         });
+    };
+    card.onkeydown = (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        card.click();
     };
 
     return card;
@@ -149,9 +174,10 @@ export function renderCategoryFilters(allBooks) {
 
     container.innerHTML = Array.from(moods).map((mood) => `
         <button class="filter-btn ${mood === 'All' ? 'active' : ''}" 
-                id="filter-${mood.replace(/\s+/g, '-')}"
-                onclick="window.app.filterLibrary('${mood}')">
-            ${mood}
+                id="${getCategoryButtonId(mood)}"
+                data-category="${escapeHTML(mood)}"
+                type="button">
+            ${escapeHTML(mood)}
         </button>
     `).join('');
 }
@@ -164,9 +190,14 @@ export function renderLibrarySpotlight(books, openPlayerCallback, options = {}) 
     const searchQuery = String(options.searchQuery || '').trim();
     const historyBooks = books
         .filter((book) => book.savedState && !book.isFinished)
-        .sort((a, b) => getTimeStamp(b.lastUpdatedAt) - getTimeStamp(a.lastUpdatedAt));
+        .sort((a, b) => getProgressTimestampValue({ lastInteractionAt: b.lastInteractionAt })
+            - getProgressTimestampValue({ lastInteractionAt: a.lastInteractionAt }));
 
-    const continueBook = historyBooks[0];
+    const lastOpenedState = options.lastOpenedState || null;
+    const lastOpenedBook = lastOpenedState?.bookId
+        ? historyBooks.find((book) => String(book.bookId) === String(lastOpenedState.bookId))
+        : null;
+    const continueBook = lastOpenedBook || historyBooks[0];
     const preferredTags = Array.from(new Set(
         historyBooks.flatMap((book) => book.topReasons || [])
     )).slice(0, 3);
@@ -188,7 +219,13 @@ export function renderLibrarySpotlight(books, openPlayerCallback, options = {}) 
         return;
     }
 
-    const continueProgress = continueBook ? getProgressPercent(continueBook) : 0;
+    const continueProgress = continueBook ? getDisplayProgressPercent(continueBook) : 0;
+    const syncStatus = options.syncStatus?.status || '';
+    const syncBadge = syncStatus === 'offline'
+        ? 'Saved Offline'
+        : syncStatus === 'pending'
+            ? 'Sync Pending'
+            : 'Cloud Synced';
     const reasonText = preferredTags.length ? `Because you keep listening to ${preferredTags.join(', ')}` : "More stories matching your listening vibe";
 
     container.classList.remove('hidden');
@@ -197,8 +234,9 @@ export function renderLibrarySpotlight(books, openPlayerCallback, options = {}) 
             <div class="continue-spotlight">
                 <div class="continue-copy">
                     <span class="personalized-kicker">Continue Listening</span>
-                    <h3>${continueBook.title}</h3>
-                    <p>${continueBook.author}</p>
+                    <span class="spotlight-sync-pill" data-status="${escapeHTML(syncStatus)}">${escapeHTML(syncBadge)}</span>
+                    <h3>${escapeHTML(continueBook.title)}</h3>
+                    <p>${escapeHTML(continueBook.author)}</p>
                     <div class="spotlight-progress-track">
                         <div class="spotlight-progress-fill" style="width: ${continueProgress}%"></div>
                     </div>
@@ -207,23 +245,23 @@ export function renderLibrarySpotlight(books, openPlayerCallback, options = {}) 
                         <i class="fas fa-play"></i> Resume Book
                     </button>
                 </div>
-                <img src="${continueBook.cover}" alt="${continueBook.title}" class="continue-cover">
+                <img src="${escapeHTML(continueBook.cover)}" alt="${escapeHTML(continueBook.title)}" class="continue-cover">
             </div>` : ''}
         ${recommendations.length ? `
             <div class="library-discovery-panel">
                 <div class="discovery-header">
                     <div>
                         <span class="personalized-kicker">Picked For You</span>
-                        <h3>${reasonText}</h3>
+                        <h3>${escapeHTML(reasonText)}</h3>
                     </div>
                 </div>
                 <div class="discovery-grid">
                     ${recommendations.map((book) => `
                         <button class="discovery-card" data-book-id="${book.bookId}">
-                            <img src="${book.cover}" alt="${book.title}">
+                            <img src="${escapeHTML(book.cover)}" alt="${escapeHTML(book.title)}">
                             <div class="discovery-info">
-                                <strong>${book.title}</strong>
-                                <span>${book.recommendationReason || book.genre || 'Fresh pick for you'}</span>
+                                <strong>${escapeHTML(book.title)}</strong>
+                                <span>${escapeHTML(book.recommendationReason || book.genre || 'Fresh pick for you')}</span>
                             </div>
                         </button>
                     `).join('')}
@@ -280,7 +318,7 @@ export async function renderHistory(allBooks, openPlayerCallback, historyData = 
 
     try {
         const history = Array.isArray(historyData) ? historyData : await fetchUserProgress();
-        const sortedHistory = [...history].sort((a, b) => getTimeStamp(b.updatedAt) - getTimeStamp(a.updatedAt));
+        const sortedHistory = [...history].sort(compareProgressByRecency);
 
         if (!sortedHistory.length) {
             grid.innerHTML = '<p class="empty-msg">Abhi tak kuch nahi suna? Start listening! </p>';

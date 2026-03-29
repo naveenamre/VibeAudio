@@ -4,25 +4,25 @@ const { DynamoDBDocumentClient, PutCommand } = require("@aws-sdk/lib-dynamodb");
 const client = new DynamoDBClient({ region: "ap-south-1" });
 const docClient = DynamoDBDocumentClient.from(client);
 
+function toSafeNumber(value, fallback = 0) {
+    const number = Number(value);
+    return Number.isFinite(number) ? number : fallback;
+}
+
 exports.handler = async (event) => {
-    // 👇 1. CORS Headers (Ye Passport hai tera)
     const headers = {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "POST, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type"
     };
 
-    // 👇 2. Handle Preflight Request (Browser puchta hai: "Kya main data bheju?")
-    // Agar request method OPTIONS hai, toh bas headers bhej ke 200 OK bol do.
-    if (event.requestContext && event.requestContext.http.method === 'OPTIONS') {
+    if (event.requestContext?.http?.method === "OPTIONS") {
         return {
             statusCode: 200,
-            headers: headers,
-            body: ''
+            headers,
+            body: ""
         };
     }
-
-    console.log("💾 Saving Progress...", event.body);
 
     if (!event.body) {
         return { statusCode: 400, headers, body: JSON.stringify({ error: "Empty Body" }) };
@@ -30,39 +30,66 @@ exports.handler = async (event) => {
 
     let body;
     try {
-        body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
-    } catch (e) {
+        body = typeof event.body === "string" ? JSON.parse(event.body) : event.body;
+    } catch (error) {
         return { statusCode: 400, headers, body: JSON.stringify({ error: "Invalid JSON" }) };
     }
 
-    const { userId, bookId, chapterIndex, currentTime, totalDuration } = body;
+    const userId = String(body.userId || "").trim();
+    const bookId = String(body.bookId || "").trim();
 
-    const params = {
-        TableName: "Vibe_UserProgress",
-        Item: {
-            userId: userId,
-            bookId: bookId.toString(),
-            chapterIndex: chapterIndex || 0,
-            currentTime: currentTime || 0,
-            totalDuration: totalDuration || 0,
-            lastUpdated: new Date().toISOString(),
-            isFinished: (currentTime > (totalDuration * 0.9))
-        }
+    if (!userId || !bookId) {
+        return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({ error: "userId and bookId are required" })
+        };
+    }
+
+    const chapterIndex = Math.max(0, Math.floor(toSafeNumber(body.chapterIndex, 0)));
+    const currentTime = Math.max(0, toSafeNumber(body.currentTime, 0));
+    const totalDuration = Math.max(0, toSafeNumber(body.totalDuration, 0));
+    const totalChapters = Math.max(0, Math.floor(toSafeNumber(body.totalChapters, 0)));
+    const currentChapterFinished = totalDuration > 0 && currentTime >= totalDuration * 0.98;
+    const legacyFinishedFlag = typeof body.isFinished === "boolean" ? body.isFinished : false;
+    const bookFinished = typeof body.bookFinished === "boolean"
+        ? body.bookFinished
+        : Boolean(totalChapters && chapterIndex >= totalChapters - 1 && currentChapterFinished)
+            || Boolean(!totalChapters && legacyFinishedFlag && currentChapterFinished);
+    const lastInteractionAt = body.lastInteractionAt || body.updatedAt || body.lastUpdated || new Date().toISOString();
+
+    const item = {
+        userId,
+        bookId,
+        chapterIndex,
+        currentTime,
+        totalDuration,
+        currentChapterFinished,
+        bookFinished,
+        lastInteractionAt
     };
 
+    if (totalChapters > 0) {
+        item.totalChapters = totalChapters;
+    }
+
     try {
-        await docClient.send(new PutCommand(params));
+        await docClient.send(new PutCommand({
+            TableName: "Vibe_UserProgress",
+            Item: item
+        }));
+
         return {
             statusCode: 200,
-            headers: headers, // ✅ Headers yahan bhi return karna zaroori hai
-            body: JSON.stringify({ message: "Progress Saved! ✅" })
+            headers,
+            body: JSON.stringify({ message: "Progress saved", progress: item })
         };
-    } catch (err) {
-        console.error("❌ DB Error:", err);
-        return { 
-            statusCode: 500, 
-            headers: headers, 
-            body: JSON.stringify({ error: err.message }) 
+    } catch (error) {
+        console.error("DB Error:", error);
+        return {
+            statusCode: 500,
+            headers,
+            body: JSON.stringify({ error: error.message })
         };
     }
 };

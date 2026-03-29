@@ -1,8 +1,34 @@
-import { fetchAllBooks, fetchUserProgress, getLocalUserProfile, syncUserProfile, saveUserProgress } from './api.js';
+import {
+    fetchAllBooks,
+    fetchUserProgress,
+    flushPendingProgressQueue,
+    getLocalUserProfile,
+    invalidateProgressCache,
+    syncUserProfile,
+    saveUserProgress
+} from './api.js';
 import { togglePlay, nextChapter, prevChapter, skip, seekTo, getCurrentState } from './player.js';
 import * as LibraryUI from './ui-library.js';
 import { openPlayerUI, updateUI } from './ui-player-main.js';
+import { STORAGE_KEYS, SYNC_STATES } from './config.js';
 import { formatTime, renderSingleComment, setActiveThemeSurface } from './ui-player-helpers.js';
+import { signOutCurrentUser } from './auth.js';
+import {
+    addPersistentComment,
+    buildProfileSnapshot,
+    getCatalogSnapshot,
+    getCurrentUserName,
+    getLastOpenedBook,
+    getLastPlayerSession,
+    getSyncStatus,
+    pushRecentSearch
+} from './user-data.js';
+import {
+    compareProgressByRecency,
+    getProgressPercent,
+    getProgressTimestampValue,
+    isBookFinishedProgress
+} from './progress-model.js';
 
 let allBooks = [];
 let userHistory = [];
@@ -10,6 +36,7 @@ let currentViewId = 'library';
 let currentCategory = 'All';
 let currentSearchQuery = '';
 let closeSidebarIfOpen = () => false;
+let hasInitialized = false;
 
 const VALID_VIEWS = new Set(['library', 'history', 'about', 'profile', 'player']);
 
@@ -18,14 +45,65 @@ function getTimeStamp(value) {
     return Number.isFinite(stamp) ? stamp : 0;
 }
 
-function getProgressPercent(progress) {
-    if (!progress) return 0;
+function sortCatalogBooks(books) {
+    return (Array.isArray(books) ? books : [])
+        .slice()
+        .sort((a, b) => {
+            const numA = parseInt(String(a.bookId || '').replace(/\D/g, ''), 10) || 0;
+            const numB = parseInt(String(b.bookId || '').replace(/\D/g, ''), 10) || 0;
+            return numA - numB;
+        })
+        .map((book, index) => ({ ...book, catalogOrder: index }));
+}
 
-    const currentTime = Number(progress.currentTime || 0);
-    const totalDuration = Number(progress.totalDuration || 0);
-    if (totalDuration <= 0) return currentTime > 0 ? 1 : 0;
+function formatRelativeTime(value) {
+    const stamp = getTimeStamp(value);
+    if (!stamp) return 'recently';
 
-    return Math.max(0, Math.min(100, Math.round((currentTime / totalDuration) * 100)));
+    const deltaMs = Date.now() - stamp;
+    if (deltaMs < 60 * 1000) return 'just now';
+
+    const minutes = Math.floor(deltaMs / (60 * 1000));
+    if (minutes < 60) return `${minutes}m ago`;
+
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+}
+
+function renderSyncState(status = getSyncStatus()) {
+    const banners = [
+        document.getElementById('library-sync-banner'),
+        document.getElementById('history-sync-banner')
+    ].filter(Boolean);
+    const profileNote = document.getElementById('profile-sync-note');
+    const pendingCount = Number(status.pendingCount || 0);
+
+    let message = 'Shelf synced. Your browser can reopen the last touched story quickly.';
+    if (status.status === SYNC_STATES.offline) {
+        message = pendingCount > 0
+            ? `Offline mode active. ${pendingCount} listening update${pendingCount === 1 ? '' : 's'} waiting to sync, but your saved shelf is still available.`
+            : 'Offline mode active. Showing your saved shelf from this device.';
+    } else if (status.status === SYNC_STATES.pending) {
+        message = pendingCount > 0
+            ? `${pendingCount} listening update${pendingCount === 1 ? '' : 's'} waiting to sync. Continue listening is using fresher local device data.`
+            : 'Device state is newer than cloud and will sync shortly.';
+    } else if (status.lastSuccessfulSyncAt) {
+        message = `Synced ${formatRelativeTime(status.lastSuccessfulSyncAt)}. Continue listening follows your latest unfinished book.`;
+    }
+
+    banners.forEach((banner) => {
+        banner.classList.remove('hidden');
+        banner.dataset.status = status.status;
+        banner.textContent = message;
+    });
+
+    if (profileNote) {
+        profileNote.dataset.status = status.status;
+        profileNote.textContent = message;
+    }
 }
 
 function getBookSignals(book) {
@@ -43,7 +121,7 @@ function getBookSignals(book) {
 }
 
 function enrichBooksWithHistory(books, history) {
-    const sortedHistory = [...history].sort((a, b) => getTimeStamp(b.updatedAt) - getTimeStamp(a.updatedAt));
+    const sortedHistory = [...history].sort(compareProgressByRecency);
     const historyByBook = new Map();
 
     sortedHistory.forEach((entry, index) => {
@@ -80,7 +158,7 @@ function enrichBooksWithHistory(books, history) {
                 .filter((signal) => tasteProfile.has(signal.key))
                 .sort((a, b) => (tasteProfile.get(b.key) || 0) - (tasteProfile.get(a.key) || 0));
             const preferenceScore = matchingSignals.reduce((sum, signal) => sum + (tasteProfile.get(signal.key) || 0), 0);
-            const isFinished = Boolean(progress?.isFinished || progressPercent >= 92);
+            const isFinished = isBookFinishedProgress(progress);
             const progressBoost = savedState && !isFinished ? 1600 + progressPercent : 0;
             const hasRecommendationMatch = preferenceScore > 0;
 
@@ -88,7 +166,7 @@ function enrichBooksWithHistory(books, history) {
                 ...book,
                 savedState,
                 progressPercent,
-                lastUpdatedAt: progress?.updatedAt || null,
+                lastInteractionAt: progress?.lastInteractionAt || null,
                 historyRank: progress?.historyRank ?? Number.MAX_SAFE_INTEGER,
                 isFinished,
                 personalizedScore: progressBoost + preferenceScore + (isFinished ? 40 : 0),
@@ -108,14 +186,16 @@ function enrichBooksWithHistory(books, history) {
             if (bucketDiff) return bucketDiff;
 
             if (a.rankingBucket === 0 && b.rankingBucket === 0) {
-                const recencyDiff = getTimeStamp(b.lastUpdatedAt) - getTimeStamp(a.lastUpdatedAt);
+                const recencyDiff = getProgressTimestampValue({ lastInteractionAt: b.lastInteractionAt })
+                    - getProgressTimestampValue({ lastInteractionAt: a.lastInteractionAt });
                 if (recencyDiff) return recencyDiff;
             }
 
             const scoreDiff = (b.personalizedScore || 0) - (a.personalizedScore || 0);
             if (scoreDiff) return scoreDiff;
 
-            const recencyDiff = getTimeStamp(b.lastUpdatedAt) - getTimeStamp(a.lastUpdatedAt);
+            const recencyDiff = getProgressTimestampValue({ lastInteractionAt: b.lastInteractionAt })
+                - getProgressTimestampValue({ lastInteractionAt: a.lastInteractionAt });
             if (recencyDiff) return recencyDiff;
 
             return (a.catalogOrder || 0) - (b.catalogOrder || 0);
@@ -147,9 +227,12 @@ function openBookFromCollection(book) {
 function renderLibrarySurfaces() {
     LibraryUI.renderLibrarySpotlight(allBooks, openBookFromCollection, {
         activeCategory: currentCategory,
-        searchQuery: currentSearchQuery
+        searchQuery: currentSearchQuery,
+        lastOpenedState: getLastOpenedBook(),
+        syncStatus: getSyncStatus()
     });
     LibraryUI.renderLibrary(getVisibleBooks(), openBookFromCollection);
+    renderLibraryInsights();
 }
 
 async function refreshPersonalizedCatalog() {
@@ -163,6 +246,88 @@ async function refreshPersonalizedCatalog() {
     allBooks = enrichBooksWithHistory(allBooks, userHistory);
     renderLibrarySurfaces();
     LibraryUI.renderHistory(allBooks, openBookFromCollection, userHistory);
+    renderProfileSnapshot();
+    renderSyncState();
+}
+
+function renderLibraryInsights() {
+    const subtitle = document.getElementById('library-subtitle');
+    const insights = document.getElementById('library-insights');
+    const visibleBooks = getVisibleBooks();
+
+    if (subtitle) {
+        if (currentSearchQuery.trim()) {
+            subtitle.textContent = `${visibleBooks.length} matching stories for "${currentSearchQuery.trim()}"`;
+        } else if (currentCategory !== 'All') {
+            subtitle.textContent = `${visibleBooks.length} stories in ${currentCategory}`;
+        } else {
+            subtitle.textContent = `${allBooks.length} stories, tailored to your recent listening patterns.`;
+        }
+    }
+
+    if (!insights) return;
+
+    const totalCategories = new Set(
+        allBooks.flatMap((book) => [book.genre, ...(Array.isArray(book.moods) ? book.moods : [])]).filter(Boolean)
+    ).size;
+    const activeResumes = userHistory.filter((entry) => !isBookFinishedProgress(entry)).length;
+
+    insights.innerHTML = `
+        <article class="insight-card">
+            <strong>${visibleBooks.length}</strong>
+            <span>Visible right now</span>
+        </article>
+        <article class="insight-card">
+            <strong>${activeResumes}</strong>
+            <span>Stories to resume</span>
+        </article>
+        <article class="insight-card">
+            <strong>${totalCategories}</strong>
+            <span>Moods and genres</span>
+        </article>
+    `;
+}
+
+function renderProfileSnapshot() {
+    const snapshot = buildProfileSnapshot(userHistory, allBooks);
+
+    const finishedEl = document.getElementById('profile-stat-finished');
+    const hoursEl = document.getElementById('profile-stat-hours');
+    const activeEl = document.getElementById('profile-stat-active');
+    const bookmarksEl = document.getElementById('profile-stat-bookmarks');
+    const summaryEl = document.getElementById('profile-summary-copy');
+    const genreEl = document.getElementById('profile-top-genre');
+
+    if (finishedEl) finishedEl.innerText = String(snapshot.finishedBooks);
+    if (hoursEl) hoursEl.innerText = `${snapshot.totalHours.toFixed(snapshot.totalHours >= 10 ? 0 : 1)}h`;
+    if (activeEl) activeEl.innerText = String(snapshot.activeBooks);
+    if (bookmarksEl) bookmarksEl.innerText = String(snapshot.bookmarkCount);
+    if (summaryEl) summaryEl.innerText = snapshot.summary;
+    if (genreEl) genreEl.innerText = `Top lane: ${snapshot.topGenre}`;
+}
+
+function restorePlayerSessionIfNeeded() {
+    if (currentViewId !== 'player') return;
+
+    const session = getLastPlayerSession() || getLastOpenedBook();
+    if (!session?.bookId) {
+        switchView('library', false);
+        return;
+    }
+
+    const book = allBooks.find((item) => String(item.bookId) === String(session.bookId));
+    if (!book) {
+        switchView('library', false);
+        return;
+    }
+
+    openPlayerUI({
+        ...book,
+        savedState: {
+            chapterIndex: Number(session.chapterIndex || 0),
+            currentTime: Number(session.currentTime || 0)
+        }
+    }, allBooks, (viewId) => switchView(viewId, false));
 }
 
 window.app = {
@@ -195,8 +360,14 @@ window.app = {
     },
 
     syncData: async () => {
-        const btn = document.querySelector('.btn-secondary');
+        const btn = document.getElementById('sync-profile-btn') || document.querySelector('.btn-secondary');
         if (!btn) return;
+
+        if (!navigator.onLine) {
+            showToast("Offline mode active. We'll sync again when the browser reconnects.");
+            renderSyncState();
+            return;
+        }
 
         const icon = btn.querySelector('i');
         const originalText = btn.innerHTML;
@@ -206,6 +377,9 @@ window.app = {
         btn.disabled = true;
 
         await syncUserProfile();
+        await flushPendingProgressQueue();
+        invalidateProgressCache();
+        await refreshPersonalizedCatalog();
 
         if (icon) icon.classList.remove('fa-spin');
         btn.innerHTML = `<i class="fas fa-check"></i> Synced!`;
@@ -223,24 +397,28 @@ window.app = {
 
     logout: async () => {
         console.log("Logging out...");
-        if (window.Clerk) {
-            try {
-                await window.Clerk.signOut();
-            } catch (error) {
-                console.warn("Clerk signout issue:", error);
-            }
+        try {
+            await signOutCurrentUser();
+        } catch (error) {
+            console.warn("Clerk signout issue:", error);
         }
 
         localStorage.removeItem("vibe_user_id");
         localStorage.removeItem("vibe_user_name");
+        localStorage.removeItem(STORAGE_KEYS.lastPlayerSession);
+        localStorage.removeItem(STORAGE_KEYS.lastOpenedBook);
         window.location.href = "../../index.html";
     }
 };
 
 async function init() {
+    if (hasInitialized) return;
+    hasInitialized = true;
+
     console.log("VibeAudio UI starting...");
     setupImageObserver();
     setupRouting();
+    renderSyncState();
 
     document.addEventListener("visibilitychange", () => {
         if (document.visibilityState !== "hidden") return;
@@ -248,8 +426,33 @@ async function init() {
         const state = getCurrentState();
         if (state.book && state.currentTime > 5) {
             console.log("App backgrounded. Saving progress...");
-            saveUserProgress(state.book.bookId, state.currentChapterIndex, state.currentTime, state.duration);
+            saveUserProgress(
+                state.book.bookId,
+                state.currentChapterIndex,
+                state.currentTime,
+                state.duration,
+                {
+                    totalChapters: state.book.activeChapters?.length || state.book.chapters?.length || 0
+                }
+            );
         }
+    });
+
+    window.addEventListener('sync-status-change', (event) => {
+        renderSyncState(event.detail);
+    });
+    window.addEventListener('online', async () => {
+        await flushPendingProgressQueue();
+        invalidateProgressCache();
+        const freshBooks = await fetchAllBooks({ forceRefresh: true });
+        if (freshBooks.length > 0) {
+            allBooks = sortCatalogBooks(freshBooks);
+            LibraryUI.renderCategoryFilters(allBooks);
+        }
+        await refreshPersonalizedCatalog();
+    });
+    window.addEventListener('offline', () => {
+        renderSyncState();
     });
 
     const user = getLocalUserProfile();
@@ -264,17 +467,20 @@ async function init() {
 
     syncUserProfile();
 
-    allBooks = await fetchAllBooks();
-    if (allBooks.length > 0) {
-        allBooks = allBooks.sort((a, b) => {
-            const numA = parseInt(String(a.bookId || '').replace(/\D/g, ''), 10) || 0;
-            const numB = parseInt(String(b.bookId || '').replace(/\D/g, ''), 10) || 0;
-            return numA - numB;
-        }).map((book, index) => ({ ...book, catalogOrder: index }));
+    const cachedCatalog = getCatalogSnapshot();
+    if (cachedCatalog.books.length > 0) {
+        allBooks = sortCatalogBooks(cachedCatalog.books);
+        LibraryUI.renderCategoryFilters(allBooks);
+        await refreshPersonalizedCatalog();
+        restorePlayerSessionIfNeeded();
     }
+
+    const freshBooks = await fetchAllBooks({ forceRefresh: true });
+    allBooks = sortCatalogBooks(freshBooks);
 
     LibraryUI.renderCategoryFilters(allBooks);
     await refreshPersonalizedCatalog();
+    restorePlayerSessionIfNeeded();
     setupListeners();
 }
 
@@ -356,6 +562,10 @@ function switchView(id, pushHistory = true) {
         refreshPersonalizedCatalog();
     }
 
+    if (nextView === 'profile') {
+        renderProfileSnapshot();
+    }
+
     if (nextView === 'library') {
         document.body.style.background = "";
         const playBtn = document.getElementById('play-btn');
@@ -368,7 +578,7 @@ function filterLibraryLogic(category) {
     currentCategory = category;
     document.querySelectorAll('.filter-btn').forEach((btn) => btn.classList.remove('active'));
 
-    const btnId = category === 'All' ? 'filter-all' : `filter-${category}`;
+    const btnId = LibraryUI.getCategoryButtonId(category);
     const activeBtn = document.getElementById(btnId);
     if (activeBtn) activeBtn.classList.add('active');
 
@@ -389,6 +599,8 @@ function setupListeners() {
     const closeBtn = document.getElementById('close-sidebar');
     const overlay = document.getElementById('sidebar-overlay');
     const sidebar = document.getElementById('sidebar');
+    const syncBtn = document.getElementById('sync-profile-btn');
+    const filterContainer = document.getElementById('category-filters');
 
     const toggleSidebar = (show) => {
         if (!sidebar || !overlay) return false;
@@ -417,10 +629,26 @@ function setupListeners() {
         btn.addEventListener('click', () => toggleSidebar(false));
     });
 
+    if (filterContainer) {
+        filterContainer.addEventListener('click', (event) => {
+            const target = event.target.closest('[data-category]');
+            if (!target) return;
+            filterLibraryLogic(String(target.dataset.category || 'All'));
+        });
+    }
+
     if (searchInput) {
         searchInput.addEventListener('input', (event) => {
             currentSearchQuery = String(event.target.value || '');
             renderLibrarySurfaces();
+        });
+        searchInput.addEventListener('change', (event) => {
+            pushRecentSearch(String(event.target.value || ''));
+        });
+        searchInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                pushRecentSearch(String(event.target.value || ''));
+            }
         });
     }
 
@@ -431,10 +659,17 @@ function setupListeners() {
             if (!text) return;
 
             const state = getCurrentState();
+            if (!state.book) return;
             const currentTime = Math.floor(state.currentTime || 0);
-            renderSingleComment({ time: currentTime, user: "You", text });
+            const savedComment = addPersistentComment(state.book.bookId, {
+                time: currentTime,
+                user: getCurrentUserName(),
+                text
+            });
+            renderSingleComment(savedComment);
 
             input.value = '';
+            showToast('Comment saved on this device');
         };
     }
 
@@ -443,6 +678,7 @@ function setupListeners() {
     if (nextBtn) nextBtn.onclick = window.app.nextChapter;
     if (seekBack) seekBack.onclick = () => skip(-10);
     if (seekFwd) seekFwd.onclick = () => skip(10);
+    if (syncBtn) syncBtn.onclick = window.app.syncData;
 
     if (progress) {
         progress.addEventListener('input', (event) => {
@@ -521,4 +757,8 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-document.addEventListener('DOMContentLoaded', init);
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}

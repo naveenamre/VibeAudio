@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vibeaudio-shell-v2-youtube-audio';
+const CACHE_NAME = 'vibeaudio-shell-v4-local-first';
 const PRECACHE_URLS = [
     './',
     './index.html',
@@ -6,15 +6,22 @@ const PRECACHE_URLS = [
     './src/pages/app.html',
     './src/css/base.css',
     './src/css/components.css',
+    './src/css/landing.css',
     './src/css/player.css',
     './src/js/api.js',
+    './src/js/app-entry.js',
+    './src/js/auth.js',
+    './src/js/config.js',
+    './src/js/landing.js',
     './src/js/player.js',
+    './src/js/progress-model.js',
     './src/js/pwa.js',
     './src/js/ui.js',
     './src/js/ui-library.js',
     './src/js/ui-player-helpers.js',
     './src/js/ui-player-list.js',
     './src/js/ui-player-main.js',
+    './src/js/user-data.js',
     './src/icons/favicon.png',
     './public/icons/logo.png'
 ];

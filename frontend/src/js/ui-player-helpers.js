@@ -277,18 +277,31 @@ export function renderComments(comments) {
 
 export function renderSingleComment(comment) {
     const list = document.getElementById('comments-list');
+    if (!list) return null;
+
     const div = document.createElement('div');
     div.className = 'comment-item';
-    div.innerHTML = `
-        <div class="comment-time" onclick="window.app.seekToComment(${comment.time})">
-            ${formatTime(comment.time)}
-        </div>
-        <div>
-            <span class="comment-user">${comment.user}</span>
-            <p>${comment.text}</p>
-        </div>
-    `;
+
+    const timeButton = document.createElement('button');
+    timeButton.type = 'button';
+    timeButton.className = 'comment-time';
+    timeButton.textContent = formatTime(comment.time);
+    timeButton.addEventListener('click', () => window.app.seekToComment(Number(comment.time || 0)));
+
+    const copyWrap = document.createElement('div');
+    const userEl = document.createElement('span');
+    userEl.className = 'comment-user';
+    userEl.textContent = String(comment.user || 'Listener');
+
+    const textEl = document.createElement('p');
+    textEl.textContent = String(comment.text || '');
+
+    copyWrap.appendChild(userEl);
+    copyWrap.appendChild(textEl);
+    div.appendChild(timeButton);
+    div.appendChild(copyWrap);
     list.appendChild(div);
+    return div;
 }
 
 surfaceThemes.library = getDefaultTheme();

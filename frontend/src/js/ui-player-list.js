@@ -1,7 +1,15 @@
 import { loadBook, getCurrentState, getCurrentLang, setLanguage } from './player.js';
-import { updateUI } from './ui-player-main.js'; // Cyclic dependency handle karenge
+import { updateUI } from './ui-player-main.js';
 
-// --- 📜 LIST RENDERER ---
+function escapeHTML(value) {
+    return String(value || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+}
+
 export function renderChapterList(book) {
     const list = document.getElementById('chapter-list');
     const totalChapters = document.getElementById('total-chapters');
@@ -24,7 +32,7 @@ export function renderChapterList(book) {
     const currentIndex = (currentState.book && currentState.book.bookId === book.bookId)
         ? currentState.currentChapterIndex : -1;
 
-    let activeSectionName = "";
+    let activeSectionName = '';
     if (currentIndex !== -1 && chaptersToShow[currentIndex].section) {
         activeSectionName = chaptersToShow[currentIndex].section;
     } else if (savedChapterIndex !== -1 && chaptersToShow[savedChapterIndex]?.section) {
@@ -33,25 +41,25 @@ export function renderChapterList(book) {
 
     let lastSection = null;
 
-    chaptersToShow.forEach((chap, idx) => {
-        const getSafeId = (str) => str.replace(/[^a-zA-Z0-9]/g, '');
+    chaptersToShow.forEach((chapter, idx) => {
+        const getSafeId = (value) => value.replace(/[^a-zA-Z0-9]/g, '');
 
-        if (chap.section && chap.section !== lastSection) {
+        if (chapter.section && chapter.section !== lastSection) {
             const sectionHeader = document.createElement('li');
             sectionHeader.className = 'section-header';
-            const isOpen = (chap.section === activeSectionName);
-            const safeSectionId = getSafeId(chap.section); 
-            
+            const isOpen = (chapter.section === activeSectionName);
+            const safeSectionId = getSafeId(chapter.section);
+
             if (isOpen) sectionHeader.classList.add('active-header');
-            
-            sectionHeader.innerHTML = `<span>${chap.section}</span><i class="fas fa-chevron-down ${isOpen ? 'rotate' : ''}"></i>`;
+
+            sectionHeader.innerHTML = `<span>${escapeHTML(chapter.section)}</span><i class="fas fa-chevron-down ${isOpen ? 'rotate' : ''}"></i>`;
             sectionHeader.onclick = () => toggleSectionGroup(safeSectionId, sectionHeader);
             list.appendChild(sectionHeader);
-            lastSection = chap.section;
+            lastSection = chapter.section;
         }
 
-        const li = document.createElement('li');
-        const safeSectionId = chap.section ? getSafeId(chap.section) : 'default';
+        const item = document.createElement('li');
+        const safeSectionId = chapter.section ? getSafeId(chapter.section) : 'default';
         const isCurrent = idx === currentIndex;
         const isCompleted = savedChapterIndex > idx;
         const isResumePoint = !isCurrent && savedChapterIndex === idx && savedCurrentTime > 5;
@@ -68,24 +76,31 @@ export function renderChapterList(book) {
                 ? '<span class="chapter-progress-label resume">Resume</span>'
                 : '';
 
-        li.setAttribute('data-section-group', safeSectionId);
-        li.className = `chapter-item ${isCurrent ? 'active' : ''} ${isCompleted ? 'completed' : ''} ${isResumePoint ? 'resume-point' : ''}`.trim();
+        item.setAttribute('data-section-group', safeSectionId);
+        item.className = `chapter-item ${isCurrent ? 'active' : ''} ${isCompleted ? 'completed' : ''} ${isResumePoint ? 'resume-point' : ''}`.trim();
 
-        if (chap.section && chap.section !== activeSectionName) li.classList.add('collapsed');
+        if (chapter.section && chapter.section !== activeSectionName) item.classList.add('collapsed');
 
-        const cleanTitle = chap.name.replace(/^Chapter\s+\d+[:\s-]*/i, '').replace(/^\d+[\.\s]+/, '').trim();
-        li.innerHTML = `
+        const cleanTitle = String(chapter.name || '')
+            .replace(/^Chapter\s+\d+[:\s-]*/i, '')
+            .replace(/^\d+[\.\s]+/, '')
+            .trim();
+
+        item.innerHTML = `
             <div class="chapter-info">
                 <span class="chapter-num">${idx + 1}</span>
                 <div class="chapter-copy">
-                    <span class="chapter-title">${cleanTitle}</span>
+                    <span class="chapter-title">${escapeHTML(cleanTitle)}</span>
                     ${progressLabel}
                 </div>
             </div>
             <div class="chapter-status"><i class="${statusClass}" style="font-size: 0.8rem;"></i></div>
         `;
-        li.onclick = () => { loadBook(book, idx); updateUI(true, book, chaptersToShow[idx]); };
-        list.appendChild(li);
+        item.onclick = () => {
+            loadBook(book, idx);
+            updateUI(true, book, chaptersToShow[idx]);
+        };
+        list.appendChild(item);
     });
 }
 
@@ -93,16 +108,28 @@ function toggleSectionGroup(sectionId, headerElement) {
     const items = document.querySelectorAll(`[data-section-group="${sectionId}"]`);
     const icon = headerElement.querySelector('i');
     let isExpanding = false;
-    items.forEach(item => {
-        if (item.classList.contains('collapsed')) { item.classList.remove('collapsed'); isExpanding = true; } 
-        else { item.classList.add('collapsed'); isExpanding = false; }
+
+    items.forEach((item) => {
+        if (item.classList.contains('collapsed')) {
+            item.classList.remove('collapsed');
+            isExpanding = true;
+        } else {
+            item.classList.add('collapsed');
+            isExpanding = false;
+        }
     });
-    if (isExpanding) { icon.classList.add('rotate'); headerElement.classList.add('active-header'); } 
-    else { icon.classList.remove('rotate'); headerElement.classList.remove('active-header'); }
+
+    if (isExpanding) {
+        icon.classList.add('rotate');
+        headerElement.classList.add('active-header');
+    } else {
+        icon.classList.remove('rotate');
+        headerElement.classList.remove('active-header');
+    }
 }
 
 export function toggleLangUI(lang, book) {
-    document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.lang-btn').forEach((button) => button.classList.remove('active'));
     document.getElementById(`btn-${lang}`).classList.add('active');
     setLanguage(lang);
     renderChapterList(book);

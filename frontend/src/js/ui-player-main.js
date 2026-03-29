@@ -14,6 +14,8 @@ import {
 } from './player.js';
 import { renderChapterList, toggleLangUI } from './ui-player-list.js';
 import { applyChameleonTheme, renderComments, showToast } from './ui-player-helpers.js';
+import { STORAGE_KEYS } from './config.js';
+import { addBookmark, getBookmarks, getPersistentComments, removeBookmark } from './user-data.js';
 
 window.addEventListener('player-state-change', (event) => {
     const { isPlaying, book, chapter } = event.detail;
@@ -21,10 +23,107 @@ window.addEventListener('player-state-change', (event) => {
 });
 
 const speeds = [1, 1.25, 1.5, 2, 0.95, 0.9, 0.8];
-let currentSpeedIndex = 0;
+let currentSpeedIndex = Math.max(0, speeds.indexOf(Number(localStorage.getItem(STORAGE_KEYS.playbackSpeed) || 1)));
 const sleepTimes = [0, 15, 30, 60];
 let currentSleepIndex = 0;
 let lastYouTubeHintSource = "";
+
+function buildBookSummary(book) {
+    if (!book) return 'Pick a story and VibeAudio will keep your place across every listening session.';
+    if (book.description) return String(book.description);
+
+    const moods = Array.isArray(book.moods) && book.moods.length ? book.moods.slice(0, 3).join(', ') : '';
+    const genreLine = book.genre ? `${book.genre} listening` : 'immersive listening';
+    const moodLine = moods ? ` tuned for ${moods}` : '';
+    return `${genreLine} by ${book.author || 'a curated voice'}${moodLine}. Jump in, pause anywhere, and come back exactly where you left off.`;
+}
+
+function renderDetailMeta(book) {
+    const container = document.getElementById('detail-pills');
+    if (!container) return;
+
+    container.innerHTML = '';
+    const pills = [
+        `${Number(book.totalChapters || book.chapters?.length || 0)} parts`,
+        book.genre || '',
+        ...(Array.isArray(book.moods) ? book.moods.slice(0, 3) : []),
+        book.chapters_en?.length ? 'Hindi + English' : 'Single language'
+    ].filter(Boolean);
+
+    pills.forEach((label) => {
+        const pill = document.createElement('span');
+        pill.className = 'detail-pill';
+        pill.textContent = String(label);
+        container.appendChild(pill);
+    });
+}
+
+function renderBookmarks(book) {
+    const list = document.getElementById('bookmark-list');
+    if (!list || !book) return;
+
+    const bookmarks = getBookmarks(book.bookId);
+    list.innerHTML = '';
+
+    if (!bookmarks.length) {
+        const empty = document.createElement('p');
+        empty.className = 'bookmark-empty';
+        empty.textContent = 'Save key moments here so you can jump back to them later.';
+        list.appendChild(empty);
+        return;
+    }
+
+    bookmarks.forEach((bookmark) => {
+        const row = document.createElement('div');
+        row.className = 'bookmark-item';
+
+        const jumpButton = document.createElement('button');
+        jumpButton.type = 'button';
+        jumpButton.className = 'bookmark-jump';
+        jumpButton.addEventListener('click', () => window.app.seekToComment(bookmark.time));
+
+        const title = document.createElement('strong');
+        title.textContent = bookmark.label || `Saved moment at ${bookmark.chapterName}`;
+        const meta = document.createElement('span');
+        meta.textContent = `${bookmark.chapterName} - ${Math.floor(Number(bookmark.time || 0) / 60)}:${Math.floor(Number(bookmark.time || 0) % 60).toString().padStart(2, '0')}`;
+        jumpButton.appendChild(title);
+        jumpButton.appendChild(meta);
+
+        const removeButton = document.createElement('button');
+        removeButton.type = 'button';
+        removeButton.className = 'bookmark-remove';
+        removeButton.textContent = 'Remove';
+        removeButton.addEventListener('click', (event) => {
+            event.stopPropagation();
+            removeBookmark(book.bookId, bookmark.id);
+            renderBookmarks(book);
+            showToast('Saved moment removed');
+        });
+
+        row.appendChild(jumpButton);
+        row.appendChild(removeButton);
+        list.appendChild(row);
+    });
+}
+
+function saveCurrentBookmark() {
+    const state = getCurrentState();
+    if (!state.book) {
+        showToast('Start a story before saving a moment');
+        return;
+    }
+
+    const chapter = state.book.activeChapters?.[state.currentChapterIndex];
+    addBookmark(state.book, {
+        chapterIndex: state.currentChapterIndex,
+        chapterName: chapter?.name || `Part ${state.currentChapterIndex + 1}`,
+        time: state.currentTime,
+        label: `${chapter?.name || 'Current part'} - ${Math.floor(Number(state.currentTime || 0) / 60)}:${Math.floor(Number(state.currentTime || 0) % 60).toString().padStart(2, '0')}`
+    });
+
+    renderBookmarks(state.book);
+    showToast('Moment saved to bookmarks');
+}
 
 function canKeepScreenAwake() {
     return Boolean(navigator.wakeLock?.request);
@@ -93,6 +192,8 @@ export async function openPlayerUI(partialBook, allBooks, switchViewCallback) {
     document.getElementById('detail-cover').src = partialBook.cover;
     document.getElementById('detail-title').innerText = partialBook.title;
     document.getElementById('detail-author').innerText = partialBook.author;
+    const summaryEl = document.getElementById('detail-summary');
+    if (summaryEl) summaryEl.textContent = buildBookSummary(partialBook);
     const blurBg = document.getElementById('blur-bg');
     if (blurBg) {
         blurBg.style.setProperty('--player-cover-image', `url("${partialBook.cover}")`);
@@ -101,7 +202,7 @@ export async function openPlayerUI(partialBook, allBooks, switchViewCallback) {
 
     const chapterListEl = document.getElementById('chapter-list');
     chapterListEl.innerHTML = `
-        <div class="skeleton-loader" style="padding: 20px; text-align: center; color: var(--text-dim);">
+        <div class="skeleton-loader" style="padding: 20px; text-align: center; color: var(--theme-text-dim);">
             <i class="fas fa-spinner fa-spin"></i> Fetching Chapters from Cloudflare...
         </div>`;
 
@@ -129,6 +230,9 @@ export async function openPlayerUI(partialBook, allBooks, switchViewCallback) {
         }
     }
 
+    if (summaryEl) summaryEl.textContent = buildBookSummary(finalBook);
+    renderDetailMeta(finalBook);
+
     const langContainer = document.getElementById('lang-toggle-container');
     if (finalBook.chapters_en && finalBook.chapters_en.length > 0) {
         langContainer.innerHTML = `
@@ -145,7 +249,8 @@ export async function openPlayerUI(partialBook, allBooks, switchViewCallback) {
     }
 
     renderChapterList(finalBook);
-    renderComments(finalBook.comments || []);
+    renderComments(getPersistentComments(finalBook.bookId, finalBook.comments || []));
+    renderBookmarks(finalBook);
     setupPlayButton(finalBook);
     setupPlayerListeners();
 
@@ -287,6 +392,8 @@ export function setupPlayerListeners() {
     if (speedBtnRef) {
         const newSpeedBtn = speedBtnRef.cloneNode(true);
         speedBtnRef.parentNode.replaceChild(newSpeedBtn, speedBtnRef);
+        const initialSpeed = speeds[currentSpeedIndex] || 1;
+        newSpeedBtn.innerText = `${initialSpeed}x`;
         newSpeedBtn.onclick = () => {
             currentSpeedIndex = (currentSpeedIndex + 1) % speeds.length;
             const newSpeed = speeds[currentSpeedIndex];
@@ -364,6 +471,15 @@ export function setupPlayerListeners() {
             }
         };
     }
+
+    ['bookmark-btn', 'bookmark-current-btn'].forEach((buttonId) => {
+        const bookmarkBtn = document.getElementById(buttonId);
+        if (!bookmarkBtn || !bookmarkBtn.parentNode) return;
+
+        const newBookmarkBtn = bookmarkBtn.cloneNode(true);
+        bookmarkBtn.parentNode.replaceChild(newBookmarkBtn, bookmarkBtn);
+        newBookmarkBtn.onclick = saveCurrentBookmark;
+    });
 
     if (document.body.classList.contains('is-android')) {
         const dlBtn = document.getElementById('download-btn');

@@ -1,4 +1,6 @@
 import { saveUserProgress } from './api.js';
+import { STORAGE_KEYS } from './config.js';
+import { setLastPlayerSession } from './user-data.js';
 
 console.log("Player Module Loading...");
 
@@ -14,7 +16,7 @@ const STALL_AUTO_PAUSE_MS = 4000;
 const PROGRESS_TICK_MS = 1000;
 const PROGRESS_SAVE_EVERY_TICKS = 5;
 
-let currentLang = localStorage.getItem('vibe_pref_lang') || 'hi';
+let currentLang = localStorage.getItem(STORAGE_KEYS.preferredLanguage) || 'hi';
 
 let audioCtx;
 let source;
@@ -31,6 +33,18 @@ let wakeLockSentinel = null;
 let wakeLockLifecycleBound = false;
 let youtubeViewportBound = false;
 let youtubeResizeObserver = null;
+
+function getStoredPlaybackSpeed() {
+    const speed = Number(localStorage.getItem(STORAGE_KEYS.playbackSpeed) || 1);
+    return Number.isFinite(speed) && speed > 0 ? speed : 1;
+}
+
+function getBookProgressOptions(overrides = {}) {
+    return {
+        totalChapters: currentBook?.activeChapters?.length || currentBook?.chapters?.length || 0,
+        ...overrides
+    };
+}
 
 audio.addEventListener('ended', () => {
     if (currentSourceType === 'youtube') return;
@@ -163,6 +177,11 @@ function getCurrentPlaybackValues() {
         currentTime: Number(audio.currentTime || 0),
         duration: Number(audio.duration || 0)
     };
+}
+
+function persistCurrentSession() {
+    if (!currentBook) return;
+    setLastPlayerSession(getCurrentState());
 }
 
 function getCurrentChapter() {
@@ -434,8 +453,16 @@ function handlePausedState(saveProgress = true) {
 
     if (saveProgress && currentBook) {
         const { currentTime, duration } = getCurrentPlaybackValues();
-        saveUserProgress(currentBook.bookId, currentChapterIndex, currentTime, duration);
+        saveUserProgress(
+            currentBook.bookId,
+            currentChapterIndex,
+            currentTime,
+            duration,
+            getBookProgressOptions()
+        );
     }
+
+    persistCurrentSession();
 }
 
 function scheduleAutoPauseForStall() {
@@ -572,11 +599,12 @@ export function setLanguage(lang) {
     if (lang === 'en' && !currentBook.chapters_en) return;
 
     currentLang = lang;
-    localStorage.setItem('vibe_pref_lang', lang);
+    localStorage.setItem(STORAGE_KEYS.preferredLanguage, lang);
     currentBook.activeChapters = lang === 'en' ? currentBook.chapters_en : currentBook.chapters;
+    const { currentTime } = getCurrentPlaybackValues();
 
     console.log(`Language switched to ${lang.toUpperCase()}`);
-    loadBook(currentBook, currentChapterIndex, 0);
+    loadBook(currentBook, currentChapterIndex, currentTime);
 }
 
 function stopCurrentPlayback() {
@@ -605,12 +633,20 @@ async function loadYouTubeChapter(videoId, startTime = 0) {
         videoId,
         startSeconds: Math.max(0, Number(startTime) || 0)
     });
+
+    window.setTimeout(() => {
+        const preferredSpeed = getStoredPlaybackSpeed();
+        if (preferredSpeed !== 1) {
+            setPlaybackSpeed(preferredSpeed);
+        }
+    }, 450);
 }
 
 function loadAudioChapter(url, startTime = 0) {
     currentSourceType = 'audio';
     audio.crossOrigin = "anonymous";
     audio.src = url;
+    audio.playbackRate = getStoredPlaybackSpeed();
     audio.onloadedmetadata = () => {
         if (startTime > 0) {
             audio.currentTime = startTime;
@@ -635,6 +671,15 @@ export async function loadBook(book, chapterIndex = 0, startTime = 0) {
 
         if (isSameLang && getCurrentSourceUrl()) {
             console.log("Chapter already loaded. Resuming...");
+            const currentState = getCurrentState();
+            saveUserProgress(
+                book.bookId,
+                chapterIndex,
+                currentState.currentTime,
+                currentState.duration,
+                getBookProgressOptions({ allowServer: false })
+            );
+            persistCurrentSession();
             if (!isPlaybackActive()) togglePlay();
             return;
         }
@@ -646,6 +691,17 @@ export async function loadBook(book, chapterIndex = 0, startTime = 0) {
 
     currentBook = book;
     currentChapterIndex = chapterIndex;
+    persistCurrentSession();
+    saveUserProgress(
+        currentBook.bookId,
+        currentChapterIndex,
+        Number(startTime || 0),
+        0,
+        getBookProgressOptions({
+            allowServer: false,
+            bookFinished: false
+        })
+    );
 
     const chapter = currentBook.activeChapters[chapterIndex];
     const fileName = `${book.bookId}_${chapterIndex}_${currentLang}.mp3`;
@@ -681,6 +737,7 @@ export async function loadBook(book, chapterIndex = 0, startTime = 0) {
         if (offlinePath) {
             audio.src = offlinePath;
             audio.removeAttribute('crossorigin');
+            audio.playbackRate = getStoredPlaybackSpeed();
             audio.onloadedmetadata = () => {
                 if (startTime > 0) {
                     audio.currentTime = startTime;
@@ -850,6 +907,8 @@ export function seekTo(percent) {
 }
 
 export function setPlaybackSpeed(speed) {
+    localStorage.setItem(STORAGE_KEYS.playbackSpeed, String(speed));
+
     if (currentSourceType === 'youtube') {
         if (!ytPlayer) return 1;
         const availableRates = ytPlayer.getAvailablePlaybackRates?.() || [];
@@ -915,6 +974,7 @@ function sendToAndroid(isPlaying) {
 }
 
 function dispatchPlayerTimeUpdate() {
+    persistCurrentSession();
     window.dispatchEvent(new CustomEvent('player-time-update', {
         detail: getCurrentState()
     }));
@@ -933,7 +993,13 @@ function startProgressTracker() {
 
         tickCount += 1;
         if (tickCount % PROGRESS_SAVE_EVERY_TICKS === 0) {
-            saveUserProgress(state.book.bookId, state.currentChapterIndex, state.currentTime, state.duration);
+            saveUserProgress(
+                state.book.bookId,
+                state.currentChapterIndex,
+                state.currentTime,
+                state.duration,
+                getBookProgressOptions()
+            );
         }
     }, PROGRESS_TICK_MS);
 }

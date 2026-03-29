@@ -4,7 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vibe Audio • Log In</title>
+    <title>VibeAudio | Browser-first Audiobook Shelf</title>
+    <meta name="description" content="Browse a calmer audiobook shelf in your browser with synced progress, chapter playback, saved moments, and immersive listening.">
 
     <script>
         if (!Array.prototype.at) {
@@ -25,7 +26,9 @@
         }
     </script>
 
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="manifest" href="./app.webmanifest">
     <meta name="theme-color" content="#0d0b21">
@@ -33,277 +36,132 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="VibeAudio">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="icon" type="image/png" href="./src/icons/favicon.png">
     <link rel="apple-touch-icon" href="./public/icons/logo.png">
 
-    <script crossorigin="anonymous" data-clerk-publishable-key="pk_test_cXVhbGl0eS1oYXJlLTk5LmNsZXJrLmFjY291bnRzLmRldiQ"
-        src="https://quality-hare-99.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js" type="text/javascript"></script>
-
-    <style>
-        :root {
-            --primary-bg: #0d0b21;
-            --accent-glow: #7b4dff;
-            --glass-bg: rgba(255, 255, 255, 0.03);
-            --glass-border: rgba(255, 255, 255, 0.08);
-            --font-main: 'Outfit', sans-serif;
-        }
-
-        body {
-            margin: 0;
-            padding: 0;
-            height: 100vh;
-            width: 100vw;
-            font-family: var(--font-main);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: radial-gradient(circle at top, #2f256e, var(--primary-bg) 60%, #000000 100%);
-            overflow: hidden;
-            color: white;
-            position: relative;
-        }
-
-        /* Ambient Glow - Now Responsive */
-        .bg-glow {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: clamp(300px, 60vw, 600px);
-            height: clamp(300px, 60vw, 600px);
-            border-radius: 50%;
-            background: var(--accent-glow);
-            filter: blur(120px);
-            opacity: 0.3;
-            z-index: -1;
-            animation: pulse 8s infinite ease-in-out alternate;
-        }
-
-        @keyframes pulse {
-            0% {
-                transform: translate(-50%, -50%) scale(1);
-                opacity: 0.25;
-            }
-            100% {
-                transform: translate(-50%, -50%) scale(1.1);
-                opacity: 0.4;
-            }
-        }
-
-        /* Glass Card with 3D Transform Prep */
-        .login-card {
-            width: 90%;
-            max-width: 400px;
-            padding: 2.5rem 2rem;
-            text-align: center;
-
-            background: var(--glass-bg);
-            border-radius: 24px;
-            backdrop-filter: blur(40px);
-            -webkit-backdrop-filter: blur(40px);
-            border: 1px solid var(--glass-border);
-
-            box-shadow:
-                0 20px 40px rgba(0, 0, 0, 0.4),
-                inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-
-            animation: slideUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-            opacity: 0;
-            transform: translateY(30px);
-            transform-style: preserve-3d; /* For the tilt effect */
-        }
-
-        @keyframes slideUp {
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .logo {
-            width: 72px;
-            height: 72px;
-            margin-bottom: 1rem;
-            border-radius: 18px;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-            transition: transform 0.3s ease;
-            transform: translateZ(20px); /* Pops out slightly */
-        }
-
-        .logo:hover {
-            transform: scale(1.05) rotate(3deg) translateZ(20px);
-        }
-
-        h1 {
-            font-size: 1.8rem;
-            font-weight: 600;
-            margin: 0;
-            letter-spacing: -0.5px;
-            background: linear-gradient(to right, #fff, #b4b4b4);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            transform: translateZ(10px);
-        }
-
-        p {
-            margin: 8px 0 28px;
-            font-size: 0.95rem;
-            color: rgba(255, 255, 255, 0.6);
-            font-weight: 300;
-            transform: translateZ(10px);
-        }
-
-        #loader {
-            font-size: 0.9rem;
-            display: none;
-            margin-top: 25px;
-            color: rgba(255, 255, 255, 0.7);
-        }
-
-        .install-btn {
-            margin-top: 18px;
-            width: 100%;
-            border: 1px solid rgba(255,255,255,0.14);
-            border-radius: 14px;
-            background: rgba(255,255,255,0.06);
-            color: white;
-            padding: 14px 18px;
-            font-size: 0.95rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
-        }
-
-        .install-btn:hover {
-            transform: translateY(-1px);
-            background: rgba(255,255,255,0.12);
-            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
-        }
-
-        /* Mobile Adjustments */
-        @media (max-width: 480px) {
-            .login-card {
-                padding: 2rem 1.5rem;
-                width: 85%;
-            }
-
-            h1 {
-                font-size: 1.6rem;
-            }
-
-            .bg-glow {
-                filter: blur(80px);
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="./src/css/base.css">
+    <link rel="stylesheet" href="./src/css/landing.css">
 </head>
 
-<body>
+<body class="landing-page">
+    <div class="landing-shell">
+        <header class="landing-topbar">
+            <div class="brand-lockup">
+                <img src="./public/icons/logo.png" alt="VibeAudio" class="brand-mark">
+                <div class="brand-copy">
+                    <strong>VibeAudio</strong>
+                    <span>Browser-first listening shelf</span>
+                </div>
+            </div>
 
-    <div class="bg-glow"></div>
+            <div class="topbar-actions">
+                <span class="topbar-note">Cloud synced listening, saved moments, and chapter-based playback.</span>
+                <button class="ghost-btn" type="button" data-scroll-target="#library-preview-panel">Browse the shelf</button>
+                <button class="solid-btn" type="button" data-open-auth="true">Open my shelf</button>
+            </div>
+        </header>
 
-    <div class="login-card" data-tilt data-tilt-max="5" data-tilt-speed="400" data-tilt-glare="true" data-tilt-max-glare="0.1">
-        <img src="src/icons/favicon.png" class="logo" alt="Vibe Logo" onerror="this.style.display='none'" />
+        <section class="landing-hero">
+            <div class="hero-panel">
+                <span class="eyebrow">Audiobooks without the prototype feel</span>
+                <h1 class="hero-title">A calmer <span>listening shelf</span> for your browser.</h1>
+                <p class="hero-copy" id="landing-greeting">A focused audiobook experience that keeps your place, remembers the moments that matter, and makes it easier to come back to long-form stories.</p>
 
-        <h1>Vibe Audio</h1>
-        <p id="dynamic-greeting">Your personal soundscape awaits.</p>
+                <div class="hero-actions">
+                    <button class="solid-btn" type="button" data-open-auth="true">Start listening</button>
+                    <button class="ghost-btn" type="button" data-scroll-target="#library-preview-panel">See the catalog</button>
+                    <button id="install-app-btn" class="ghost-btn" type="button" hidden>
+                        <i class="fas fa-mobile-screen-button"></i> Install app
+                    </button>
+                </div>
 
-        <div id="sign-in-container" style="transform: translateZ(15px);"></div>
+                <div id="hero-stats" class="hero-metrics"></div>
 
-        <div id="loader">
-            <i class="fas fa-circle-notch fa-spin"></i> &nbsp; Syncing your vibe...
-        </div>
+                <div class="featured-stage">
+                    <div id="featured-spotlight" class="featured-spotlight"></div>
+                    <img id="featured-cover" class="featured-cover" src="./public/icons/logo.png" alt="Featured VibeAudio book">
+                </div>
+            </div>
 
-        <button id="install-app-btn" class="install-btn" hidden>
-            <i class="fas fa-mobile-screen-button"></i> Install VibeAudio
-        </button>
+            <aside class="auth-panel" id="auth-panel">
+                <div>
+                    <span class="eyebrow">Sign in once, resume anywhere</span>
+                    <h2>Your personal shelf</h2>
+                    <p>Log in to unlock synced progress, history, saved moments, and a shelf that remembers where you stopped.</p>
+                </div>
+
+                <div class="auth-chip-row">
+                    <span class="auth-chip">Resume playback</span>
+                    <span class="auth-chip">Saved moments</span>
+                    <span class="auth-chip">History sync</span>
+                </div>
+
+                <div class="landing-status" id="auth-status">Preparing your sign-in panel...</div>
+                <div class="sign-in-shell">
+                    <div id="sign-in-container"></div>
+                </div>
+            </aside>
+        </section>
+
+        <section class="section-grid">
+            <div class="feature-row">
+                <article class="feature-panel">
+                    <div class="feature-icon"><i class="fas fa-route"></i></div>
+                    <h3>Resume-aware playback</h3>
+                    <p>Your current chapter, progress, and player state stay close so you can return to stories faster.</p>
+                </article>
+                <article class="feature-panel">
+                    <div class="feature-icon"><i class="fas fa-bookmark"></i></div>
+                    <h3>Saved moments</h3>
+                    <p>Keep timestamped highlights and jump back to them without hunting through the entire chapter list.</p>
+                </article>
+                <article class="feature-panel">
+                    <div class="feature-icon"><i class="fas fa-wave-square"></i></div>
+                    <h3>Focused chapter player</h3>
+                    <p>Speed control, sleep timer, chapter navigation, and source support designed for long-form listening.</p>
+                </article>
+                <article class="feature-panel">
+                    <div class="feature-icon"><i class="fas fa-cloud"></i></div>
+                    <h3>Browser-first sync</h3>
+                    <p>Cloud progress and local safeguards work together so your listening shelf feels dependable, not temporary.</p>
+                </article>
+            </div>
+
+            <section class="section-panel" id="library-preview-panel">
+                <div class="section-head">
+                    <div>
+                        <h2>Preview the listening shelf</h2>
+                        <p>Browse a sample of the catalog before you sign in.</p>
+                    </div>
+                    <button class="ghost-btn" type="button" data-open-auth="true">Unlock full shelf</button>
+                </div>
+                <div id="library-preview" class="preview-grid"></div>
+            </section>
+
+            <section class="section-panel">
+                <div class="section-head">
+                    <div>
+                        <h2>Built for multiple listening moods</h2>
+                        <p>The browser version is being tuned around discovery, return visits, and smoother long-form listening.</p>
+                    </div>
+                </div>
+                <div id="category-spotlight" class="tag-cluster"></div>
+            </section>
+
+            <section class="section-panel">
+                <div class="footer-callout">
+                    <div>
+                        <strong>From shelf preview to full player in one step.</strong>
+                        <p>Sign in when you are ready and move straight into your synced browser listening flow.</p>
+                    </div>
+                    <button class="solid-btn" type="button" data-open-auth="true">Continue to sign in</button>
+                </div>
+            </section>
+        </section>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.0/vanilla-tilt.min.js"></script>
     <script type="module" src="./src/js/pwa.js"></script>
-
-    <script>
-        // 🕒 Dynamic Greeting Logic
-        function setGreeting() {
-            const hour = new Date().getHours();
-            const greetingEl = document.getElementById('dynamic-greeting');
-            if (hour < 12) {
-                greetingEl.innerText = "Good morning! Let's get into the vibe.";
-            } else if (hour < 18) {
-                greetingEl.innerText = "Good afternoon! Time for a quick listen?";
-            } else {
-                greetingEl.innerText = "Evening vibes. Your soundscape awaits.";
-            }
-        }
-
-        async function startClerk() {
-            const loader = document.getElementById('loader');
-            const signInDiv = document.getElementById('sign-in-container');
-
-            if (!window.Clerk) {
-                signInDiv.innerHTML = '<span style="color:red; opacity:0.7">Error: Scripts blocked.</span>';
-                return;
-            }
-
-            try {
-                await window.Clerk.load();
-
-                if (window.Clerk.user) {
-                    // User already logged in
-                    loader.style.display = 'block';
-                    signInDiv.style.display = 'none';
-
-                    localStorage.setItem("vibe_user_id", window.Clerk.user.id);
-                    localStorage.setItem("vibe_user_name", window.Clerk.user.firstName);
-
-                    setTimeout(() => {
-                        window.location.href = "./src/pages/app.html";
-                    }, 800);
-
-                } else {
-                    // Mount Login - With Native Clerk Styling
-                    window.Clerk.mountSignIn(signInDiv, {
-                        appearance: {
-                            layout: {
-                                socialButtonsPlacement: 'top',
-                                showOptionalFields: false,
-                            },
-                            variables: {
-                                fontFamily: '"Outfit", sans-serif',
-                                colorPrimary: "#7b4dff", 
-                                colorText: "white",
-                                colorBackground: "transparent",
-                                colorInputBackground: "rgba(255,255,255,0.08)",
-                                colorInputText: "white",
-                                borderRadius: "12px"
-                            },
-                            elements: {
-                                card: "shadow-none bg-transparent p-0",
-                                headerTitle: "hidden", 
-                                headerSubtitle: "hidden",
-                                socialButtonsBlockButton: "bg-white/5 border border-white/10 hover:bg-white/10 text-white",
-                                socialButtonsBlockButtonText: "text-white font-normal",
-                                dividerLine: "bg-white/20",
-                                dividerText: "text-white/40",
-                                formFieldLabel: "text-white/60",
-                                formButtonPrimary: "bg-white text-black hover:bg-gray-200 border-none", 
-                                footer: "hidden" 
-                            }
-                        }
-                    });
-                }
-            } catch (err) {
-                console.error("Clerk Failure:", err);
-                signInDiv.innerHTML = '<span style="color:#ff6b6b">Connection failed. Please refresh.</span>';
-            }
-        }
-
-        // Initialize everything on load
-        window.addEventListener("load", () => {
-            setGreeting();
-            startClerk();
-        });
-    </script>
-
+    <script type="module" src="./src/js/landing.js"></script>
 </body>
 
 </html>
