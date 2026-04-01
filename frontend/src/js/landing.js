@@ -271,7 +271,6 @@ async function initLanding() {
     }
 
     setGreeting();
-    bindScrollActions();
 
     const books = await fetchAllBooks();
     renderHeroStats(books);

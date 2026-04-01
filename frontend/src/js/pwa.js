@@ -178,7 +178,7 @@ async function handleInstallClick() {
     if (isStandaloneMode()) return;
 
     if (!deferredInstallPrompt) {
-        showPwaToast('Browser menu kholo aur "Add to Home Screen" ya "Install App" use karo.');
+        showPwaToast('To install, use your browser\'s "Add to Home Screen" or "Install App" option.');
         return;
     }
 
@@ -236,7 +236,7 @@ window.addEventListener('beforeinstallprompt', (event) => {
 window.addEventListener('appinstalled', () => {
     deferredInstallPrompt = null;
     syncInstallButton();
-    showPwaToast('VibeAudio installed. Ab app browser ke bahar bhi jaldi khul jayegi.');
+    showPwaToast('VibeAudio installed! It will now launch faster, even outside the browser.');
 });
 
 window.addEventListener('DOMContentLoaded', () => {

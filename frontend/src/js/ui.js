@@ -28,6 +28,8 @@ import {
     getLastOpenedBook,
     getLastPlayerSession,
     getSyncStatus,
+    getRecentSearches,
+    clearRecentSearches,
     pushRecentSearch
 } from './user-data.js';
 import {
@@ -114,6 +116,32 @@ function renderSyncState(status = getSyncStatus()) {
         profileNote.dataset.status = status.status;
         profileNote.textContent = message;
     }
+
+    // New global indicator logic
+    const indicator = document.getElementById('global-sync-indicator');
+    if (!indicator) return;
+
+    let indicatorText = 'Synced';
+    let indicatorIcon = 'fas fa-check-circle';
+    let indicatorTitle = `Last synced: ${formatRelativeTime(status.lastSuccessfulSyncAt)}`;
+
+    if (status.status === SYNC_STATES.offline) {
+        indicatorText = pendingCount > 0 ? `Offline (${pendingCount})` : 'Offline';
+        indicatorIcon = 'fas fa-wifi-slash';
+        indicatorTitle = 'Offline. Click to attempt sync.';
+    } else if (status.status === SYNC_STATES.pending) {
+        indicatorText = `Syncing (${pendingCount})...`;
+        indicatorIcon = 'fas fa-sync fa-spin';
+        indicatorTitle = `${pendingCount} updates pending sync.`;
+    } else if (!status.lastSuccessfulSyncAt) {
+        indicatorText = 'Synced';
+        indicatorIcon = 'fas fa-check-circle';
+        indicatorTitle = 'Shelf is synced with the cloud.';
+    }
+
+    indicator.dataset.status = status.status;
+    indicator.title = indicatorTitle;
+    indicator.innerHTML = `<i class="${indicatorIcon}"></i> <span>${indicatorText}</span>`;
 }
 
 function getBookSignals(book) {
@@ -273,9 +301,21 @@ function warmOfflineCatalog(books = allBooks) {
         pushBook((books || []).find((book) => String(book.bookId) === String(lastSession.bookId)));
     }
 
-    buildOfflineRenderableBooks().slice(0, 6).forEach(pushBook);
-    (Array.isArray(books) ? books : []).slice(0, 10).forEach(pushBook);
+    // 2. Proactively cache top 3 personalized recommendations (unstarted books)
+    const personalizedPicks = (Array.isArray(books) ? books : [])
+        .filter(book => !book.savedState && book.personalizedScore > 0)
+        .slice(0, 3);
+    personalizedPicks.forEach(pushBook);
 
+    // 3. Cache top 3 "continue listening" books (excluding last active one if already added)
+    const continueListening = (Array.isArray(books) ? books : [])
+        .filter(book => book.savedState && !book.isFinished);
+    continueListening.slice(0, 3).forEach(pushBook);
+
+    // 4. Cache any already downloaded books to keep them warm
+    buildOfflineRenderableBooks().slice(0, 6).forEach(pushBook);
+    // 5. Fallback: cache first few books from general catalog if list is still short
+    (Array.isArray(books) ? books : []).slice(0, 5).forEach(pushBook);
     const urls = [
         '../../index.html',
         '../../app.webmanifest',
@@ -293,7 +333,11 @@ function matchesBookFilters(book) {
     if (query) {
         const title = String(book.title || '').toLowerCase();
         const author = String(book.author || '').toLowerCase();
+        const genre = String(book.genre || '').toLowerCase();
+        const moods = (book.moods || []).join(' ').toLowerCase();
+
         if (!title.includes(query) && !author.includes(query)) {
+        if (!title.includes(query) && !author.includes(query) && !genre.includes(query) && !moods.includes(query)) {
             return false;
         }
     }
@@ -318,6 +362,7 @@ function renderLibrarySurfaces() {
         syncStatus: getSyncStatus()
     });
     LibraryUI.renderLibrary(getVisibleBooks(), openBookFromCollection);
+    LibraryUI.renderRecentSearches(getRecentSearches());
     renderLibraryInsights();
 }
 
@@ -659,6 +704,17 @@ async function init() {
         if (nameDisplay) nameDisplay.innerText = user.name;
         if (avatar) {
             avatar.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=ff4b1f&color=fff&bold=true`;
+
+            // Create and inject global sync indicator
+            if (!document.getElementById('global-sync-indicator') && avatar.parentElement) {
+                const indicator = document.createElement('div');
+                indicator.id = 'global-sync-indicator';
+                indicator.className = 'global-sync-indicator';
+                indicator.title = 'Sync status';
+                indicator.onclick = () => window.app.syncData();
+                // Assuming avatar's parent is a flex container
+                avatar.parentElement.appendChild(indicator);
+            }
         }
     }
 
@@ -800,6 +856,7 @@ function setupListeners() {
     const postBtn = document.getElementById('post-comment-btn');
     const searchInput = document.getElementById('search-input');
 
+    const searchClearBtn = document.getElementById('search-clear-btn');
     const menuBtn = document.getElementById('menu-btn');
     const closeBtn = document.getElementById('close-sidebar');
     const overlay = document.getElementById('sidebar-overlay');
@@ -807,6 +864,7 @@ function setupListeners() {
     const syncBtn = document.getElementById('sync-profile-btn');
     const clearOfflineBtn = document.getElementById('clear-offline-downloads-btn');
     const filterContainer = document.getElementById('category-filters');
+    const recentSearchesContainer = document.getElementById('recent-searches-panel');
 
     const toggleSidebar = (show) => {
         if (!sidebar || !overlay) return false;
@@ -846,15 +904,42 @@ function setupListeners() {
     if (searchInput) {
         searchInput.addEventListener('input', (event) => {
             currentSearchQuery = String(event.target.value || '');
+            const query = String(event.target.value || '');
+            currentSearchQuery = query;
+            if (searchClearBtn) {
+                searchClearBtn.classList.toggle('hidden', !query);
+            }
             renderLibrarySurfaces();
         });
         searchInput.addEventListener('change', (event) => {
             pushRecentSearch(String(event.target.value || ''));
+            renderLibrarySurfaces();
         });
         searchInput.addEventListener('keydown', (event) => {
             if (event.key === 'Enter') {
                 pushRecentSearch(String(event.target.value || ''));
+                renderLibrarySurfaces();
             }
+        });
+    }
+
+    if (searchClearBtn) {
+        searchClearBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            currentSearchQuery = '';
+            searchClearBtn.classList.add('hidden');
+            renderLibrarySurfaces();
+            searchInput.focus();
+        });
+    }
+
+    if (recentSearchesContainer) {
+        recentSearchesContainer.addEventListener('click', (event) => {
+            const target = event.target.closest('[data-query]');
+            if (!target) return;
+            searchInput.value = target.dataset.query;
+            searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+            searchInput.dispatchEvent(new Event('change', { bubbles: true }));
         });
     }
 
@@ -960,6 +1045,53 @@ style.textContent = `
         background-size: 200% 100%;
         animation: skeleton 2s infinite linear;
     }
+    .global-sync-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.75rem;
+        padding: 4px 8px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-left: auto; /* Pushes it to the right in a flex container */
+    }
+    .global-sync-indicator:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.2); }
+    .global-sync-indicator[data-status="synced"] { color: #77d28c; }
+    .global-sync-indicator[data-status="pending"] { color: #ffd37b; }
+    .global-sync-indicator[data-status="offline"] { color: #ff8a80; }
+    #recent-searches-panel { margin-top: 12px; }
+    .recent-searches-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .recent-searches-header span { font-size: 0.8rem; color: var(--theme-text-dim); font-weight: 600; text-transform: uppercase; }
+    .clear-recent-btn { background: none; border: none; color: var(--theme-text-dim); font-size: 0.75rem; cursor: pointer; padding: 4px; }
+    .clear-recent-btn:hover { color: var(--secondary); }
+    .recent-searches-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+    .recent-search-tag {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        color: var(--theme-text-soft);
+        padding: 5px 10px;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .recent-search-tag:hover { background: rgba(255, 255, 255, 0.1); border-color: var(--secondary); color: white; }
+    #search-clear-btn {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: var(--theme-text-dim);
+        cursor: pointer;
+        padding: 4px;
+    }
+    #search-clear-btn.hidden { display: none; }
+    .search-wrapper { position: relative; }
     @keyframes skeleton { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
 `;
 document.head.appendChild(style);

@@ -28,7 +28,8 @@ exports.handler = async (event) => {
             author: book.author,
             cover: book.cover, // Amazon link hai, seedha use hoga
             moods: book.moods,
-            totalChapters: book.chapters ? book.chapters.length : 0 // Sirf count bhejo
+            genre: book.genre, // ✅ Add genre for frontend filtering & personalization
+            totalChapters: book.chapters ? book.chapters.length : 0
         }));
 
         return {

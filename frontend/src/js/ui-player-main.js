@@ -389,7 +389,7 @@ export async function openPlayerUI(partialBook, allBooks, switchViewCallback) {
     const chapterListEl = document.getElementById('chapter-list');
     chapterListEl.innerHTML = `
         <div class="skeleton-loader" style="padding: 20px; text-align: center; color: var(--theme-text-dim);">
-            <i class="fas fa-spinner fa-spin"></i> Fetching Chapters from Cloudflare...
+            <i class="fas fa-spinner fa-spin"></i> Fetching chapters...
         </div>`;
 
     let finalBook = partialBook;
@@ -530,15 +530,19 @@ export function updateUI(isPlaying, book = null, chapter = null) {
     void syncOfflineExperienceUI(book || state.book, chapter || state.book?.activeChapters?.[state.currentChapterIndex], state);
 }
 
+// Store handlers to remove them before re-binding, preventing memory leaks.
+const playerEventHandlers = {};
+
 function setupPlayButton(book) {
     const mainBtn = document.getElementById('main-play-btn');
     if (!mainBtn) return;
 
-    const newBtn = mainBtn.cloneNode(true);
-    mainBtn.parentNode.replaceChild(newBtn, mainBtn);
+    if (playerEventHandlers.mainPlay) {
+        mainBtn.removeEventListener('click', playerEventHandlers.mainPlay);
+    }
 
-    newBtn.onclick = async () => {
-        newBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Loading...`;
+    playerEventHandlers.mainPlay = async () => {
+        mainBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Loading...`;
         try {
             const history = await fetchUserProgress();
             const saved = history.find((item) => item.bookId == book.bookId);
@@ -550,22 +554,26 @@ function setupPlayButton(book) {
             updateUI(isPlaybackActive(), book);
         }
     };
+    mainBtn.addEventListener('click', playerEventHandlers.mainPlay);
 }
 
+let playerListenersBound = false;
+
 export function setupPlayerListeners() {
+    if (playerListenersBound) return;
+    playerListenersBound = true;
+
     const speedBtnRef = document.getElementById('speed-btn');
     if (speedBtnRef) {
-        const newSpeedBtn = speedBtnRef.cloneNode(true);
-        speedBtnRef.parentNode.replaceChild(newSpeedBtn, speedBtnRef);
         const initialSpeed = speeds[currentSpeedIndex] || 1;
-        newSpeedBtn.innerText = `${initialSpeed}x`;
-        newSpeedBtn.onclick = () => {
+        speedBtnRef.innerText = `${initialSpeed}x`;
+        speedBtnRef.addEventListener('click', () => {
             currentSpeedIndex = (currentSpeedIndex + 1) % speeds.length;
             const newSpeed = speeds[currentSpeedIndex];
             const appliedSpeed = setPlaybackSpeed(newSpeed);
-            newSpeedBtn.innerText = `${appliedSpeed}x`;
+            speedBtnRef.innerText = `${appliedSpeed}x`;
             showToast(`Speed: ${appliedSpeed}x`);
-        };
+        });
     }
 
     let boostBtn = document.getElementById('vocal-boost-btn');
@@ -581,78 +589,70 @@ export function setupPlayerListeners() {
     }
 
     if (boostBtn && boostBtn.parentNode) {
-        const newBoostBtn = boostBtn.cloneNode(true);
-        boostBtn.parentNode.replaceChild(newBoostBtn, boostBtn);
-        newBoostBtn.onclick = () => {
+        boostBtn.addEventListener('click', () => {
             if (getCurrentState().sourceType === 'youtube') {
                 showToast("Vocal boost is not available for YouTube links");
                 return;
             }
 
-            const isBoosting = newBoostBtn.classList.toggle('active');
+            const isBoosting = boostBtn.classList.toggle('active');
             const applied = toggleVocalBoost(isBoosting);
 
             if (!applied) {
-                newBoostBtn.classList.remove('active');
+                boostBtn.classList.remove('active');
                 showToast("Vocal boost is not available for this source");
                 return;
             }
 
             if (isBoosting) {
-                newBoostBtn.style.color = "#ff4b1f";
-                newBoostBtn.style.boxShadow = "0 0 15px rgba(255, 75, 31, 0.5)";
+                boostBtn.style.color = "#ff4b1f";
+                boostBtn.style.boxShadow = "0 0 15px rgba(255, 75, 31, 0.5)";
                 showToast("Vocal boost active");
             } else {
-                newBoostBtn.style.color = "";
-                newBoostBtn.style.boxShadow = "";
+                boostBtn.style.color = "";
+                boostBtn.style.boxShadow = "";
                 showToast("Normal sound");
             }
-        };
+        });
     }
 
     const sleepBtn = document.getElementById('sleep-timer-btn');
     if (sleepBtn) {
-        const newSleepBtn = sleepBtn.cloneNode(true);
-        sleepBtn.parentNode.replaceChild(newSleepBtn, sleepBtn);
-        newSleepBtn.onclick = () => {
+        sleepBtn.addEventListener('click', () => {
             currentSleepIndex = (currentSleepIndex + 1) % sleepTimes.length;
             const minutes = sleepTimes[currentSleepIndex];
 
             setSleepTimer(minutes, () => {
                 updateUI(false);
-                newSleepBtn.innerHTML = `<i class="fas fa-moon"></i>`;
-                newSleepBtn.style.color = "";
+                sleepBtn.innerHTML = `<i class="fas fa-moon"></i>`;
+                sleepBtn.style.color = "";
                 currentSleepIndex = 0;
             });
 
             if (minutes > 0) {
-                newSleepBtn.innerHTML = `<span style="font-size:0.8rem; font-weight:bold">${minutes}m</span>`;
-                newSleepBtn.style.color = "var(--secondary)";
+                sleepBtn.innerHTML = `<span style="font-size:0.8rem; font-weight:bold">${minutes}m</span>`;
+                sleepBtn.style.color = "var(--secondary)";
                 showToast(`Sleep: ${minutes}m`);
             } else {
-                newSleepBtn.innerHTML = `<i class="fas fa-moon"></i>`;
-                newSleepBtn.style.color = "";
+                sleepBtn.innerHTML = `<i class="fas fa-moon"></i>`;
+                sleepBtn.style.color = "";
                 showToast("Sleep: Off");
             }
-        };
+        });
     }
 
     ['bookmark-btn', 'bookmark-current-btn'].forEach((buttonId) => {
         const bookmarkBtn = document.getElementById(buttonId);
         if (!bookmarkBtn || !bookmarkBtn.parentNode) return;
 
-        const newBookmarkBtn = bookmarkBtn.cloneNode(true);
-        bookmarkBtn.parentNode.replaceChild(newBookmarkBtn, bookmarkBtn);
-        newBookmarkBtn.onclick = saveCurrentBookmark;
+        bookmarkBtn.addEventListener('click', saveCurrentBookmark);
     });
 
     const dlBtn = document.getElementById('download-btn');
     if (dlBtn) {
         dlBtn.style.display = "inline-flex";
-        const newDlBtn = dlBtn.cloneNode(true);
-        dlBtn.parentNode.replaceChild(newDlBtn, dlBtn);
 
-        newDlBtn.onclick = async () => {
+        dlBtn.addEventListener('click', async () => {
             const offlineState = await getCurrentChapterOfflineState();
             const state = getCurrentState();
 
@@ -674,9 +674,9 @@ export function setupPlayerListeners() {
                 return;
             }
 
-            setButtonLoading(newDlBtn, 'Saving');
+            setButtonLoading(dlBtn, 'Saving');
             const result = await downloadCurrentChapter();
-            resetButtonLoading(newDlBtn);
+            resetButtonLoading(dlBtn);
             renderChapterList(state.book);
             updateUI(state.isPlaying, state.book);
 
@@ -690,15 +690,13 @@ export function setupPlayerListeners() {
 
     const downloadBookBtn = document.getElementById('download-book-btn');
     if (downloadBookBtn && downloadBookBtn.parentNode) {
-        const newDownloadBookBtn = downloadBookBtn.cloneNode(true);
-        downloadBookBtn.parentNode.replaceChild(newDownloadBookBtn, downloadBookBtn);
-        newDownloadBookBtn.onclick = async () => {
+        downloadBookBtn.addEventListener('click', async () => {
             const state = getCurrentState();
             if (!state.book) return;
 
-            setButtonLoading(newDownloadBookBtn, 'Queueing');
+            setButtonLoading(downloadBookBtn, 'Queueing');
             const result = await queueCurrentBookForOffline();
-            resetButtonLoading(newDownloadBookBtn);
+            resetButtonLoading(downloadBookBtn);
             renderChapterList(state.book);
             updateUI(state.isPlaying, state.book);
 
@@ -707,23 +705,21 @@ export function setupPlayerListeners() {
             } else {
                 showToast(result?.reason || "Book download queue could not start");
             }
-        };
+        });
     }
 
     const removeBookBtn = document.getElementById('remove-offline-book-btn');
     if (removeBookBtn && removeBookBtn.parentNode) {
-        const newRemoveBookBtn = removeBookBtn.cloneNode(true);
-        removeBookBtn.parentNode.replaceChild(newRemoveBookBtn, removeBookBtn);
-        newRemoveBookBtn.onclick = async () => {
+        removeBookBtn.addEventListener('click', async () => {
             const state = getCurrentState();
             if (!state.book) return;
 
-            setButtonLoading(newRemoveBookBtn, 'Removing');
+            setButtonLoading(removeBookBtn, 'Removing');
             await removeCurrentBookOffline();
-            resetButtonLoading(newRemoveBookBtn);
+            resetButtonLoading(removeBookBtn);
             renderChapterList(state.book);
             updateUI(state.isPlaying, state.book);
             showToast("Offline copies cleared for this book");
-        };
+        });
     }
 }

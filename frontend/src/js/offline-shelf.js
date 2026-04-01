@@ -794,9 +794,19 @@ async function downloadJob(job) {
         const willRetry = navigator.onLine && error?.name !== 'AbortError';
         const nextDelay = JOB_RETRY_DELAYS_MS[retryIndex];
         const nextStatus = willRetry ? OFFLINE_STATES.failed : OFFLINE_STATES.queued;
-        const errorReason = navigator.onLine
-            ? (error?.message || 'Download failed')
-            : 'Browser is offline';
+
+        let errorReason = 'Download failed';
+        if (!navigator.onLine) {
+            errorReason = 'Browser is offline';
+        } else if (error?.name === 'AbortError') {
+            errorReason = 'Download cancelled';
+        } else if (error?.name === 'QuotaExceededError' || String(error?.message).includes('quota')) {
+            errorReason = 'Not enough storage space';
+        } else if (error instanceof TypeError) { // Often indicates network/CORS issue
+            errorReason = 'Network error or access denied';
+        } else if (error?.message) {
+            errorReason = error.message;
+        }
 
         await putRecord(STORE_NAMES.chapters, {
             ...chapterRecord,
