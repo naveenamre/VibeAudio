@@ -517,3 +517,358 @@ body.player-mode #back-btn {
         padding-right: 20px;
     }
 }
+
+/* Cinematic premium redesign */
+:root {
+    --primary: rgb(168, 101, 54);
+    --secondary: rgb(224, 190, 137);
+    --accent-soft: rgba(168, 101, 54, 0.18);
+    --theme-bg-1: rgba(74, 44, 26, 0.34);
+    --theme-bg-2: rgba(73, 89, 120, 0.18);
+    --theme-bg-3: rgba(38, 48, 67, 0.18);
+    --theme-bg-4: rgba(8, 11, 18, 0.995);
+    --theme-surface-1: rgba(15, 19, 28, 0.9);
+    --theme-surface-2: rgba(255, 250, 239, 0.06);
+    --theme-surface-3: rgba(255, 250, 239, 0.12);
+    --theme-border: rgba(231, 219, 197, 0.12);
+    --theme-border-strong: rgba(231, 219, 197, 0.22);
+    --theme-glow: rgba(168, 101, 54, 0.16);
+    --theme-glow-soft: rgba(224, 190, 137, 0.09);
+    --theme-shadow: rgba(0, 0, 0, 0.52);
+    --theme-shadow-strong: rgba(0, 0, 0, 0.72);
+    --theme-title: rgba(247, 241, 230, 0.98);
+    --theme-text: rgba(231, 225, 214, 0.95);
+    --theme-text-soft: rgba(203, 196, 186, 0.82);
+    --theme-text-dim: rgba(156, 152, 145, 0.66);
+    --theme-title-gradient-start: rgb(247, 241, 230);
+    --theme-title-gradient-end: rgb(222, 187, 133);
+    --theme-progress-track: rgba(255, 250, 239, 0.12);
+    --theme-progress-fill: linear-gradient(90deg, rgb(156, 89, 48), rgb(224, 190, 137));
+    --theme-player-overlay: linear-gradient(135deg, rgba(156, 89, 48, 0.16), rgba(224, 190, 137, 0.08) 40%, rgba(7, 10, 16, 0.78));
+    --dark-bg: #070a11;
+    --font-body: 'Manrope', sans-serif;
+    --font-display: 'Cormorant Garamond', serif;
+    --shell-width: 1240px;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    color: var(--theme-text);
+    padding-bottom: 150px;
+    background:
+        radial-gradient(circle at 14% 18%, rgba(146, 88, 48, 0.18), transparent 22%),
+        radial-gradient(circle at 84% 16%, rgba(211, 171, 118, 0.08), transparent 20%),
+        radial-gradient(circle at 52% 82%, rgba(70, 87, 118, 0.12), transparent 24%),
+        linear-gradient(180deg, #090d15 0%, #070910 42%, #05070c 100%);
+    transition: background 0.7s ease, color 0.4s ease;
+}
+
+body::before {
+    background:
+        radial-gradient(circle at 24% 24%, rgba(162, 98, 54, 0.12), transparent 22%),
+        radial-gradient(circle at 76% 18%, rgba(224, 190, 137, 0.06), transparent 18%),
+        radial-gradient(circle at 50% 78%, rgba(255, 255, 255, 0.03), transparent 20%);
+    filter: blur(42px);
+    opacity: 0.8;
+    animation: ambientFloat 28s ease-in-out infinite alternate;
+}
+
+body::after {
+    background-image:
+        linear-gradient(rgba(255, 247, 233, 0.018) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 247, 233, 0.018) 1px, transparent 1px);
+    background-size: 132px 132px;
+    mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.36), transparent 78%);
+    opacity: 0.16;
+}
+
+.glass-container {
+    max-width: var(--shell-width);
+    margin: 0 auto;
+    padding: 26px 28px 48px;
+}
+
+.app-topbar {
+    position: sticky;
+    top: 18px;
+    z-index: 120;
+    margin-bottom: 28px;
+    padding: 16px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    gap: 18px;
+    border-radius: 30px;
+    background: rgba(11, 14, 22, 0.78);
+    border: 1px solid rgba(255, 245, 228, 0.08);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+}
+
+.logo {
+    gap: 14px;
+}
+
+.brand-stack {
+    display: grid;
+    gap: 2px;
+}
+
+.brand-stack span {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 2.6vw, 2.45rem);
+    font-weight: 700;
+    line-height: 0.92;
+    letter-spacing: -0.04em;
+    color: var(--theme-title);
+    background: none;
+    -webkit-background-clip: initial;
+}
+
+.brand-subtitle {
+    color: var(--theme-text-dim);
+    font-size: 0.76rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.search-shell {
+    display: grid;
+    gap: 8px;
+    justify-items: end;
+    min-width: min(100%, 360px);
+}
+
+.search-label,
+.section-eyebrow {
+    color: var(--secondary);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+.search-box {
+    position: relative;
+    width: min(100%, 360px);
+    min-height: 54px;
+    padding: 0 18px;
+    border-radius: 999px;
+    gap: 12px;
+    border: 1px solid rgba(255, 245, 228, 0.08);
+    background: rgba(255, 250, 239, 0.045);
+    box-shadow: inset 0 1px 0 rgba(255, 250, 239, 0.05);
+}
+
+.search-box i {
+    color: var(--theme-text-dim);
+}
+
+.search-box input {
+    width: 100%;
+    color: var(--theme-title);
+    font-size: 0.95rem;
+}
+
+.search-box input::placeholder {
+    color: rgba(160, 156, 149, 0.9);
+}
+
+.search-box:focus-within {
+    border-color: rgba(224, 190, 137, 0.28);
+    box-shadow:
+        0 0 0 1px rgba(224, 190, 137, 0.1),
+        0 10px 30px rgba(0, 0, 0, 0.22);
+}
+
+#search-clear-btn {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: var(--theme-text-dim);
+    cursor: pointer;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+}
+
+#search-clear-btn:hover {
+    color: var(--theme-title);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.glass-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
+    background: rgba(255, 250, 239, 0.05);
+    border-color: rgba(255, 245, 228, 0.08);
+    box-shadow: none;
+}
+
+.glass-btn:hover {
+    background: rgba(224, 190, 137, 0.12);
+    color: var(--theme-title);
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.2);
+}
+
+.section-header-row {
+    align-items: end;
+    gap: 18px;
+    margin-bottom: 20px;
+}
+
+.section-title {
+    margin: 6px 0 10px;
+    font-size: clamp(2.1rem, 3.2vw, 3.3rem);
+    line-height: 0.92;
+    letter-spacing: -0.045em;
+    text-shadow: none;
+}
+
+.section-subtitle {
+    max-width: 62ch;
+    color: var(--theme-text-soft);
+    font-size: 0.96rem;
+    line-height: 1.7;
+    margin-top: 0;
+}
+
+.sync-status-banner,
+.profile-sync-note {
+    margin-top: 16px;
+    padding: 12px 14px;
+    border-radius: 18px;
+    border: 1px solid rgba(255, 245, 228, 0.08);
+    background: rgba(255, 250, 239, 0.035);
+    color: var(--theme-text-soft);
+    font-size: 0.86rem;
+}
+
+.grid {
+    gap: 22px;
+}
+
+.empty-msg,
+.empty-state {
+    padding: 28px 24px;
+    border-radius: 24px;
+    border: 1px dashed rgba(255, 245, 228, 0.12);
+    background: rgba(255, 250, 239, 0.025);
+    color: var(--theme-text-soft);
+}
+
+.loading-spinner {
+    margin-top: 0;
+    padding: 22px;
+    border-radius: 22px;
+    background: rgba(255, 250, 239, 0.03);
+    border: 1px solid rgba(255, 245, 228, 0.08);
+    color: var(--secondary);
+}
+
+.toast-msg {
+    position: fixed;
+    left: 50%;
+    bottom: 28px;
+    transform: translateX(-50%);
+    padding: 12px 18px;
+    border-radius: 999px;
+    background: rgba(12, 16, 24, 0.92);
+    color: var(--theme-title);
+    border: 1px solid rgba(255, 245, 228, 0.1);
+    box-shadow: 0 18px 34px rgba(0, 0, 0, 0.34);
+    z-index: 2200;
+    font-size: 0.88rem;
+    letter-spacing: 0.01em;
+}
+
+body.player-mode .app-topbar {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    backdrop-filter: none;
+    padding: 0;
+    margin-bottom: 8px;
+}
+
+body.player-mode .brand-stack {
+    justify-items: center;
+}
+
+body.player-mode .brand-subtitle {
+    display: none;
+}
+
+@media (max-width: 980px) {
+    .app-topbar {
+        align-items: stretch;
+        flex-wrap: wrap;
+    }
+
+    .search-shell {
+        width: 100%;
+        justify-items: stretch;
+    }
+
+    .search-box {
+        width: 100%;
+    }
+}
+
+@media (max-width: 768px) {
+    body {
+        padding-bottom: 190px;
+    }
+
+    .glass-container {
+        padding: 14px 16px 28px;
+    }
+
+    .app-topbar {
+        top: 10px;
+        padding: 14px;
+        margin-bottom: 22px;
+        border-radius: 24px;
+    }
+
+    .brand-stack span {
+        font-size: 1.8rem;
+    }
+
+    .search-label {
+        padding-left: 4px;
+    }
+
+    .section-title {
+        font-size: clamp(1.8rem, 8vw, 2.5rem);
+        margin-bottom: 8px;
+    }
+
+    .section-header-row,
+    .section-subtitle,
+    .section-title {
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    .grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+        padding: 0 0 100px;
+    }
+
+    body.player-mode {
+        padding-bottom: 360px;
+    }
+}

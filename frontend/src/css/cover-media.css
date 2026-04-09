@@ -1,0 +1,65 @@
+/* Shared cover handling */
+:root {
+    --cover-surface:
+        linear-gradient(180deg, rgba(255, 250, 239, 0.05), rgba(255, 250, 239, 0.02)),
+        rgba(8, 12, 18, 0.92);
+}
+
+.featured-cover,
+.preview-card img,
+.book-card img,
+.continue-cover,
+.discovery-card img,
+.history-layout img,
+.track-info img {
+    object-fit: contain;
+    object-position: center;
+    background: var(--cover-surface);
+}
+
+.book-card-media {
+    aspect-ratio: 2 / 3;
+    background: rgba(8, 12, 18, 0.82);
+}
+
+.book-card:hover img {
+    transform: none;
+}
+
+.continue-cover {
+    width: 100%;
+    height: 100%;
+}
+
+.discovery-card img {
+    width: 56px;
+    height: auto;
+    aspect-ratio: 2 / 3;
+}
+
+.history-layout {
+    align-items: flex-start;
+}
+
+.history-layout img {
+    width: 76px !important;
+    height: auto !important;
+    aspect-ratio: 2 / 3;
+}
+
+.track-info img {
+    width: 52px;
+    height: 78px;
+    border-radius: 14px;
+}
+
+@media (max-width: 768px) {
+    .continue-cover {
+        max-width: 200px;
+    }
+
+    .track-info img {
+        width: 46px;
+        height: 69px;
+    }
+}

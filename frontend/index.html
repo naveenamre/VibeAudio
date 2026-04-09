@@ -28,7 +28,7 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="manifest" href="./app.webmanifest">
     <meta name="theme-color" content="#0d0b21">
@@ -41,6 +41,7 @@
 
     <link rel="stylesheet" href="./src/css/base.css">
     <link rel="stylesheet" href="./src/css/landing.css">
+    <link rel="stylesheet" href="./src/css/cover-media.css">
 </head>
 
 <body class="landing-page">
@@ -50,29 +51,26 @@
                 <img src="./public/icons/logo.png" alt="VibeAudio" class="brand-mark">
                 <div class="brand-copy">
                     <strong>VibeAudio</strong>
-                    <span>Browser-first listening shelf</span>
+                    <span>Cinematic listening shelf</span>
                 </div>
             </div>
 
             <div class="topbar-actions">
-                <span class="topbar-note">Cloud synced listening, saved moments, and chapter-based playback.</span>
-                <button class="ghost-btn" type="button" data-scroll-target="#library-preview-panel">Browse the shelf</button>
-                <button class="solid-btn" type="button" data-open-auth="true">Open my shelf</button>
+                <span class="topbar-note">Curated discovery, synced progress, and a player worth returning to.</span>
+                <button class="ghost-btn" type="button" data-scroll-target="#library-preview-panel">Browse catalog</button>
+                <button class="solid-btn" type="button" data-open-auth="true">Open library</button>
             </div>
         </header>
 
         <section class="landing-hero">
             <div class="hero-panel">
-                <span class="eyebrow">Audiobooks without the prototype feel</span>
-                <h1 class="hero-title">A calmer <span>listening shelf</span> for your browser.</h1>
-                <p class="hero-copy" id="landing-greeting">A focused audiobook experience that keeps your place, remembers the moments that matter, and makes it easier to come back to long-form stories.</p>
+                <span class="eyebrow">Discovery-first audiobook experience</span>
+                <h1 class="hero-title">A <span>premium listening shelf</span> built for long-form stories.</h1>
+                <p class="hero-copy" id="landing-greeting">Step into a darker, calmer audiobook experience with stronger discovery, smoother returns, and a player that feels built to stay.</p>
 
                 <div class="hero-actions">
                     <button class="solid-btn" type="button" data-open-auth="true">Start listening</button>
-                    <button class="ghost-btn" type="button" data-scroll-target="#library-preview-panel">See the catalog</button>
-                    <button id="install-app-btn" class="ghost-btn" type="button" hidden>
-                        <i class="fas fa-mobile-screen-button"></i> Install app
-                    </button>
+                    <button class="ghost-btn" type="button" data-scroll-target="#library-preview-panel">Explore catalog</button>
                 </div>
 
                 <div id="hero-stats" class="hero-metrics"></div>
@@ -82,67 +80,69 @@
                     <img id="featured-cover" class="featured-cover" src="./public/icons/logo.png" alt="Featured VibeAudio book">
                 </div>
             </div>
+        </section>
 
-            <aside class="auth-panel" id="auth-panel">
-                <div>
-                    <span class="eyebrow">Sign in once, resume anywhere</span>
-                    <h2>Your personal shelf</h2>
-                    <p>Log in to unlock synced progress, history, saved moments, and a shelf that remembers where you stopped.</p>
+        <section class="section-grid">
+            <section class="section-panel" id="library-preview-panel">
+                <div class="section-head">
+                    <div>
+                        <span class="eyebrow">Curated preview</span>
+                        <h2>Browse the shelf before you sign in</h2>
+                        <p>See the tone, pacing, and range of stories waiting inside VibeAudio.</p>
+                    </div>
+                    <button class="ghost-btn" type="button" data-open-auth="true">Unlock full library</button>
+                </div>
+                <div id="library-preview" class="preview-grid"></div>
+            </section>
+
+            <div class="feature-row">
+                <article class="feature-panel">
+                    <div class="feature-icon"><i class="fas fa-compass"></i></div>
+                    <h3>Stronger discovery</h3>
+                    <p>Featured shelves, curated categories, and visual hierarchy that makes the next story obvious.</p>
+                </article>
+                <article class="feature-panel">
+                    <div class="feature-icon"><i class="fas fa-wave-square"></i></div>
+                    <h3>Flagship player</h3>
+                    <p>Playback controls, chapter flow, and atmosphere designed around long listening sessions.</p>
+                </article>
+                <article class="feature-panel">
+                    <div class="feature-icon"><i class="fas fa-bookmark"></i></div>
+                    <h3>Save the moments</h3>
+                    <p>Return to scenes, lines, and beats you want to revisit without losing your place.</p>
+                </article>
+                <article class="feature-panel">
+                    <div class="feature-icon"><i class="fas fa-cloud-arrow-down"></i></div>
+                    <h3>Browser-ready shelf</h3>
+                    <p>Progress sync and offline support work together so the shelf stays dependable.</p>
+                </article>
+            </div>
+
+            <section class="section-panel auth-panel" id="auth-panel">
+                <div class="auth-panel-copy">
+                    <span class="eyebrow">Personal access</span>
+                    <h2>Sign in once. Come back exactly where you left.</h2>
+                    <p>Your listening shelf, saved moments, history, and synced progress stay ready across sessions.</p>
                 </div>
 
                 <div class="auth-chip-row">
                     <span class="auth-chip">Resume playback</span>
                     <span class="auth-chip">Saved moments</span>
-                    <span class="auth-chip">History sync</span>
+                    <span class="auth-chip">Offline shelf</span>
                 </div>
 
                 <div class="landing-status" id="auth-status">Preparing your sign-in panel...</div>
                 <div class="sign-in-shell">
                     <div id="sign-in-container"></div>
                 </div>
-            </aside>
-        </section>
-
-        <section class="section-grid">
-            <div class="feature-row">
-                <article class="feature-panel">
-                    <div class="feature-icon"><i class="fas fa-route"></i></div>
-                    <h3>Resume-aware playback</h3>
-                    <p>Your current chapter, progress, and player state stay close so you can return to stories faster.</p>
-                </article>
-                <article class="feature-panel">
-                    <div class="feature-icon"><i class="fas fa-bookmark"></i></div>
-                    <h3>Saved moments</h3>
-                    <p>Keep timestamped highlights and jump back to them without hunting through the entire chapter list.</p>
-                </article>
-                <article class="feature-panel">
-                    <div class="feature-icon"><i class="fas fa-wave-square"></i></div>
-                    <h3>Focused chapter player</h3>
-                    <p>Speed control, sleep timer, chapter navigation, and source support designed for long-form listening.</p>
-                </article>
-                <article class="feature-panel">
-                    <div class="feature-icon"><i class="fas fa-cloud"></i></div>
-                    <h3>Browser-first sync</h3>
-                    <p>Cloud progress and local safeguards work together so your listening shelf feels dependable, not temporary.</p>
-                </article>
-            </div>
-
-            <section class="section-panel" id="library-preview-panel">
-                <div class="section-head">
-                    <div>
-                        <h2>Preview the listening shelf</h2>
-                        <p>Browse a sample of the catalog before you sign in.</p>
-                    </div>
-                    <button class="ghost-btn" type="button" data-open-auth="true">Unlock full shelf</button>
-                </div>
-                <div id="library-preview" class="preview-grid"></div>
             </section>
 
             <section class="section-panel">
                 <div class="section-head">
                     <div>
-                        <h2>Built for multiple listening moods</h2>
-                        <p>The browser version is being tuned around discovery, return visits, and smoother long-form listening.</p>
+                        <span class="eyebrow">Listening lanes</span>
+                        <h2>Built for mood, momentum, and return visits</h2>
+                        <p>The catalog adapts to genre, atmosphere, and the stories you keep coming back to.</p>
                     </div>
                 </div>
                 <div id="category-spotlight" class="tag-cluster"></div>
@@ -151,10 +151,15 @@
             <section class="section-panel">
                 <div class="footer-callout">
                     <div>
-                        <strong>From shelf preview to full player in one step.</strong>
-                        <p>Sign in when you are ready and move straight into your synced browser listening flow.</p>
+                        <strong>From discovery to playback in one smooth flow.</strong>
+                        <p>Move from browsing the shelf to your full listening setup without switching products or losing momentum.</p>
                     </div>
-                    <button class="solid-btn" type="button" data-open-auth="true">Continue to sign in</button>
+                    <div class="footer-callout-actions">
+                        <button id="install-app-btn" class="ghost-btn" type="button" hidden>
+                            <i class="fas fa-mobile-screen-button"></i> Install app
+                        </button>
+                        <button class="solid-btn" type="button" data-open-auth="true">Continue</button>
+                    </div>
                 </div>
             </section>
         </section>

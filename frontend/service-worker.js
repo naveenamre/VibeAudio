@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v10-smart-offline';
+const CACHE_VERSION = 'v11-client-split';
 const STATIC_CACHE_NAME = `vibeaudio-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE_NAME = `vibeaudio-runtime-${CACHE_VERSION}`;
 const DATA_CACHE_NAME = `vibeaudio-data-${CACHE_VERSION}`;
@@ -12,9 +12,12 @@ const PRECACHE_URLS = [
     './app.webmanifest',
     './src/pages/app.html',
     './src/css/base.css',
+    './src/css/app-sections.css',
     './src/css/components.css',
+    './src/css/cover-media.css',
     './src/css/landing.css',
     './src/css/player.css',
+    './src/css/player-premium.css',
     './src/js/api.js',
     './src/js/app-entry.js',
     './src/js/auth.js',
@@ -24,8 +27,11 @@ const PRECACHE_URLS = [
     './src/js/player.js',
     './src/js/progress-model.js',
     './src/js/pwa.js',
+    './src/js/ui-dom.js',
+    './src/js/ui-formatters.js',
     './src/js/ui.js',
     './src/js/ui-library.js',
+    './src/js/ui-library-insights.js',
     './src/js/ui-player-helpers.js',
     './src/js/ui-player-list.js',
     './src/js/ui-player-main.js',

@@ -190,11 +190,11 @@ export function buildProfileSnapshot(history, books) {
 
     const topGenre = Array.from(genreCount.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Story-driven picks';
 
-    let summary = 'Your shelf is ready for deeper listening sessions.';
+    let summary = 'Your shelf is shaping into a stronger listening habit.';
     if (finishedBooks > 0) {
-        summary = `You have already finished ${finishedBooks} ${finishedBooks === 1 ? 'book' : 'books'} and built a strong listening habit.`;
+        summary = `You have already finished ${finishedBooks} ${finishedBooks === 1 ? 'book' : 'books'} and built real momentum on the shelf.`;
     } else if (uniqueHistory.length > 0) {
-        summary = `You are currently juggling ${uniqueHistory.length} active stories across your shelf.`;
+        summary = `You currently have ${uniqueHistory.length} active ${uniqueHistory.length === 1 ? 'story' : 'stories'} moving across your shelf.`;
     }
 
     return {
@@ -288,6 +288,11 @@ export function pushRecentSearch(query) {
     const next = [value, ...existing].slice(0, 8);
     writeJson(getScopedRecentSearchesKey(), next);
     return next;
+}
+
+export function clearRecentSearches() {
+    writeJson(getScopedRecentSearchesKey(), []);
+    return [];
 }
 
 export function getCatalogSnapshot() {

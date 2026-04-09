@@ -29,11 +29,14 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/app-sections.css">
     <link rel="stylesheet" href="../css/components.css">
     <link rel="stylesheet" href="../css/player.css">
+    <link rel="stylesheet" href="../css/player-premium.css">
+    <link rel="stylesheet" href="../css/cover-media.css">
     <link rel="manifest" href="../../app.webmanifest">
     <link rel="icon" type="image/png" href="../icons/favicon.png">
     <meta name="theme-color" content="#0f0c29">
@@ -50,25 +53,35 @@
 
     <div class="glass-container">
 
-        <header>
+        <header class="app-topbar">
             <div class="logo">
                 <button id="menu-btn" class="glass-btn" aria-label="Open navigation">
                     <i class="fas fa-bars"></i>
                 </button>
-                <span><i class="fas fa-wave-square"></i> VibeAudio</span>
+                <div class="brand-stack">
+                    <span><i class="fas fa-wave-square"></i> VibeAudio</span>
+                    <p class="brand-subtitle">Discovery-first listening shelf</p>
+                </div>
             </div>
 
-            <div class="search-box">
-                <i class="fas fa-search"></i>
-                <input type="text" id="search-input" placeholder="Search books, moods, or authors">
+            <div class="search-shell">
+                <label class="search-label" for="search-input">Search the shelf</label>
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="search-input" placeholder="Title, author, or mood">
+                    <button id="search-clear-btn" class="hidden" type="button" aria-label="Clear search">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
             </div>
         </header>
 
         <main id="view-library" class="view-section fade-in">
             <div class="section-header-row">
                 <div>
-                    <h2 class="section-title">Your Browser Shelf</h2>
-                    <p class="section-subtitle" id="library-subtitle">Loading your listening shelf...</p>
+                    <span class="section-eyebrow">Discover</span>
+                    <h2 class="section-title">Your listening shelf</h2>
+                    <p class="section-subtitle" id="library-subtitle">Loading your next standout audiobook...</p>
                     <div id="library-sync-banner" class="sync-status-banner hidden" aria-live="polite"></div>
                 </div>
             </div>
@@ -84,8 +97,9 @@
         <section id="view-history" class="view-section hidden fade-in">
             <div class="section-header-row">
                 <div>
-                    <h2 class="section-title">Continue Listening</h2>
-                    <p class="section-subtitle">Every story you touch stays ready for the next session.</p>
+                    <span class="section-eyebrow">Resume</span>
+                    <h2 class="section-title">Continue listening</h2>
+                    <p class="section-subtitle">Return to the stories already carrying your momentum.</p>
                     <div id="history-sync-banner" class="sync-status-banner hidden" aria-live="polite"></div>
                 </div>
             </div>
@@ -97,7 +111,8 @@
         <section id="view-offline" class="view-section hidden fade-in">
             <div class="section-header-row">
                 <div>
-                    <h2 class="section-title">Offline Shelf</h2>
+                    <span class="section-eyebrow">Offline</span>
+                    <h2 class="section-title">Offline shelf</h2>
                     <p class="section-subtitle" id="offline-subtitle">Your saved browser shelf will appear here.</p>
                 </div>
             </div>
@@ -109,15 +124,16 @@
 
         <section id="view-about" class="view-section hidden fade-in">
             <div class="profile-card about-card">
+                <span class="section-eyebrow">About</span>
                 <h2>About VibeAudio</h2>
                 <p class="about-version">Browser edition</p>
                 <div class="about-copy">
-                    <p>VibeAudio is being shaped as a browser-first audiobook shelf for listeners who want instant playback, synced progress, and a calmer way to return to long-form stories.</p>
-                    <p>The focus for this version is simple: better discovery, better resume logic, and a player that feels dependable instead of temporary.</p>
-                    <p>Everything on this page is tuned for web listening first, so the browser experience can stand on its own before any app-specific extras.</p>
+                    <p>VibeAudio is a cinematic browser shelf for listeners who want discovery, continuity, and a player that feels intentional.</p>
+                    <p>This edition focuses on premium presentation, calmer browsing, and strong return-to-story flow without adding product bloat.</p>
+                    <p>Everything here is tuned to make long-form listening feel polished before any platform-specific extras enter the picture.</p>
                 </div>
                 <button class="action-btn" onclick="window.app.switchView('library')">
-                    <i class="fas fa-book-open"></i> Back to shelf
+                    <i class="fas fa-book-open"></i> Return to shelf
                 </button>
             </div>
         </section>
@@ -201,7 +217,7 @@
 
         <section id="view-player" class="view-section hidden fade-in">
             <button id="back-btn" class="glass-back-btn" onclick="window.app.goBack()">
-                <i class="fas fa-arrow-left"></i> <span>Back</span>
+                <i class="fas fa-arrow-left"></i> <span>Back to shelf</span>
             </button>
 
             <div class="player-header-card">
@@ -213,10 +229,10 @@
                 <img id="detail-cover" src="" alt="Book Cover">
 
                 <div class="info">
-                    <span class="badge">NOW PLAYING</span>
+                    <span class="badge">NOW LISTENING</span>
                     <h1 id="detail-title">Loading title...</h1>
                     <p id="detail-author">Unknown author</p>
-                    <p id="detail-summary" class="detail-summary">Story notes, listening context, and shelf metadata will appear here.</p>
+                    <p id="detail-summary" class="detail-summary">Story notes, listening context, and premium shelf details will appear here.</p>
                     <div id="detail-pills" class="detail-pills"></div>
 
                     <div id="lang-toggle-container" class="hidden" style="margin: 10px 0;"></div>
@@ -253,7 +269,7 @@
                         <div class="stack-header">
                             <div>
                                 <h3>Offline Shelf</h3>
-                                <p>Save direct-audio chapters privately inside this browser.</p>
+                                <p>Keep direct-audio chapters close for lower-friction listening later.</p>
                             </div>
                             <span id="player-offline-status-chip" class="player-offline-status-chip" data-state="not_downloaded">Ready for Offline</span>
                         </div>
@@ -273,10 +289,10 @@
                         <div class="stack-header">
                             <div>
                                 <h3>Saved Moments</h3>
-                                <p>Keep the parts you want to revisit quickly.</p>
+                                <p>Pin the scenes and lines you want to return to fast.</p>
                             </div>
                             <button id="bookmark-current-btn" class="mini-action-btn" type="button">
-                                <i class="fas fa-bookmark"></i> Save current moment
+                                <i class="fas fa-bookmark"></i> Save moment
                             </button>
                         </div>
                         <div id="bookmark-list" class="bookmark-list"></div>
@@ -286,11 +302,11 @@
                         <div class="stack-header">
                             <div>
                                 <h3>Vibe Check</h3>
-                                <p>Your notes stay tied to the exact listening timestamp.</p>
+                                <p>Leave notes that stay locked to the exact listening timestamp.</p>
                             </div>
                         </div>
                         <div class="add-comment-box">
-                            <input type="text" id="comment-input" placeholder="Write a note at the current time">
+                            <input type="text" id="comment-input" placeholder="Write a note for this moment">
                             <button id="post-comment-btn" aria-label="Save comment"><i class="fas fa-paper-plane"></i></button>
                         </div>
                         <div id="comments-list"></div>
@@ -320,12 +336,12 @@
         </nav>
     </aside>
 
-    <div id="mini-player" class="player-bar hidden">
+        <div id="mini-player" class="player-bar hidden">
         <div class="track-info">
             <img id="mini-cover" src="" alt="">
             <div class="mini-text">
                 <h4 id="mini-title">Select a story</h4>
-                <p id="mini-chapter">Ready when you are</p>
+                <p id="mini-chapter">Your shelf is ready</p>
             </div>
         </div>
 

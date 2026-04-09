@@ -72,9 +72,28 @@ function getOfflineBadgeCopy(book) {
     return '';
 }
 
+function getBookAccentLabel(book) {
+    if (book?.savedState && !book?.isFinished) {
+        return 'Continue listening';
+    }
+
+    if (book?.isFinished) {
+        return 'Finished';
+    }
+
+    if (book?.genre) {
+        return String(book.genre);
+    }
+
+    if (Array.isArray(book?.moods) && book.moods.length) {
+        return String(book.moods[0]);
+    }
+
+    return 'Featured pick';
+}
+
 function createLibraryCard(book, openPlayerCallback, placeholder) {
-    const moodHTML = (book.moods || []).map((mood) => `<span class="mood-tag">${escapeHTML(mood)}</span>`).join('');
-    const genreHTML = book.genre ? `<span class="mood-tag genre-accent">${escapeHTML(book.genre)}</span>` : '';
+    const accentLabel = getBookAccentLabel(book);
     const progressPercent = getDisplayProgressPercent(book);
     const savedState = getSavedState(book);
     const progressHTML = savedState ? `
@@ -82,32 +101,35 @@ function createLibraryCard(book, openPlayerCallback, placeholder) {
             <div class="card-progress-track">
                 <div class="card-progress-fill" style="width: ${progressPercent}%"></div>
             </div>
-            <p class="card-progress-text">${escapeHTML(getResumeText(book))} - ${progressPercent}% done</p>
+            <p class="card-progress-text">${escapeHTML(getResumeText(book))} - ${progressPercent}% complete</p>
         </div>` : '';
     const offlineBadgeCopy = getOfflineBadgeCopy(book);
     const offlineBadge = offlineBadgeCopy ? `
         <div class="card-offline-badge" data-status="${escapeHTML(book.offlineSummary?.overallStatus || '')}">
             ${escapeHTML(offlineBadgeCopy)}
         </div>` : '';
-    const activityBadge = savedState ? `
+    const activityBadge = savedState || book.isFinished ? `
         <div class="card-activity-badge ${book.isFinished ? 'finished' : 'continue'}">
-            ${book.isFinished ? 'Finished' : `Part ${savedState.chapterIndex + 1}`}
+            ${book.isFinished ? 'Finished' : `Part ${(savedState?.chapterIndex || 0) + 1}`}
         </div>` : '';
+    const utilityLine = savedState
+        ? `${escapeHTML(book.author)}`
+        : `${escapeHTML(book.author)} - ${Number(book.totalChapters || 0)} parts`;
 
     const card = document.createElement('div');
     card.className = `book-card ${savedState ? 'has-progress' : ''} ${book.isFinished ? 'is-finished' : ''}`;
     card.tabIndex = 0;
     card.innerHTML = `
-        <div class="img-container">
+        <div class="book-card-media">
             <img class="lazy-img" src="${placeholder}" data-src="${escapeHTML(book.cover)}" alt="${escapeHTML(book.title)}">
             <div class="book-badge">${book.totalChapters || 0} Parts</div>
             ${activityBadge}
             ${offlineBadge}
         </div>
         <div class="card-content">
+            <span class="card-kicker">${escapeHTML(accentLabel)}</span>
             <h3>${escapeHTML(book.title)}</h3>
-            <p>${escapeHTML(book.author)}</p>
-            <div class="mood-tags">${genreHTML}${moodHTML}</div>
+            <p class="card-author">${utilityLine}</p>
             ${progressHTML}
         </div>`;
 
@@ -184,13 +206,20 @@ export function renderCategoryFilters(allBooks) {
     const container = document.getElementById('category-filters');
     if (!container) return;
 
-    const moods = new Set(['All']);
+    const counts = new Map([['All', Number.MAX_SAFE_INTEGER]]);
     allBooks.forEach((book) => {
-        if (book.genre) moods.add(book.genre);
-        if (book.moods) book.moods.forEach((m) => moods.add(m));
+        if (book.genre) counts.set(book.genre, (counts.get(book.genre) || 0) + 2);
+        if (book.moods) {
+            book.moods.forEach((mood) => counts.set(mood, (counts.get(mood) || 0) + 1));
+        }
     });
 
-    container.innerHTML = Array.from(moods).map((mood) => `
+    const orderedCategories = Array.from(counts.entries())
+        .sort((left, right) => right[1] - left[1])
+        .map(([label]) => label)
+        .slice(0, 9);
+
+    container.innerHTML = orderedCategories.map((mood) => `
         <button class="filter-btn ${mood === 'All' ? 'active' : ''}" 
                 id="${getCategoryButtonId(mood)}"
                 data-category="${escapeHTML(mood)}"
@@ -244,32 +273,33 @@ export function renderLibrarySpotlight(books, openPlayerCallback, options = {}) 
         : syncStatus === 'pending'
             ? 'Sync Pending'
             : 'Cloud Synced';
-    const reasonText = preferredTags.length ? `Because you keep listening to ${preferredTags.join(', ')}` : "More stories matching your listening vibe";
+    const reasonText = preferredTags.length ? `Because you return to ${preferredTags.join(', ')}` : "More stories aligned with your listening taste";
 
     container.classList.remove('hidden');
     container.innerHTML = `
+        <div class="discovery-stage">
         ${continueBook ? `
-            <div class="continue-spotlight">
+            <div class="continue-spotlight premium-stage">
                 <div class="continue-copy">
-                    <span class="personalized-kicker">Continue Listening</span>
+                    <span class="personalized-kicker">Continue listening</span>
                     <span class="spotlight-sync-pill" data-status="${escapeHTML(syncStatus)}">${escapeHTML(syncBadge)}</span>
                     <h3>${escapeHTML(continueBook.title)}</h3>
-                    <p>${escapeHTML(continueBook.author)}</p>
+                    <p class="continue-byline">${escapeHTML(continueBook.author)}</p>
                     <div class="spotlight-progress-track">
                         <div class="spotlight-progress-fill" style="width: ${continueProgress}%"></div>
                     </div>
-                    <span class="spotlight-progress-text">${getResumeText(continueBook)} - ${continueProgress}% done</span>
+                    <span class="spotlight-progress-text">${getResumeText(continueBook)} - ${continueProgress}% complete</span>
                     <button class="action-btn personalized-action" data-continue-book="${continueBook.bookId}">
-                        <i class="fas fa-play"></i> Resume Book
+                        <i class="fas fa-play"></i> Resume story
                     </button>
                 </div>
                 <img src="${escapeHTML(continueBook.cover)}" alt="${escapeHTML(continueBook.title)}" class="continue-cover">
             </div>` : ''}
         ${recommendations.length ? `
-            <div class="library-discovery-panel">
+            <div class="library-discovery-panel premium-stage">
                 <div class="discovery-header">
                     <div>
-                        <span class="personalized-kicker">Picked For You</span>
+                        <span class="personalized-kicker">Picked for you</span>
                         <h3>${escapeHTML(reasonText)}</h3>
                     </div>
                 </div>
@@ -279,12 +309,13 @@ export function renderLibrarySpotlight(books, openPlayerCallback, options = {}) 
                             <img src="${escapeHTML(book.cover)}" alt="${escapeHTML(book.title)}">
                             <div class="discovery-info">
                                 <strong>${escapeHTML(book.title)}</strong>
-                                <span>${escapeHTML(book.recommendationReason || book.genre || 'Fresh pick for you')}</span>
+                                <span>${escapeHTML(book.recommendationReason || book.genre || 'Fresh shelf pick')}</span>
                             </div>
                         </button>
                     `).join('')}
                 </div>
-            </div>` : ''}`;
+            </div>` : ''}
+        </div>`;
 
     const continueBtn = container.querySelector('[data-continue-book]');
     if (continueBtn && continueBook) {
@@ -302,20 +333,33 @@ export function renderLibrarySpotlight(books, openPlayerCallback, options = {}) 
 export function renderLibrary(books, openPlayerCallback) {
     const grid = document.getElementById('book-grid');
     if (!grid) return;
-    grid.innerHTML = '';
 
     if (!books.length) {
-        grid.innerHTML = '<div class="empty-state"><p>Iss vibe ki koi book nahi mili. Try another filter. </p></div>';
+        grid.innerHTML = '<div class="empty-state"><p>No titles matched this lane. Try a broader mood, genre, or author.</p></div>';
         return;
     }
 
     applyLibraryTheme(null, true);
 
     const placeholder = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+    grid.innerHTML = `
+        <section class="catalog-stage">
+            <div class="catalog-head">
+                <div>
+                    <span class="catalog-kicker">Browse the shelf</span>
+                    <h3>Curated picks, ready to open</h3>
+                </div>
+            </div>
+            <div class="catalog-grid"></div>
+        </section>
+    `;
+
+    const catalogGrid = grid.querySelector('.catalog-grid');
+    if (!catalogGrid) return;
 
     books.forEach((book) => {
         const card = createLibraryCard(book, openPlayerCallback, placeholder);
-        grid.appendChild(card);
+        catalogGrid.appendChild(card);
 
         const img = card.querySelector('img');
         if (window.imageObserver) window.imageObserver.observe(img);
@@ -323,26 +367,61 @@ export function renderLibrary(books, openPlayerCallback) {
 
     if (window.matchMedia("(min-width: 768px)").matches && window.VanillaTilt) {
         window.VanillaTilt.init(document.querySelectorAll("#book-grid .book-card"), {
-            max: 12, speed: 400, glare: true, "max-glare": 0.2, scale: 1.05
+            max: 5, speed: 300, glare: false, scale: 1.01
         });
     }
+}
+
+export function renderRecentSearches(searches = []) {
+    const libraryView = document.getElementById('view-library');
+    const filterContainer = document.getElementById('category-filters');
+    if (!libraryView || !filterContainer) return;
+
+    let panel = document.getElementById('recent-searches-panel');
+    if (!panel) {
+        panel = document.createElement('div');
+        panel.id = 'recent-searches-panel';
+        filterContainer.insertAdjacentElement('afterend', panel);
+    }
+
+    const items = Array.isArray(searches) ? searches.filter(Boolean) : [];
+    if (!items.length) {
+        panel.innerHTML = '';
+        panel.classList.add('hidden');
+        return;
+    }
+
+    panel.classList.remove('hidden');
+    panel.innerHTML = `
+        <div class="recent-searches-header">
+            <span>Recent searches</span>
+            <button class="clear-recent-btn" type="button" data-clear-recent="true">Clear</button>
+        </div>
+        <div class="recent-searches-tags">
+            ${items.map((query) => `
+                <button class="recent-search-tag" type="button" data-query="${escapeHTML(query)}">${escapeHTML(query)}</button>
+            `).join('')}
+        </div>
+    `;
 }
 
 export function renderOfflineShelf(books, openPlayerCallback) {
     const grid = document.getElementById('offline-grid');
     if (!grid) return;
 
-    grid.innerHTML = '';
     if (!books.length) {
-        grid.innerHTML = '<div class="empty-state"><p>No offline books yet. Save a direct-audio title from the player to build your browser shelf.</p></div>';
+        grid.innerHTML = '<div class="empty-state"><p>No offline stories yet. Save a direct-audio title from the player to build your browser shelf.</p></div>';
         return;
     }
 
     const placeholder = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+    grid.innerHTML = '<div class="catalog-grid offline-catalog-grid"></div>';
+    const catalogGrid = grid.querySelector('.catalog-grid');
+    if (!catalogGrid) return;
 
     books.forEach((book) => {
         const card = createLibraryCard(book, openPlayerCallback, placeholder);
-        grid.appendChild(card);
+        catalogGrid.appendChild(card);
 
         const img = card.querySelector('img');
         if (window.imageObserver) window.imageObserver.observe(img);
@@ -360,7 +439,7 @@ export async function renderHistory(allBooks, openPlayerCallback, historyData = 
         const sortedHistory = [...history].sort(compareProgressByRecency);
 
         if (!sortedHistory.length) {
-            grid.innerHTML = '<p class="empty-msg">Abhi tak kuch nahi suna? Start listening! </p>';
+            grid.innerHTML = '<p class="empty-msg">No recent listening yet. Start one standout story and it will stay here.</p>';
             return;
         }
 

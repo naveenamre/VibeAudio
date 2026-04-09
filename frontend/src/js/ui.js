@@ -18,8 +18,11 @@ import { togglePlay, nextChapter, prevChapter, skip, seekTo, getCurrentState } f
 import * as LibraryUI from './ui-library.js';
 import { openPlayerUI, updateUI } from './ui-player-main.js';
 import { STORAGE_KEYS, SYNC_STATES } from './config.js';
-import { formatTime, renderSingleComment, setActiveThemeSurface } from './ui-player-helpers.js';
+import { formatTime, renderSingleComment, setActiveThemeSurface, showToast } from './ui-player-helpers.js';
 import { signOutCurrentUser } from './auth.js';
+import { injectUiRuntimeStyles, setupImageObserver } from './ui-dom.js';
+import { formatRelativeTime } from './ui-formatters.js';
+import { renderLibraryInsightsPanel } from './ui-library-insights.js';
 import {
     addPersistentComment,
     buildProfileSnapshot,
@@ -52,11 +55,6 @@ let offlineRefreshQueued = false;
 
 const VALID_VIEWS = new Set(['library', 'history', 'offline', 'about', 'profile', 'player']);
 
-function getTimeStamp(value) {
-    const stamp = Date.parse(value || 0);
-    return Number.isFinite(stamp) ? stamp : 0;
-}
-
 function sortCatalogBooks(books) {
     return (Array.isArray(books) ? books : [])
         .slice()
@@ -68,23 +66,6 @@ function sortCatalogBooks(books) {
         .map((book, index) => ({ ...book, catalogOrder: index }));
 }
 
-function formatRelativeTime(value) {
-    const stamp = getTimeStamp(value);
-    if (!stamp) return 'recently';
-
-    const deltaMs = Date.now() - stamp;
-    if (deltaMs < 60 * 1000) return 'just now';
-
-    const minutes = Math.floor(deltaMs / (60 * 1000));
-    if (minutes < 60) return `${minutes}m ago`;
-
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
-
-    const days = Math.floor(hours / 24);
-    return `${days}d ago`;
-}
-
 function renderSyncState(status = getSyncStatus()) {
     const banners = [
         document.getElementById('library-sync-banner'),
@@ -93,17 +74,17 @@ function renderSyncState(status = getSyncStatus()) {
     const profileNote = document.getElementById('profile-sync-note');
     const pendingCount = Number(status.pendingCount || 0);
 
-    let message = 'Shelf synced. Your browser can reopen the last touched story quickly.';
+    let message = 'Shelf synced. Your next listening session is ready to pick up cleanly.';
     if (status.status === SYNC_STATES.offline) {
         message = pendingCount > 0
-            ? `Offline mode active. ${pendingCount} listening update${pendingCount === 1 ? '' : 's'} waiting to sync, but your saved shelf is still available.`
-            : 'Offline mode active. Showing your saved shelf from this device.';
+            ? `Offline mode active. ${pendingCount} listening update${pendingCount === 1 ? '' : 's'} will sync later, while your saved shelf stays available.`
+            : 'Offline mode active. Showing the shelf saved on this device.';
     } else if (status.status === SYNC_STATES.pending) {
         message = pendingCount > 0
-            ? `${pendingCount} listening update${pendingCount === 1 ? '' : 's'} waiting to sync. Continue listening is using fresher local device data.`
-            : 'Device state is newer than cloud and will sync shortly.';
+            ? `${pendingCount} listening update${pendingCount === 1 ? '' : 's'} still need sync. Continue listening is using fresher device data.`
+            : 'This device is slightly ahead of the cloud and will sync shortly.';
     } else if (status.lastSuccessfulSyncAt) {
-        message = `Synced ${formatRelativeTime(status.lastSuccessfulSyncAt)}. Continue listening follows your latest unfinished book.`;
+        message = `Synced ${formatRelativeTime(status.lastSuccessfulSyncAt)}. Continue listening reflects your latest unfinished story.`;
     }
 
     banners.forEach((banner) => {
@@ -336,7 +317,6 @@ function matchesBookFilters(book) {
         const genre = String(book.genre || '').toLowerCase();
         const moods = (book.moods || []).join(' ').toLowerCase();
 
-        if (!title.includes(query) && !author.includes(query)) {
         if (!title.includes(query) && !author.includes(query) && !genre.includes(query) && !moods.includes(query)) {
             return false;
         }
@@ -414,41 +394,14 @@ async function refreshPersonalizedCatalog() {
 }
 
 function renderLibraryInsights() {
-    const subtitle = document.getElementById('library-subtitle');
-    const insights = document.getElementById('library-insights');
-    const visibleBooks = getVisibleBooks();
-
-    if (subtitle) {
-        if (currentSearchQuery.trim()) {
-            subtitle.textContent = `${visibleBooks.length} matching stories for "${currentSearchQuery.trim()}"`;
-        } else if (currentCategory !== 'All') {
-            subtitle.textContent = `${visibleBooks.length} stories in ${currentCategory}`;
-        } else {
-            subtitle.textContent = `${allBooks.length} stories, tailored to your recent listening patterns.`;
-        }
-    }
-
-    if (!insights) return;
-
-    const totalCategories = new Set(
-        allBooks.flatMap((book) => [book.genre, ...(Array.isArray(book.moods) ? book.moods : [])]).filter(Boolean)
-    ).size;
-    const activeResumes = userHistory.filter((entry) => !isBookFinishedProgress(entry)).length;
-
-    insights.innerHTML = `
-        <article class="insight-card">
-            <strong>${visibleBooks.length}</strong>
-            <span>Visible right now</span>
-        </article>
-        <article class="insight-card">
-            <strong>${activeResumes}</strong>
-            <span>Stories to resume</span>
-        </article>
-        <article class="insight-card">
-            <strong>${totalCategories}</strong>
-            <span>Moods and genres</span>
-        </article>
-    `;
+    renderLibraryInsightsPanel({
+        currentSearchQuery,
+        currentCategory,
+        allBooks,
+        visibleBooks: getVisibleBooks(),
+        userHistory,
+        isBookFinishedProgress
+    });
 }
 
 function renderProfileSnapshot() {
@@ -493,7 +446,7 @@ function renderProfileStoragePanel() {
     quotaEl.innerText = quotaBytes ? formatSize(quotaBytes) : 'Browser managed';
     booksEl.innerText = String(offlineStorageStats?.downloadedBooks || 0);
     chaptersEl.innerText = String(offlineStorageStats?.downloadedChapters || 0);
-    modeEl.innerText = offlineStorageStats?.storageMode === 'opfs' ? 'OPFS preferred' : 'IndexedDB fallback';
+    modeEl.innerText = offlineStorageStats?.storageMode === 'opfs' ? 'Stored with OPFS when available' : 'Stored with IndexedDB fallback';
 
     if (clearBtn) {
         clearBtn.disabled = !(offlineStorageStats?.downloadedBooks || offlineStorageStats?.pendingJobs);
@@ -507,9 +460,9 @@ function renderOfflineView() {
 
     if (subtitle) {
         if (!offlineBooks.length) {
-            subtitle.textContent = 'Save direct-audio books from the player and they will appear here for offline browser listening.';
+            subtitle.textContent = 'Save direct-audio stories from the player and they will gather here for offline listening.';
         } else {
-            subtitle.textContent = `${offlineBooks.length} saved ${offlineBooks.length === 1 ? 'book' : 'books'} ready from this browser shelf.`;
+            subtitle.textContent = `${offlineBooks.length} saved ${offlineBooks.length === 1 ? 'story' : 'stories'} ready from this browser shelf.`;
         }
     }
 
@@ -517,15 +470,15 @@ function renderOfflineView() {
         stats.innerHTML = `
             <article class="insight-card">
                 <strong>${offlineStorageStats?.downloadedBooks || 0}</strong>
-                <span>Books saved locally</span>
+                <span>Stories saved locally</span>
             </article>
             <article class="insight-card">
                 <strong>${offlineStorageStats?.downloadedChapters || 0}</strong>
-                <span>Chapters available offline</span>
+                <span>Chapters offline</span>
             </article>
             <article class="insight-card">
                 <strong>${offlineStorageStats?.pendingJobs || 0}</strong>
-                <span>Queued right now</span>
+                <span>Downloads queued</span>
             </article>
         `;
     }
@@ -594,7 +547,7 @@ window.app = {
         if (!btn) return;
 
         if (!navigator.onLine) {
-            showToast("Offline mode active. We'll sync again when the browser reconnects.");
+            showToast("Offline mode is active. Sync will resume when the browser reconnects.");
             renderSyncState();
             return;
         }
@@ -615,7 +568,7 @@ window.app = {
         btn.innerHTML = `<i class="fas fa-check"></i> Synced!`;
         btn.style.borderColor = "#00ff00";
         btn.style.color = "#00ff00";
-        showToast("Data synced with cloud.");
+        showToast("Shelf synced with the cloud.");
 
         setTimeout(() => {
             btn.innerHTML = originalText;
@@ -629,7 +582,7 @@ window.app = {
         await clearAllOfflineDownloads();
         await refreshOfflineShelfState();
         renderLibrarySurfaces();
-        showToast("Offline shelf cleared from this browser");
+        showToast("Offline shelf cleared from this browser.");
     },
 
     logout: async () => {
@@ -935,6 +888,14 @@ function setupListeners() {
 
     if (recentSearchesContainer) {
         recentSearchesContainer.addEventListener('click', (event) => {
+            const clearTrigger = event.target.closest('[data-clear-recent]');
+            if (clearTrigger) {
+                clearRecentSearches();
+                renderLibrarySurfaces();
+                if (searchInput) searchInput.focus();
+                return;
+            }
+
             const target = event.target.closest('[data-query]');
             if (!target) return;
             searchInput.value = target.dataset.query;
@@ -1013,88 +974,7 @@ function setupListeners() {
     });
 }
 
-function setupImageObserver() {
-    window.imageObserver = new IntersectionObserver((entries, observer) => {
-        entries.forEach((entry) => {
-            if (!entry.isIntersecting) return;
-
-            const img = entry.target;
-            img.src = img.dataset.src;
-            img.onload = () => img.classList.add('visible');
-            observer.unobserve(img);
-        });
-    }, { rootMargin: "100px 0px", threshold: 0.01 });
-}
-
-function showToast(msg) {
-    const toast = document.createElement('div');
-    toast.className = 'toast-msg';
-    toast.innerText = msg;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
-}
-
-const style = document.createElement('style');
-style.textContent = `
-    .lazy-img { opacity: 0; transition: opacity 0.6s ease-in-out; }
-    .lazy-img.visible { opacity: 1; }
-    .skeleton-loader {
-        height: 45px; margin: 10px 0; border-radius: 8px;
-        background: rgba(255,255,255,0.05);
-        background-image: linear-gradient(90deg, rgba(255,255,255,0) 0, rgba(255,255,255,0.1) 20%, rgba(255,255,255,0.2) 60%, rgba(255,255,255,0) 100%);
-        background-size: 200% 100%;
-        animation: skeleton 2s infinite linear;
-    }
-    .global-sync-indicator {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 0.75rem;
-        padding: 4px 8px;
-        border-radius: 12px;
-        background: rgba(255, 255, 255, 0.04);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        cursor: pointer;
-        transition: all 0.3s ease;
-        margin-left: auto; /* Pushes it to the right in a flex container */
-    }
-    .global-sync-indicator:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.2); }
-    .global-sync-indicator[data-status="synced"] { color: #77d28c; }
-    .global-sync-indicator[data-status="pending"] { color: #ffd37b; }
-    .global-sync-indicator[data-status="offline"] { color: #ff8a80; }
-    #recent-searches-panel { margin-top: 12px; }
-    .recent-searches-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-    .recent-searches-header span { font-size: 0.8rem; color: var(--theme-text-dim); font-weight: 600; text-transform: uppercase; }
-    .clear-recent-btn { background: none; border: none; color: var(--theme-text-dim); font-size: 0.75rem; cursor: pointer; padding: 4px; }
-    .clear-recent-btn:hover { color: var(--secondary); }
-    .recent-searches-tags { display: flex; flex-wrap: wrap; gap: 8px; }
-    .recent-search-tag {
-        background: rgba(255, 255, 255, 0.04);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        color: var(--theme-text-soft);
-        padding: 5px 10px;
-        border-radius: 8px;
-        font-size: 0.8rem;
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-    .recent-search-tag:hover { background: rgba(255, 255, 255, 0.1); border-color: var(--secondary); color: white; }
-    #search-clear-btn {
-        position: absolute;
-        right: 12px;
-        top: 50%;
-        transform: translateY(-50%);
-        background: none;
-        border: none;
-        color: var(--theme-text-dim);
-        cursor: pointer;
-        padding: 4px;
-    }
-    #search-clear-btn.hidden { display: none; }
-    .search-wrapper { position: relative; }
-    @keyframes skeleton { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
-`;
-document.head.appendChild(style);
+injectUiRuntimeStyles();
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

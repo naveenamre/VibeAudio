@@ -206,11 +206,11 @@ function canKeepScreenAwake() {
 function openCurrentSourceInBrowser() {
     const sourceUrl = String(getCurrentState().sourceUrl || '').trim();
     if (!sourceUrl) {
-        showToast("Source link is unavailable right now");
+        showToast("Source link is unavailable right now.");
         return;
     }
 
-    showToast("Opening in browser for steadier background playback");
+    showToast("Opening the source in your browser.");
 
     const openedWindow = window.open(sourceUrl, '_blank');
     if (openedWindow) {
@@ -235,9 +235,9 @@ function syncSourceSupportUI(state) {
 
     if (noteText && isYouTubeSource) {
         const wakeLockHint = canKeepScreenAwake()
-            ? " Active tab me playback ko steady rakhne ke liye wake lock bhi request ho sakta hai."
+            ? " VibeAudio may also request a wake lock to keep playback steadier while the tab stays active."
             : "";
-        noteText.innerText = `YouTube link audio-only mode me chalega, video hidden rahega.${wakeLockHint} Agar kisi browser me playback ruk jaye to source ko browser me khol lo.`;
+        noteText.innerText = `This source is running in audio-only mode with the video hidden.${wakeLockHint} If playback stops in your browser, open the original source directly.`;
     } else if (noteText) {
         noteText.innerText = "";
     }
@@ -685,7 +685,7 @@ export function setupPlayerListeners() {
             } else {
                 showToast(result?.reason || "Offline download could not start");
             }
-        };
+        });
     }
 
     const downloadBookBtn = document.getElementById('download-book-btn');

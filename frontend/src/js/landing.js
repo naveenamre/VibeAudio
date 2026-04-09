@@ -73,12 +73,22 @@ function setGreeting() {
     if (!greetingEl) return;
 
     if (hour < 12) {
-        greetingEl.textContent = 'Morning listening starts better with a calm shelf.';
+        greetingEl.textContent = 'Morning listening lands better when the next chapter already feels chosen for you.';
     } else if (hour < 18) {
-        greetingEl.textContent = 'Afternoons feel lighter when your next chapter is already lined up.';
+        greetingEl.textContent = 'Afternoons move faster when the shelf keeps your next standout story close.';
     } else {
-        greetingEl.textContent = 'Evenings are made for long-form listening and immersive stories.';
+        greetingEl.textContent = 'Evenings deserve immersive stories, stronger atmosphere, and a shelf worth returning to.';
     }
+}
+
+function pickFeaturedBook(books = []) {
+    return [...books]
+        .filter((book) => book?.cover && book?.title)
+        .sort((left, right) => {
+            const chapterDiff = Number(right.totalChapters || 0) - Number(left.totalChapters || 0);
+            if (chapterDiff) return chapterDiff;
+            return String(left.title || '').localeCompare(String(right.title || ''));
+        })[0] || books[0] || null;
 }
 
 function renderHeroStats(books) {
@@ -87,19 +97,24 @@ function renderHeroStats(books) {
 
     const genreCount = new Set(books.map((book) => String(book.genre || '').trim()).filter(Boolean)).size;
     const chapterCount = books.reduce((sum, book) => sum + Number(book.totalChapters || 0), 0);
+    const offlineReady = window.VibePWA?.isOfflineShellLikelyReady?.() ? 'Ready' : 'Warming';
 
     statsEl.innerHTML = `
         <div class="metric-card">
             <strong>${books.length}</strong>
-            <span>Stories ready to stream</span>
+            <span>Stories ready to start</span>
+        </div>
+        <div class="metric-card">
+            <strong>${chapterCount || 0}</strong>
+            <span>Chapters already in the catalog</span>
         </div>
         <div class="metric-card">
             <strong>${genreCount || 'Curated'}</strong>
-            <span>Genres and moods to explore</span>
+            <span>Genres and moods in rotation</span>
         </div>
         <div class="metric-card">
-            <strong>${chapterCount || 'Always on'}</strong>
-            <span>Chapters waiting in your queue</span>
+            <strong>${offlineReady}</strong>
+            <span>Browser shelf availability</span>
         </div>
     `;
 }
@@ -109,29 +124,29 @@ function renderSpotlight(books) {
     const coverEl = document.getElementById('featured-cover');
     if (!spotlightEl || !coverEl) return;
 
-    const [firstBook] = books;
-    if (!firstBook) {
-        spotlightEl.innerHTML = '<h2>Cloud shelf warming up</h2><p>Catalog preview will appear here as soon as books are available.</p>';
+    const featuredBook = pickFeaturedBook(books);
+    if (!featuredBook) {
+        spotlightEl.innerHTML = '<span class="eyebrow">Featured listening</span><h2>Catalog warming up</h2><p>Your standout cover story will appear here as soon as the browser shelf is ready.</p>';
         coverEl.hidden = true;
         return;
     }
 
     coverEl.hidden = false;
-    coverEl.src = firstBook.cover || './public/icons/logo.png';
-    coverEl.alt = firstBook.title || 'Featured audiobook';
+    coverEl.src = featuredBook.cover || './public/icons/logo.png';
+    coverEl.alt = featuredBook.title || 'Featured audiobook';
 
-    const moodText = Array.isArray(firstBook.moods) && firstBook.moods.length
-        ? firstBook.moods.slice(0, 3).join(', ')
-        : (firstBook.genre || 'Curated audio stories');
+    const moodText = Array.isArray(featuredBook.moods) && featuredBook.moods.length
+        ? featuredBook.moods.slice(0, 2).join(' / ')
+        : (featuredBook.genre || 'Curated audio story');
 
     spotlightEl.innerHTML = `
-        <span class="eyebrow">Featured for your browser shelf</span>
-        <h2>${escapeHTML(firstBook.title || 'VibeAudio pick')}</h2>
-        <p>${escapeHTML(firstBook.author || 'Curated author')}</p>
-        <p>${escapeHTML(moodText)} listening with ${Number(firstBook.totalChapters || 0)} chapters ready to go.</p>
+        <span class="eyebrow">Featured listening</span>
+        <h2>${escapeHTML(featuredBook.title || 'VibeAudio select')}</h2>
+        <p class="featured-byline">${escapeHTML(featuredBook.author || 'Curated author')}</p>
+        <p>${escapeHTML(moodText)} atmosphere with ${Number(featuredBook.totalChapters || 0)} chapters ready for a longer session.</p>
         <div class="hero-actions">
             <button class="solid-btn" type="button" data-open-auth="true">Start Listening</button>
-            <button class="ghost-btn" type="button" data-scroll-target="#library-preview-panel">Browse First</button>
+            <button class="ghost-btn" type="button" data-scroll-target="#library-preview-panel">Browse Catalog</button>
         </div>
     `;
 }
@@ -141,21 +156,24 @@ function renderPreviewGrid(books) {
     if (!previewEl) return;
 
     if (!books.length) {
-        previewEl.innerHTML = '<div class="empty-preview">Preview shelf is unavailable right now. Refresh once the catalog is reachable.</div>';
+        previewEl.innerHTML = '<div class="empty-preview">The shelf preview is unavailable right now. Refresh once the catalog is reachable.</div>';
         return;
     }
 
-    previewEl.innerHTML = books.slice(0, 6).map((book) => {
+    previewEl.innerHTML = books.slice(0, 5).map((book, index) => {
         const meta = Array.isArray(book.moods) && book.moods.length
-            ? book.moods.slice(0, 2).join(' - ')
+            ? book.moods.slice(0, 2).join(' / ')
             : (book.genre || 'Curated listening');
 
         return `
-            <article class="preview-card">
+            <article class="preview-card ${index === 0 ? 'is-featured' : ''}">
                 <img src="${escapeHTML(book.cover || './public/icons/logo.png')}" alt="${escapeHTML(book.title || 'Audiobook cover')}">
-                <strong>${escapeHTML(book.title || 'Untitled')}</strong>
-                <span>${escapeHTML(book.author || 'Unknown author')}</span>
-                <p>${escapeHTML(meta)} - ${Number(book.totalChapters || 0)} parts</p>
+                <div class="preview-copy">
+                    <span class="preview-kicker">${escapeHTML(book.genre || 'Featured pick')}</span>
+                    <strong>${escapeHTML(book.title || 'Untitled')}</strong>
+                    <span>${escapeHTML(book.author || 'Unknown author')}</span>
+                    <p>${escapeHTML(meta)} - ${Number(book.totalChapters || 0)} parts</p>
+                </div>
             </article>
         `;
     }).join('');
@@ -165,15 +183,25 @@ function renderCategoryTags(books) {
     const tagEl = document.getElementById('category-spotlight');
     if (!tagEl) return;
 
-    const tags = new Set();
+    const tagCounts = new Map();
     books.forEach((book) => {
-        if (book.genre) tags.add(String(book.genre));
-        (book.moods || []).forEach((mood) => tags.add(String(mood)));
+        if (book.genre) {
+            const genre = String(book.genre);
+            tagCounts.set(genre, (tagCounts.get(genre) || 0) + 2);
+        }
+        (book.moods || []).forEach((mood) => {
+            const label = String(mood);
+            tagCounts.set(label, (tagCounts.get(label) || 0) + 1);
+        });
     });
 
-    const picked = Array.from(tags).filter(Boolean).slice(0, 10);
+    const picked = Array.from(tagCounts.entries())
+        .sort((left, right) => right[1] - left[1])
+        .map(([label]) => label)
+        .filter(Boolean)
+        .slice(0, 10);
     if (!picked.length) {
-        tagEl.innerHTML = '<span>Fresh picks</span><span>Motivation</span><span>Night listening</span>';
+        tagEl.innerHTML = '<span>Late-night listening</span><span>Slow-burn fantasy</span><span>Comfort replay</span>';
         return;
     }
 
@@ -231,7 +259,7 @@ async function bootAuthPanel() {
             return;
         }
 
-        statusEl.textContent = 'Sign in to unlock resume, history, and your synced listening shelf.';
+        statusEl.textContent = 'Sign in to unlock your synced shelf, saved moments, and premium listening flow.';
         statusEl.classList.add('is-ready');
 
         await mountSignIn(signInContainer, {
@@ -243,13 +271,13 @@ async function bootAuthPanel() {
                     showOptionalFields: false
                 },
                 variables: {
-                    fontFamily: '"Outfit", sans-serif',
-                    colorPrimary: '#ff8a4c',
+                    fontFamily: '"Manrope", sans-serif',
+                    colorPrimary: '#d78d46',
                     colorText: 'white',
                     colorBackground: 'transparent',
-                    colorInputBackground: 'rgba(255,255,255,0.08)',
+                    colorInputBackground: 'rgba(255,255,255,0.06)',
                     colorInputText: 'white',
-                    borderRadius: '14px'
+                    borderRadius: '18px'
                 },
                 elements: {
                     card: 'shadow-none bg-transparent p-0',
@@ -261,7 +289,7 @@ async function bootAuthPanel() {
         });
     } catch (error) {
         console.error('Unable to boot Clerk on landing page.', error);
-        statusEl.textContent = 'Auth panel could not load right now. You can still browse the public shelf preview below.';
+        statusEl.textContent = 'The sign-in panel could not load right now. You can still explore the public shelf preview below.';
     }
 }
 

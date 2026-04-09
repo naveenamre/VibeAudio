@@ -1,29 +1,29 @@
 const DEFAULT_PALETTE = [
-    [255, 90, 58],
-    [57, 214, 255],
-    [31, 24, 59],
-    [8, 11, 23]
+    [181, 108, 43],
+    [214, 170, 112],
+    [43, 54, 77],
+    [9, 12, 19]
 ];
 
 const SURFACES = ['library', 'history', 'player'];
 const SURFACE_BASE_PALETTES = {
     library: [
-        [62, 138, 186],
-        [136, 204, 231],
-        [39, 87, 128],
-        [7, 15, 29]
+        [145, 92, 46],
+        [208, 169, 108],
+        [42, 53, 73],
+        [8, 12, 19]
     ],
     history: [
-        [70, 132, 182],
-        [148, 194, 227],
-        [46, 77, 114],
-        [8, 14, 28]
+        [124, 95, 62],
+        [175, 156, 118],
+        [46, 55, 72],
+        [9, 12, 20]
     ],
     player: [
-        [126, 158, 218],
-        [244, 176, 157],
-        [84, 98, 150],
-        [8, 12, 24]
+        [159, 92, 58],
+        [214, 170, 119],
+        [62, 73, 94],
+        [9, 12, 20]
     ]
 };
 const SURFACE_DYNAMIC_THEME = {
@@ -98,7 +98,7 @@ function buildSurfacePalette(palette, surface) {
         return basePalette;
     }
 
-    const blendWeights = [0.34, 0.3, 0.22, 0.12];
+    const blendWeights = [0.26, 0.24, 0.18, 0.1];
     return basePalette.map((baseColor, index) => {
         const sourceColor = palette[index] || baseColor;
         return mixColor(baseColor, sourceColor, blendWeights[index]);
@@ -107,39 +107,39 @@ function buildSurfacePalette(palette, surface) {
 
 function buildTheme(palette, surface = 'library') {
     const [primaryBase, secondaryBase, tertiaryBase, depthBase] = buildSurfacePalette(palette, surface);
-    const primary = mixColor(primaryBase, [255, 255, 255], 0.16);
-    const secondary = mixColor(secondaryBase, [255, 255, 255], 0.18);
-    const tertiary = mixColor(tertiaryBase, [255, 255, 255], 0.08);
-    const depth = mixColor(depthBase, [0, 0, 0], 0.42);
-    const shell = mixColor(depth, [8, 12, 22], 0.56);
+    const primary = mixColor(primaryBase, [255, 238, 212], 0.12);
+    const secondary = mixColor(secondaryBase, [255, 245, 223], 0.12);
+    const tertiary = mixColor(tertiaryBase, [236, 228, 216], 0.06);
+    const depth = mixColor(depthBase, [0, 0, 0], 0.48);
+    const shell = mixColor(depth, [8, 12, 18], 0.6);
     const titleAccent = mixColor(secondary, [255, 255, 255], 0.34);
 
     return {
         '--primary': rgb(primary),
         '--secondary': rgb(secondary),
         '--accent-soft': rgba(primary, 0.18),
-        '--theme-bg-1': rgba(mixColor(primary, shell, 0.76), 0.86),
-        '--theme-bg-2': rgba(mixColor(secondary, shell, 0.72), 0.62),
-        '--theme-bg-3': rgba(mixColor(tertiary, shell, 0.66), 0.58),
-        '--theme-bg-4': rgba(mixColor(shell, [0, 0, 0], 0.34), 0.99),
-        '--theme-surface-1': rgba(mixColor(shell, primary, 0.14), 0.84),
-        '--theme-surface-2': rgba(mixColor(shell, secondary, 0.12), 0.5),
-        '--theme-surface-3': rgba(mixColor(shell, [255, 255, 255], 0.08), 0.18),
-        '--theme-border': rgba(mixColor(primary, [255, 255, 255], 0.34), 0.18),
-        '--theme-border-strong': rgba(mixColor(secondary, [255, 255, 255], 0.24), 0.34),
-        '--theme-glow': rgba(primary, 0.24),
-        '--theme-glow-soft': rgba(secondary, 0.18),
-        '--theme-shadow': rgba(mixColor(shell, [0, 0, 0], 0.22), 0.56),
-        '--theme-shadow-strong': rgba(mixColor(shell, [0, 0, 0], 0.38), 0.78),
-        '--theme-title': 'rgba(247, 250, 255, 0.98)',
-        '--theme-text': 'rgba(240, 245, 255, 0.96)',
-        '--theme-text-soft': 'rgba(220, 230, 252, 0.84)',
-        '--theme-text-dim': 'rgba(184, 198, 228, 0.66)',
-        '--theme-title-gradient-start': 'rgb(246, 250, 255)',
+        '--theme-bg-1': rgba(mixColor(primary, shell, 0.82), 0.72),
+        '--theme-bg-2': rgba(mixColor(secondary, shell, 0.8), 0.42),
+        '--theme-bg-3': rgba(mixColor(tertiary, shell, 0.74), 0.34),
+        '--theme-bg-4': rgba(mixColor(shell, [0, 0, 0], 0.3), 0.995),
+        '--theme-surface-1': rgba(mixColor(shell, primary, 0.08), 0.9),
+        '--theme-surface-2': rgba(mixColor(shell, secondary, 0.08), 0.58),
+        '--theme-surface-3': rgba(mixColor(shell, [255, 255, 255], 0.06), 0.14),
+        '--theme-border': rgba(mixColor(primary, [255, 255, 255], 0.22), 0.14),
+        '--theme-border-strong': rgba(mixColor(secondary, [255, 255, 255], 0.18), 0.26),
+        '--theme-glow': rgba(primary, 0.18),
+        '--theme-glow-soft': rgba(secondary, 0.12),
+        '--theme-shadow': rgba(mixColor(shell, [0, 0, 0], 0.28), 0.62),
+        '--theme-shadow-strong': rgba(mixColor(shell, [0, 0, 0], 0.44), 0.82),
+        '--theme-title': 'rgba(248, 244, 236, 0.98)',
+        '--theme-text': 'rgba(235, 229, 220, 0.96)',
+        '--theme-text-soft': 'rgba(214, 206, 194, 0.82)',
+        '--theme-text-dim': 'rgba(173, 167, 158, 0.66)',
+        '--theme-title-gradient-start': 'rgb(248, 243, 234)',
         '--theme-title-gradient-end': rgb(titleAccent),
-        '--theme-progress-track': rgba(mixColor(shell, [255, 255, 255], 0.16), 0.28),
+        '--theme-progress-track': rgba(mixColor(shell, [255, 255, 255], 0.12), 0.24),
         '--theme-progress-fill': `linear-gradient(90deg, ${rgb(primary)}, ${rgb(secondary)})`,
-        '--theme-player-overlay': `linear-gradient(135deg, ${rgba(primary, 0.2)}, ${rgba(secondary, 0.1)} 42%, ${rgba(shell, 0.78)})`
+        '--theme-player-overlay': `linear-gradient(135deg, ${rgba(primary, 0.16)}, ${rgba(secondary, 0.08)} 42%, ${rgba(shell, 0.82)})`
     };
 }
 
